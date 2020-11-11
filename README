@@ -1,4 +1,4 @@
 1) To generate figures, python,matplotlib,numpy should be installed.
-   Check if numpy include python is in the python include directory, if no, make a soft link
+   Check if numpy include path is in the python include directory, if no, make a soft link
 2) To calculate GL and GB, sofa library should be installed.
 2) To calculate YMW16 DM and distance, environment variable YMW16_DIR should be set.
