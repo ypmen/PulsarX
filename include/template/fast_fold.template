@@ -1,0 +1,291 @@
+SIMPLE  =                    T / file does conform to FITS standard
+BITPIX  =                    8 / number of bits per data pixel
+NAXIS   =                    0 / number of data axes
+EXTEND  =                    T / FITS dataset may contain extensions
+COMMENT   FITS (Flexible Image Transport System) format defined in Astronomy and
+COMMENT   Astrophysics Supplement Series v44/p363, v44/p371, v73/p359, v73/p365.
+COMMENT   Contact the NASA Science Office of Standards and Technology for the
+COMMENT   FITS Definition document #100 and other FITS information.
+COMMENT
+HDRVER  = '6.1             '   / Header version 
+FITSTYPE= 'PSRFITS         '   / FITS definition for pulsar data files
+DATE    = '                '   / File creation date (YYYY-MM-DDThh:mm:ss UTC)
+OBSERVER= '                '   / Observer name(s)
+PROJID  = '                '   / Project name
+TELESCOP= 'FAST            '   / Telescope name
+ANT_X   =                    * / [m] Antenna ITRF X-coordinate (D)
+ANT_Y   =                    * / [m] Antenna ITRF Y-coordinate (D)
+ANT_Z   =                    * / [m] Antenna ITRF Z-coordinate (D)
+FRONTEND= '                '   / Receiver ID
+IBEAM   = '                '   / Beam ID for multibeam systems
+NRCVR   = 2                    / Number of receiver polarisation channels
+FD_POLN = 'LIN             '   / LIN or CIRC
+FD_HAND = 1                    / +/- 1. +1 is LIN:A=X,B=Y, CIRC:A=L,B=R (I)
+FD_SANG = 0                    / [deg] FA of E vect for equal sig in A&B (E)
+FD_XYPH = 0                    / [deg] Phase of A^* B for injected cal (E)
+BACKEND = '                '   / Backend ID
+BECONFIG= '                '   / Backend configuration file name
+BE_PHASE= 1                    / 0/+1/-1 BE cross-phase:0 unknown,+/-1 std/rev
+BE_DCC  = 0                    / 0/1 BE downconversion conjugation corrected
+BE_DELAY=                    * / [s] Backend propn delay from digitiser input 
+TCYCLE  =                    * / [s] On-line cycle time (D)
+OBS_MODE= 'PSR             '   / (PSR, CAL, SEARCH)
+DATE-OBS= '                '   / Date of observation (YYYY-MM-DDThh:mm:ss UTC)
+OBSFREQ = 1250                 / [MHz] Centre frequency for observation
+OBSBW   = 500                  / [MHz] Bandwidth for observation
+OBSNCHAN= 4096                 / Number of frequency channels (original)
+CHAN_DM =                    * / [cm-3 pc] DM used for on-line dedispersion
+PNT_ID  = '                '   / Name or ID for pointing ctr (multibeam feeds)
+SRC_NAME= '                '   / Source or scan ID 
+COORD_MD= 'J2000           '   / Coordinate mode (J2000, GALACTIC, ECLIPTIC)
+EQUINOX = 2000                 / Equinox of coords (e.g. 2000.0) 
+RA      = '                '   / Right ascension (hh:mm:ss.ssss)
+DEC     = '                '   / Declination (-dd:mm:ss.sss)
+BMAJ    =                    * / [deg] Beam major axis length
+BMIN    =                    * / [deg] Beam minor axis length
+BPA     =                    * / [deg] Beam position angle
+STT_CRD1= '                '   / Start coord 1 (hh:mm:ss.sss or ddd.ddd)
+STT_CRD2= '                '   / Start coord 2 (-dd:mm:ss.sss or -dd.ddd) 
+TRK_MODE= '                '   / Track mode (TRACK, SCANGC, SCANLAT)
+STP_CRD1= '                '   / Stop coord 1 (hh:mm:ss.sss or ddd.ddd)
+STP_CRD2= '                '   / Stop coord 2 (-dd:mm:ss.sss or -dd.ddd) 
+SCANLEN =                    * / [s] Requested scan length (E)
+FD_MODE = '                '   / Feed track mode - FA, CPA, SPA, TPA
+FA_REQ  =                    * / [deg] Feed/Posn angle requested (E)
+CAL_MODE= '                '   / Cal mode (OFF, SYNC, EXT1, EXT2)
+CAL_FREQ=                    * / [Hz] Cal modulation frequency (E)
+CAL_DCYC=                    * / Cal duty cycle (E)
+CAL_PHS =                    * / Cal phase (wrt start time) (E)
+CAL_NPHS=                    * / Number of states in cal pulse (I)
+STT_IMJD=                    * / Start MJD (UTC days) (J - long integer)
+STT_SMJD=                    * / [s] Start time (sec past UTC 00h) (J)
+STT_OFFS=                    * / [s] Start time offset (D)   
+STT_LST =                    * / [s] Start LST (D)
+END
+#
+###############################################################################
+#
+# History Binary Table Extension
+#
+###############################################################################
+#
+XTENSION= BINTABLE             / ***** Processing history *****
+BITPIX  =                    8 / N/A
+NAXIS   =                    2 / 2-dimensional binary table
+NAXIS1  =                    * / width of table in bytes
+NAXIS2  =                    * / number of rows
+PCOUNT  =                    0 / size of special data area
+GCOUNT  =                    1 / one data group (required keyword)
+TFIELDS =                    * / number of fields per row
+#
+EXTNAME = HISTORY             / name of this binary table extension
+#
+TTYPE#  = DATE_PRO            / Processing date and time (UTC)
+TFORM#  = 24A                 / 24-char string
+TTYPE#  = PROC_CMD            / Processing program and command
+TFORM#  = 256A                / 256-char string
+TTYPE#  = SCALE               / Units (FluxDen/RefFlux/Jansky)
+TFORM#  = 8A                  / 8-char string
+TTYPE#  = POL_TYPE            / Polarisation identifier
+TFORM#  = 8A                  / 8-char string
+TTYPE#  = NSUB                / Number of Sub-Integrations
+TFORM#  = 1J                  / Long integer
+TTYPE#  = NPOL                / Number of polarisations
+TFORM#  = 1I                  / Integer
+TTYPE#  = NBIN                / Nr of bins per product (0 for SEARCH mode)
+TFORM#  = 1I                  / Integer
+TTYPE#  = NBIN_PRD            / Nr of bins per period
+TFORM#  = 1I                  / Integer
+TTYPE#  = TBIN                / Time per bin or sample
+TUNIT#  = s                   / units of field
+TFORM#  = 1D                  / Double
+TTYPE#  = CTR_FREQ            / Band centre frequency (weighted)
+TUNIT#  = MHz                 / units of field
+TFORM#  = 1D                  / Double
+TTYPE#  = NCHAN               / Number of frequency channels
+TFORM#  = 1J                  / Long integer
+TTYPE#  = CHAN_BW             / Channel bandwidth
+TFORM#  = 1D                  / Double
+TUNIT#  = MHz                 / units of field
+TTYPE#  = REF_FREQ            / Reference frequency
+TFORM#  = 1D                  / Double
+TUNIT#  = MHz                 / units of field
+TTYPE#  = DM                  / DM used for dedispersion
+TFORM#  = 1D                  / Double
+TUNIT#  = CM-3 PC             / units of field
+TTYPE#  = RM                  / RM used for RM correction
+TFORM#  = 1D                  / Double
+TUNIT#  = RAD M-2             / units of field
+TTYPE#  = PR_CORR             / Projection of receptors onto sky corrected
+TFORM#  = 1I                  / Integer flag 
+TTYPE#  = FD_CORR             / Feed basis correction applied
+TFORM#  = 1I                  / Integer flag 
+TTYPE#  = BE_CORR             / Backend correction applied
+TFORM#  = 1I                  / Integer flag 
+TTYPE#  = RM_CORR             / RM correction applied
+TFORM#  = 1I                  / Integer flag 
+TTYPE#  = DEDISP              / Data dedispersed
+TFORM#  = 1I                  / Integer flag 
+TTYPE#  = DDS_MTHD            / Dedispersion method
+TFORM#  = 32A                 / 32-char string
+TTYPE#  = SC_MTHD             / Scattered power correction method
+TFORM#  = 32A                 / 32-char string
+TTYPE#  = CAL_MTHD            / Calibration method
+TFORM#  = 32A                 / 32-char string
+TTYPE#  = CAL_FILE            / Name of gain calibration file
+TFORM#  = 256A                / 256-char string
+TTYPE#  = RFI_MTHD            / RFI excision method
+TFORM#  = 32A                 / 32-char string
+TTYPE#  = RM_MODEL            / Auxiliary Faraday rotation model description
+TFORM#  = 32A                 / 32-char string
+TTYPE#  = AUX_RM_C            / Auxiliary Faraday rotation corrected flag
+TFORM#  = 1I                  / Integer flag 
+TTYPE#  = DM_MODEL            / Auxiliary dispersion model description
+TFORM#  = 32A                 / 32-char string
+TTYPE#  = AUX_DM_C            / Auxiliary dispersion corrected flag
+TFORM#  = 1I                  / Integer flag
+END
+#
+###############################################################################
+#
+# Ephemeris Binary Table Extension
+#
+###############################################################################
+#
+XTENSION= BINTABLE             / ***** Pulsar ephemeris *****
+BITPIX  =                    8 / N/A 
+NAXIS   =                    2 / 2-dimensional binary table
+NAXIS1  =                    * / width of table in bytes
+NAXIS2  =                    * / number of rows in table
+PCOUNT  =                    0 / size of special data area
+GCOUNT  =                    1 / one data group (required keyword)
+TFIELDS =                    * / Number of fields per row
+#
+EXTNAME = PSRPARAM             / Name of this binary table extension
+#
+TTYPE#  = PARAM                / Text file stored row by row
+TFORM#  = 128A                 / Allow 128 char per row
+END
+#
+###############################################################################
+#
+# TEMPO2 Predictor Binary Table Extension
+#
+###############################################################################
+#
+XTENSION= BINTABLE             / ***** Tempo2 Predictor *****
+BITPIX  =                    8 / N/A 
+NAXIS   =                    2 / 2-dimensional binary table
+NAXIS1  =                    * / width of table in bytes
+NAXIS2  =                    * / number of rows in table
+PCOUNT  =                    0 / size of special data area
+GCOUNT  =                    1 / one data group (required keyword)
+TFIELDS =                    * / Number of fields per row
+#
+EXTNAME = T2PREDICT            / Name of this binary table extension
+#
+TTYPE#  = PREDICT              / Text file stored row by row
+TFORM#  = 128A                 / Allow 128 char per row
+END
+#
+###############################################################################
+#
+# Subintegration data Binary Table Extension
+#
+###############################################################################
+#
+XTENSION= BINTABLE             / ***** Subintegration data  *****
+BITPIX  =                    8 / N/A
+NAXIS   =                    2 / 2-dimensional binary table
+NAXIS1  =                    * / width of table in bytes 
+NAXIS2  =                    * / Number of rows in table (NSUBINT)
+PCOUNT  =                    0 / size of special data area
+GCOUNT  =                    1 / one data group (required keyword)
+TFIELDS =                    * / Number of fields per row
+#
+EPOCHS  = 'VALID             ' / Epoch convention (VALID, MIDTIME, STT_MJD)
+INT_TYPE= 'TIME              ' / Time axis (TIME, BINPHSPERI, BINLNGASC, etc)
+INT_UNIT= 'SEC               ' / Unit of time axis (SEC, PHS (0-1), DEG) 
+SCALE   = 'RefFlux           ' / Intensity units (FluxDen/RefFlux/Jansky)
+POL_TYPE= 'AA+BB             ' / Polarisation identifier (e.g., AABBCRCI, AA+BB)
+NPOL    =                    * / Nr of polarisations
+TBIN    =                    * / [s] Time per bin or sample 
+NBIN    =                    * / Nr of bins (PSR/CAL mode; else 1)
+NBIN_PRD=                    * / Nr of bins/pulse period (for gated data)
+PHS_OFFS=                    * / Phase offset of bin 0 for gated data
+NBITS   = 1                    / Nr of bits/datum (SEARCH mode data, else 1)
+ZERO_OFF=                    * / Zero offset for SEARCH-mode data   
+SIGNINT =                    * / 1 for signed ints in SEARCH-mode data, else 0
+NSUBOFFS=                    * / Subint offset (Contiguous SEARCH-mode files)
+NCHAN   =                    * / Number of channels/sub-bands in this file
+CHAN_BW =                    * / [MHz] Channel/sub-band width
+REFFREQ = 1250                 / [MHz] Reference frequency
+DM      =                    * / [cm-3 pc] DM for post-detection dedisperion
+RM      =                    * / [rad m-2] RM for post-detection deFaraday
+NCHNOFFS=                    * / Channel/sub-band offset for split files
+NSBLK   = 1                    / Samples/row (SEARCH mode, else 1) 
+NSTOT   = 1                    / Total number of samples (SEARCH mode, else 1) 
+#
+EXTNAME = SUBINT               / name of this binary table extension
+#
+TTYPE#  = INDEXVAL             / Optionally used if INT_TYPE != TIME
+TFORM#  = 1D                   / Double
+TTYPE#  = TSUBINT              / Length of subintegration
+TFORM#  = 1D                   / Double 
+TUNIT#  = s                    / Units of field
+TTYPE#  = OFFS_SUB             / Offset from Start of subint centre
+TFORM#  = 1D                   / Double 
+TUNIT#  = s                    / Units of field
+TTYPE#  = PERIOD               / Folding period
+TFORM#  = 1D                   / Double
+TUNIT#  = s                    / Units of field
+TTYPE#  = LST_SUB              / LST at subint centre 
+TFORM#  = 1D                   / Double 
+TUNIT#  = s                    / Units of field
+TTYPE#  = RA_SUB               / RA (J2000) at subint centre
+TFORM#  = 1D                   / Double 
+TUNIT#  = deg                  / Units of field
+TTYPE#  = DEC_SUB              / Dec (J2000) at subint centre
+TFORM#  = 1D                   / Double 
+TUNIT#  = deg                  / Units of field
+TTYPE#  = GLON_SUB             / [deg] Gal longitude at subint centre
+TFORM#  = 1D                   / Double 
+TUNIT#  = deg                  / Units of field
+TTYPE#  = GLAT_SUB             / [deg] Gal latitude at subint centre
+TFORM#  = 1D                   / Double 
+TUNIT#  = deg                  / Units of field
+TTYPE#  = FD_ANG               / [deg] Feed angle at subint centre
+TFORM#  = 1E                   / Float
+TUNIT#  = deg                  / Units of field
+TTYPE#  = POS_ANG              / [deg] Position angle of feed at subint centre
+TFORM#  = 1E                   / Float
+TUNIT#  = deg                  / Units of field
+TTYPE#  = PAR_ANG              / [deg] Parallactic angle at subint centre
+TFORM#  = 1E                   / Float
+TUNIT#  = deg                  / Units of field
+TTYPE#  = TEL_AZ               / [deg] Telescope azimuth at subint centre
+TFORM#  = 1E                   / Float 
+TUNIT#  = deg                  / Units of field
+TTYPE#  = TEL_ZEN              / [deg] Telescope zenith angle at subint centre
+TFORM#  = 1E                   / Float
+TUNIT#  = deg                  / Units of field
+TTYPE#  = AUX_DM               / additional DM (ionosphere, corona, etc.)
+TFORM#  = 1D                   / Double
+TUNIT#  = CM-3 PC              / units of field
+TTYPE#  = AUX_RM               / additional RM (ionosphere, corona, etc.)
+TFORM#  = 1D                   / Double
+TUNIT#  = RAD M-2              / units of field
+TTYPE#  = DAT_FREQ             / [MHz] Centre frequency for each channel
+TFORM#  = D                    / NCHAN doubles
+TUNIT#  = MHz                  / Units of field
+TTYPE#  = DAT_WTS              / Weights for each channel
+TFORM#  = E                    / NCHAN floats
+TTYPE#  = DAT_OFFS             / Data offset for each channel
+TFORM#  = E                    / NCHAN*NPOL floats
+TTYPE#  = DAT_SCL              / Data scale factor (outval=dataval*scl + offs)
+TFORM#  = E                    / NCHAN*NPOL floats
+TTYPE#  = DATA                 / Subint data table
+#TDIM#   = (*,*,*)              / (NBIN,NCHAN,NPOL) or (NCHAN,NPOL,NSBLK*NBITS/8)
+TFORM#  = I                    / I (Fold) or B (1-8 bit) Search
+TUNIT#  = Jy                   / Units of subint data
+END
