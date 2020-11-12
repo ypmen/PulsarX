@@ -482,7 +482,7 @@ int main(int argc, const char *argv[])
 	obsinfo["Telescope"] = s_telescope;
 	//beam
 	stringstream ss_ibeam;
-    ss_ibeam << "M" << setw(4) << setfill('0') << ibeam;
+    ss_ibeam << "cfbf" << setw(4) << setfill('0') << ibeam;
     string s_ibeam = ss_ibeam.str();
 	obsinfo["Beam"] = s_ibeam;
 	//data filename
