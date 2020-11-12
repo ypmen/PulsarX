@@ -1,3 +1,19 @@
+*.lo
+*.o
+config.h
+bin
+*.Po
+*.la
+*.deps
+*.libs
+libtool
+src/pulsar/dedisperse_all
+src/pulsar/dedisperse_all_fil
+src/pulsar/psrfold
+src/pulsar/psrfold_fil
+src/ymw16/ymw16
+src/ymw16/ymw16_ne
+
 # http://www.gnu.org/software/automake
 
 Makefile.in

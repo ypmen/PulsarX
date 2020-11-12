@@ -98,6 +98,16 @@ if test x$ax_python_lib != xno; then
   AC_DEFINE([HAVE_PYTHON],[1],[Define if the python library is present])
 fi
 
+# Check for numpy
+AC_MSG_CHECKING([for Numpy include path])
+numpy_include=`$ax_python_bin -c "import numpy; print(numpy.get_include())"`
+AC_MSG_RESULT([$numpy_include])
+if test -z "$numpy_include" ; then
+        AC_MSG_ERROR([cannot find Numpy include path])
+else
+  CPPFLAGS="-I$numpy_include $CPPFLAGS"
+fi
+
 AM_CONDITIONAL(HAVE_PYTHON, [test x$ax_python_lib != xno])
 
 ])dnl
