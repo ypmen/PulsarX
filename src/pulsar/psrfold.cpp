@@ -423,14 +423,14 @@ int main(int argc, const char *argv[])
 		double f1 = folder[k].f1;
 
 		gridsearch[k].ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-		gridsearch[k].ddmstep = abs(gridsearch[k].ddmstart/folder[k].nbin);
-		gridsearch[k].nddm = 2*folder[k].nbin;
+		gridsearch[k].ddmstep = 1./3*abs(gridsearch[k].ddmstart/folder[k].nbin);
+		gridsearch[k].nddm = 6*folder[k].nbin;
 		gridsearch[k].df0start = -3*1./tint;
-		gridsearch[k].df0step = abs(gridsearch[k].df0start/folder[k].nbin);
-		gridsearch[k].ndf0 = 2*folder[k].nbin;
+		gridsearch[k].df0step = 1./3*abs(gridsearch[k].df0start/folder[k].nbin);
+		gridsearch[k].ndf0 = 6*folder[k].nbin;
 		gridsearch[k].df1start = -3*2./(tint*tint);
-		gridsearch[k].df1step = abs(gridsearch[k].df1start/folder[k].nbin);
-		gridsearch[k].ndf1 = 2*folder[k].nbin;
+		gridsearch[k].df1step = 1./3*abs(gridsearch[k].df1start/folder[k].nbin);
+		gridsearch[k].ndf1 = 6*folder[k].nbin;
 
 		gridsearch[k].prepare(folder[k]);
 		
