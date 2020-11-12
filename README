@@ -6,5 +6,14 @@ Requirements:
 
 Installation:
 1) ./bootstrap
-2) ./configure  CXXFLAGS="-std=c++11 -O3"
+2) ./configure  CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L/path_to_sofa" CPPFLAGS="-I/path_to_sofa"
 3) make and make install
+
+Usage:
+1) use -h to see help
+3) set environment variable YMW16_DIR to $top_src/src/ymw16
+2) --template /path_to_fits_template ($top_src/include/template contains some examples).
+3) --candfile /path_to candfile, eg:
+   #id   dm acc  F0 F1 S/N
+   1  100   0  1000  0  10
+   2  200   0  1  0  100
