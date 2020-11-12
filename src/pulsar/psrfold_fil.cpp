@@ -70,6 +70,7 @@ int main(int argc, const char *argv[])
 			("srcname", value<string>()->default_value("PSRJ0000+00"), "Souce name")
 			("telescope", value<string>()->default_value("Fake"), "Telescope name")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
+			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
@@ -461,7 +462,10 @@ int main(int argc, const char *argv[])
 	obsinfo["Telescope"] = s_telescope;
 	//beam
 	stringstream ss_ibeam;
-    ss_ibeam << "cfbf" << setw(4) << setfill('0') << ibeam;
+	if (vm.count("incoherent"))
+    	ss_ibeam << "ifbf" << setw(5) << setfill('0') << ibeam;
+	else
+		ss_ibeam << "cfbf" << setw(5) << setfill('0') << ibeam;
     string s_ibeam = ss_ibeam.str();
 	obsinfo["Beam"] = s_ibeam;	
 	//data filename
@@ -480,7 +484,7 @@ int main(int argc, const char *argv[])
 	for (long int k=0; k<ncand; k++)
 	{
 		stringstream ss_id;
-		ss_id << setw(4) << setfill('0') << k+1;
+		ss_id << setw(5) << setfill('0') << k+1;
 		string s_id = ss_id.str();
 
 		writer.rootname = rootname + "_" + obsinfo["Date"] + "_" + s_ibeam + "_" + s_id;

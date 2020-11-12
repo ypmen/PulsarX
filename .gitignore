@@ -13,6 +13,7 @@ src/pulsar/psrfold
 src/pulsar/psrfold_fil
 src/ymw16/ymw16
 src/ymw16/ymw16_ne
+.vscode
 
 # http://www.gnu.org/software/automake
 
