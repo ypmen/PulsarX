@@ -16,3 +16,7 @@ Usage:
    #id   dm acc  F0 F1 S/N
    1  100   0  1000  0  10
    2  200   0  1  0  100
+
+Docker:
+1) docker pull ypmen/pulsarx
+2) docker build -t pulsarx - < Dockerfile
