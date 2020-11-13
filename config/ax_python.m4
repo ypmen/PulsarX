@@ -73,6 +73,9 @@ fi
 done
 if test x$ax_python_bin = x; then
    ax_python_bin=no
+else
+   PYTHON_BIN=$ax_python_bin
+   AC_SUBST(PYTHON_BIN)
 fi
 if test x$ax_python_header = x; then
    ax_python_header=no

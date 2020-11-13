@@ -48,6 +48,7 @@ int main(int argc, const char *argv[])
 {
     /* options */
 	int verbose = 0;
+	bool outbest = false;
 
 	options_description desc{"Options"};
 	desc.add_options()
@@ -62,7 +63,8 @@ int main(int argc, const char *argv[])
             ("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("nosearch", "Do not search dm,f0,f1")
 			("candfile", value<string>(), "Input cand file")
-            ("template", value<string>(), "Input fold template file")
+            ("outbest", "Dump original parameters and best parameters to text")
+			("template", value<string>(), "Input fold template file")
 			("nbin,b", value<int>()->default_value(64), "Number of bins per period")
 			("tsubint,L", value<double>()->default_value(1), "Time length per integration (s)")
 			("nsubband,n", value<int>()->default_value(32), "Number of subband")
@@ -104,6 +106,10 @@ int main(int argc, const char *argv[])
 	if (vm.count("verbose"))
 	{
 		verbose = 1;
+	}
+	if (vm.count("outbest"))
+	{
+		outbest = true;
 	}
 	if (vm.count("input") == 0)
 	{
@@ -516,7 +522,7 @@ int main(int argc, const char *argv[])
 
 #ifdef HAVE_PYTHON
 		Pulsar::PulsarPlot psrplot;
-		psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname);
+		psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname, outbest);
 #endif
 	}
 
@@ -560,6 +566,7 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
             dedisp.vdm.push_back(stod(parameters[1]));
             fdr.f0 = stod(parameters[3]);
             fdr.f1 = stod(parameters[4]);
+			fdr.snr = stod(parameters[5]);
 
             folder.push_back(fdr);
         }

@@ -126,6 +126,7 @@ namespace Pulsar
         double f0;
         double f1;
         double dm;
+        double snr;
     public:
         int nbin;
         int nchan;

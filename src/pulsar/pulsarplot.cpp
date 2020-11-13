@@ -6,6 +6,7 @@
  * @desc [description]
  */
 
+#include <fstream>
 #include <string.h>
 #include <sstream>
 
@@ -34,10 +35,10 @@ PulsarPlot::PulsarPlot(){}
 
 PulsarPlot::~PulsarPlot(){}
 
-void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname)
+void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool outbest)
 {
     stringstream ss_id;
-    ss_id << setw(4) << setfill('0') << id;
+    ss_id << setw(5) << setfill('0') << id;
     string s_id = ss_id.str();
 
     string basename = rootname + "_" + obsinfo["Date"] + "_" + obsinfo["Beam"] + "_" + s_id;
@@ -395,4 +396,37 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     plt::annotate(obsinfo["Filename"], 0.07, 0.97, {{"xycoords","figure fraction"}, {"annotation_clip", ""}, {"fontsize", "8"}});
 
     plt::save(figname);
+
+    /**
+     * @brief output best and old parameters to bestpar file
+     * 
+     */
+    if (outbest)
+    {
+        std::ofstream outfile;
+        outfile.open(rootname + "_" + obsinfo["Date"] + "_" + obsinfo["Beam"] + ".cands", ios_base::app);
+        /**
+         * @brief id    dm_old  dm_new  f0_old  f0_new  f1_old  f1_new  acc_old acc_new S/N_old S/N_new
+         * 
+         */
+
+        if (id == 1)
+        {
+            outfile<<"#id       dm_old     dm_new     f0_old     f0_new     f1_old     f1_new     acc_old        acc_new      S/N        S/N_new"<<endl;
+        }
+
+        outfile<<s_id<<"\t\t";
+        outfile<<archive.dm<<"\t\t";
+        outfile<<s_dm<<"\t\t";
+        outfile<<archive.f0<<"\t\t";
+        outfile<<s_f0<<"\t\t";
+        outfile<<archive.f1<<"\t\t";
+        outfile<<s_f1<<"\t\t";
+        outfile<<archive.f1/archive.f0*CONST_C<<"\t\t";
+        outfile<<s_acc<<"\t\t";
+        outfile<<archive.snr<<"\t\t";
+        outfile<<s_snr<<endl;
+        outfile.close();
+    }
+
 }

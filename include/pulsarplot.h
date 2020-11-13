@@ -21,7 +21,7 @@ namespace Pulsar
     public:
         PulsarPlot();
         ~PulsarPlot();
-        void plot(const DedispersionLite &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname);        
+        void plot(const DedispersionLite &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool outbest);        
     };
 }
 
