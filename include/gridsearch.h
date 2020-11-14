@@ -59,6 +59,7 @@ namespace Pulsar
         float get_chisq(vector<float> &pro);
         void get_snr_width(double &snr, double &width);
         void get_rms();
+        void subints_normalize();
     public:
         double df0start;
         double df0step;

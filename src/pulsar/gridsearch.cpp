@@ -151,6 +151,7 @@ void GridSearch::prepare(ArchiveLite &arch)
         }
     }
 
+    subints_normalize();
     get_rms();
 }
 
@@ -413,13 +414,13 @@ void GridSearch::get_snr_width(double &snr, double &width)
     }
 
     double tmp_mean = min/(nbin/2);
-    //double tmp_var = 0.;
+    // double tmp_var = 0.;
     // for (long int i=istart; i<iend; i++)
     // {
     //     double tmp = profile[i%nbin];
     //     tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
     // }
-    //tmp_var /= (nbin/2);
+    // tmp_var /= (nbin/2);
 
     for (long int i=0; i<nbin; i++)
     {
@@ -496,21 +497,67 @@ void GridSearch::get_rms()
             }
             tmp_var /= (nbin/2);
 
-            /**
-             * @brief normalize profiles
-             * 
-             */
-            if (tmp_var != 0)
-            {
-                for (long int i=0; i<nbin; i++)
-                {
-                    profiles[k*nchan*nbin+j*nbin+i] -= tmp_mean;
-                    profiles[k*nchan*nbin+j*nbin+i] /= tmp_var;
-                }
-            }
-
             mean += tmp_mean;
             var += tmp_var;
+        }
+    }
+}
+
+/**
+ * @brief normalize the subints
+ * 
+ */
+void GridSearch::subints_normalize()
+{
+    for (long int k=0; k<nsubint; k++)
+    {
+        double boxsum = 0.;
+        for (long int j=0; j<nchan; j++)
+        {
+            for (long int i=0; i<nbin/2; i++)
+            {
+                boxsum += profiles[k*nchan*nbin+j*nbin+i];
+            }
+        }
+        double min = boxsum;
+        long int istart = 0;
+        long int iend = nbin/2;
+
+        for (long int i=0; i<nbin; i++)
+        {
+            for (long int j=0; j<nchan; j++)
+            {
+                boxsum -= profiles[k*nchan*nbin+j*nbin+i];
+                boxsum += profiles[k*nchan*nbin+j*nbin+(i+nbin/2)%nbin];
+            }
+
+            if (boxsum < min)
+            {
+                min = boxsum;
+                istart = i+1;
+                iend = nbin/2+i+1;
+            }
+        }
+
+        double tmp_mean = min/((nbin/2)*nchan);
+        double tmp_var = 0.;
+        for (long int j=0; j<nchan; j++)
+        {
+            for (long int i=istart; i<iend; i++)
+            {
+                double tmp = profiles[k*nchan*nbin+j*nbin+i%nbin];
+                tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
+            }
+        }
+        tmp_var /= (nbin/2)*nchan;
+
+        for (long int j=0; j<nchan; j++)
+        {
+            for (long int i=0; i<nbin; i++)
+            {
+                profiles[k*nchan*nbin+j*nbin+i] -= tmp_mean;
+                profiles[k*nchan*nbin+j*nbin+i] /= sqrt(tmp_var);
+            }
         }
     }
 }
