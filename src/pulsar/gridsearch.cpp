@@ -413,18 +413,19 @@ void GridSearch::get_snr_width(double &snr, double &width)
     }
 
     double tmp_mean = min/(nbin/2);
-    double tmp_var = 0.;
-    for (long int i=istart; i<iend; i++)
-    {
-        double tmp = profile[i%nbin];
-        tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
-    }
-    tmp_var /= (nbin/2);
+    //double tmp_var = 0.;
+    // for (long int i=istart; i<iend; i++)
+    // {
+    //     double tmp = profile[i%nbin];
+    //     tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
+    // }
+    //tmp_var /= (nbin/2);
 
     for (long int i=0; i<nbin; i++)
     {
         profile[i] -= tmp_mean;
-        profile[i] /= sqrt(tmp_var);
+        //profile[i] /= sqrt(tmp_var);
+        profile[i] /= sqrt(var);
     }
 
     snr = 0.;
@@ -494,6 +495,19 @@ void GridSearch::get_rms()
                 tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
             }
             tmp_var /= (nbin/2);
+
+            /**
+             * @brief normalize profiles
+             * 
+             */
+            if (tmp_var != 0)
+            {
+                for (long int i=0; i<nbin; i++)
+                {
+                    profiles[k*nchan*nbin+j*nbin+i] -= tmp_mean;
+                    profiles[k*nchan*nbin+j*nbin+i] /= tmp_var;
+                }
+            }
 
             mean += tmp_mean;
             var += tmp_var;
