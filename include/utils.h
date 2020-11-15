@@ -219,7 +219,7 @@ inline void format_val_err(std::string &s_val_err, T val, T err, const std::stri
             }
             else
             {
-                int n = -floor(log10(val))+1;
+                int n = -floor(log10(abs(val)))+1;
                 ss_val<<fixed<<setprecision(n)<<val;
                 ss_err<<fixed<<setprecision(0)<<err*pow(10, n);
             }

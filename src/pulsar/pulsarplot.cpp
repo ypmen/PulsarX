@@ -183,6 +183,9 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     err_f0 = sqrt(12)*toaerr*f0/obslen;
     err_f1 = sqrt(320)*toaerr*f0/(obslen*obslen);
     err_dm = 1./4.148741601e3*(vf[0]*vf.back())/sqrt((vf[0]/vf.back()+vf.back()/vf[0]+1)/3.-1)*toaerr;
+    
+    if (abs(f1)<1000*err_f1) f1 = 0.;
+    
     double p0 = 1/f0;
     double p1 = -f1/(f0*f0);
     double err_p0 = abs(err_f0/(f0*f0));
@@ -282,9 +285,19 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
                       {"labelbottom", "on"}, {"labeltop", ""}, {"labelleft", "on"}, {"labelright", ""}});
     plt::twinx();
     vector<double> vfid(nchan);
-    for (long int i=0; i<nchan; i++)
+    if (vf[1]<vf[0])
     {
-        vfid[i] = nchan-1-i;
+        for (long int i=0; i<nchan; i++)
+        {
+            vfid[i] = nchan-1-i;
+        }
+    }
+    else
+    {
+        for (long int i=0; i<nchan; i++)
+        {
+            vfid[i] = i;
+        }        
     }
     plt::pcolormesh(vph, vfid, mxfph);
     //plt::ylabel("Index");
@@ -304,9 +317,19 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
                       {"labelbottom", "on"}, {"labeltop", ""}, {"labelleft", "on"}, {"labelright", ""}});
     plt::twinx();
     vector<double> vtid(nsubint);
-    for (long int i=0; i<nsubint; i++)
+    if (vt[1] > vt[0])
     {
-        vtid[i] = nsubint-1-i;
+        for (long int i=0; i<nsubint; i++)
+        {
+            vtid[i] = i;
+        }    
+    }
+    else
+    {
+        for (long int i=0; i<nsubint; i++)
+        {
+            vtid[i] = nsubint-1-i;
+        }
     }
     plt::pcolormesh(vph, vtid, mxtph);
     //plt::ylabel("Index");

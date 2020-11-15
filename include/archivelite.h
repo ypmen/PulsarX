@@ -114,7 +114,14 @@ namespace Pulsar
             long int phi = floor(f0*t+0.5*f1*t*t);
             long double tepoch = 0.;
             if (f1 != 0)
-                tepoch = (sqrt(f0*f0+2*f1*phi)-f0)/f1;
+            {
+                if (phi > 0)
+                    tepoch = (sqrt(f0*f0+2*f1*phi)-f0)/f1;
+                else if (phi < 0)
+                    tepoch = (-sqrt(f0*f0+2*f1*phi)-f0)/f1;
+                else
+                    tepoch = 0.;
+            }
             else
                 tepoch = phi/f0;
 
