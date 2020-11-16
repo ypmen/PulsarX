@@ -77,6 +77,7 @@ int main(int argc, const char *argv[])
 			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
+			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
 			("bandlimitKT", value<double>()->default_value(10), "Band limit of RFI kadaneT (MHz)")
@@ -421,6 +422,8 @@ int main(int argc, const char *argv[])
 		gridsearch[k].df1start = -3*2./(tint*tint);
 		gridsearch[k].df1step = 1./3*abs(gridsearch[k].df1start/folder[k].nbin);
 		gridsearch[k].ndf1 = 6*folder[k].nbin;
+
+		gridsearch[k].clfd_q = vm["clfd"].as<double>();
 
 		gridsearch[k].prepare(folder[k]);
 		

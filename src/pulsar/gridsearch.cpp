@@ -35,6 +35,8 @@ GridSearch::GridSearch()
     ddmstart = 0.;
     ddmstep = 0.;
     nddm = 0;
+    clfd_q = -1.;
+
     nsubint = 0;
     nchan = 0;
     nbin = 0;
@@ -73,6 +75,7 @@ GridSearch::GridSearch(const GridSearch &gridsearch)
     ddmstart = gridsearch.ddmstart;
     ddmstep = gridsearch.ddmstep;
     nddm = gridsearch.nddm;
+    clfd_q = gridsearch.clfd_q;
     nsubint = gridsearch.nsubint;
     nchan = gridsearch.nchan;
     nbin = gridsearch.nbin;
@@ -118,6 +121,7 @@ GridSearch & GridSearch::operator=(const GridSearch &gridsearch)
     ddmstart = gridsearch.ddmstart;
     ddmstep = gridsearch.ddmstep;
     nddm = gridsearch.nddm;
+    clfd_q = gridsearch.clfd_q;
     nsubint = gridsearch.nsubint;
     nchan = gridsearch.nchan;
     nbin = gridsearch.nbin;
@@ -188,7 +192,8 @@ void GridSearch::prepare(ArchiveLite &arch)
         }
     }
 
-    clfd();
+    if (clfd_q > 0)
+        clfd();
     subints_normalize();
     get_rms();
 }
@@ -659,12 +664,9 @@ void GridSearch::clfd()
     std::nth_element(tfstd_sort.begin(), tfstd_sort.begin()+nsubint*nchan/4, tfstd_sort.end(), std::greater<float>());
     float Q3 = tfstd_sort[nsubint*nchan/4];
 
-    float q = 1.5;
     float R = Q3-Q1;
-    float vmin = Q1-q*R;
-    float vmax = Q3+q*R;
-
-    cout<<Q1<<" "<<Q3<<endl;
+    float vmin = Q1-clfd_q*R;
+    float vmax = Q3+clfd_q*R;
 
     for (long int k=0; k<nsubint; k++)
     {

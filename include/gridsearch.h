@@ -73,6 +73,7 @@ namespace Pulsar
         double ddmstart;
         double ddmstep;
         int nddm;
+        double clfd_q;
     public:
         double f0;
         double f1;
