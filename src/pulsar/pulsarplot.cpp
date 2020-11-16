@@ -198,7 +198,6 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
 
     std::string s_ymw16_maxdm, s_ymw16_dist;
 
-#ifdef HAVE_YMW16
     std::stringstream ss_ymw16_maxdm;
     ss_ymw16_maxdm<<fixed<<setprecision(1)<<stod(obsinfo["MaxDM_YMW16"]);
     s_ymw16_maxdm = ss_ymw16_maxdm.str();
@@ -206,7 +205,6 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     std::stringstream ss_ymw16_dist;
     ss_ymw16_dist<<fixed<<setprecision(1)<<stod(obsinfo["Dist_YMW16"]);
     s_ymw16_dist = ss_ymw16_dist.str();
-#endif
 
     //DM smearing
     double dmsmear_phase = abs(DedispersionLite::dmdelay(dm, dedisp.frequencies[0], dedisp.frequencies.back()))/dedisp.nchans*f0;

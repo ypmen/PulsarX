@@ -671,8 +671,6 @@ void get_gl_gb(double &gl, double &gb, const std::string &s_ra, const std::strin
 }
 #endif
 
-#define HAVE_YMW16 1
-#ifdef HAVE_YMW16
 #include "cn.h"
 /**
  * @brief Get the maxdm ymw16 lib
@@ -727,8 +725,6 @@ double get_dist_ymw16(double gl, double gb, double dm)
     
     return ymw16_dist;
 }
-
-#endif
 
 template bool get_error_from_chisq_matrix<float>(float &xerr, float &yerr, vector<float> &x, vector<float> &y, vector<float> &mxchisq);
 template bool get_error_from_chisq_matrix<float>(float &xerr, vector<float> &x, vector<float> &vchisq);

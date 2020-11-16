@@ -491,9 +491,8 @@ int main(int argc, const char *argv[])
 	obsinfo["GB"] = to_string(gb);
 
 	double ymw16_maxdm = 0.;
-#ifdef HAVE_YMW16
 	ymw16_maxdm = get_maxdm_ymw16(gl, gb);
-#endif
+	
 	obsinfo["MaxDM_YMW16"] = to_string(ymw16_maxdm);
 
 	std::ofstream outfile;
