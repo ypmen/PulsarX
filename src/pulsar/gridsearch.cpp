@@ -638,6 +638,10 @@ void GridSearch::subints_normalize()
  */
 void GridSearch::clfd()
 {
+    /**
+     * @brief apply to time-phase image
+     * 
+     */
     vector<float> tfstd(nsubint*nchan, 0.);
     vector<float> tfstd_sort(nsubint*nchan, 0.);
     for (long int k=0; k<nsubint; k++)
@@ -673,6 +677,118 @@ void GridSearch::clfd()
         for (long int j=0; j<nchan; j++)
         {
             if (tfstd[k*nchan+j]<vmin or tfstd[k*nchan+j]>vmax)
+            {
+                for (long int i=0; i<nbin; i++)
+                {
+                    profiles[k*nchan*nbin+j*nbin+i] = 0.;
+                }
+            }
+        }
+    }
+
+    /**
+     * @brief apply to time
+     * 
+     */
+
+    vector<float> tstd(nsubint, 0.);
+    vector<float> tstd_sort(nsubint, 0.);
+
+    for (long int k=0; k<nsubint; k++)
+    {
+        vector<float> tmppro(nbin, 0.);
+        for (long int j=0; j<nchan; j++)
+        {
+            for (long int i=0; i<nbin; i++)
+            {
+                tmppro[i] += profiles[k*nchan*nbin+j*nbin+i];
+            }
+        }
+
+        float tmpmean = 0.;
+        float tmpvar = 0.;
+        for (long int i=0; i<nbin; i++)
+        {
+            tmpmean += tmppro[i];
+            tmpvar += tmppro[i]*tmppro[i];
+        }
+        tmpmean /= nbin;
+        tmpvar /= nbin;
+        tmpvar -= tmpmean*tmpmean;
+
+        tstd_sort[k] = tstd[k] = sqrt(tmpvar);
+    }
+
+    std::nth_element(tstd_sort.begin(), tstd_sort.begin()+nsubint/4, tstd_sort.end(), std::less<float>());
+    Q1 = tstd_sort[nsubint/4];
+    std::nth_element(tstd_sort.begin(), tstd_sort.begin()+nsubint/4, tstd_sort.end(), std::greater<float>());
+    Q3 = tstd_sort[nsubint/4];
+
+    R = Q3-Q1;
+    vmin = Q1-clfd_q*R;
+    vmax = Q3+clfd_q*R;
+
+    for (long int k=0; k<nsubint; k++)
+    {
+        if (tstd[k]<vmin or tstd[k]>vmax)
+        {
+            for (long int j=0; j<nchan; j++)
+            {
+                for (long int i=0; i<nbin; i++)
+                {
+                    profiles[k*nchan*nbin+j*nbin+i] = 0.;
+                }
+            }
+        }
+    }
+
+    /**
+     * @brief apply to frequency
+     * 
+     */
+
+    vector<float> fstd(nchan, 0.);
+    vector<float> fstd_sort(nchan, 0.);
+
+    for (long int j=0; j<nchan; j++)
+    {
+        vector<float> tmppro(nbin, 0.);
+        for (long int k=0; k<nsubint; k++)
+        {
+            for (long int i=0; i<nbin; i++)
+            {
+                tmppro[i] += profiles[k*nchan*nbin+j*nbin+i];
+            }
+        }
+
+        float tmpmean = 0.;
+        float tmpvar = 0.;
+        for (long int i=0; i<nbin; i++)
+        {
+            tmpmean += tmppro[i];
+            tmpvar += tmppro[i]*tmppro[i];
+        }
+        tmpmean /= nbin;
+        tmpvar /= nbin;
+        tmpvar -= tmpmean*tmpmean;
+
+        fstd_sort[j] = fstd[j] = sqrt(tmpvar);
+    }
+
+    std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nsubint/4, fstd_sort.end(), std::less<float>());
+    Q1 = fstd_sort[nchan/4];
+    std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nsubint/4, fstd_sort.end(), std::greater<float>());
+    Q3 = fstd_sort[nchan/4];
+
+    R = Q3-Q1;
+    vmin = Q1-clfd_q*R;
+    vmax = Q3+clfd_q*R;
+
+    for (long int k=0; k<nsubint; k++)
+    {
+        for (long int j=0; j<nchan; j++)
+        {
+            if (fstd[j]<vmin or fstd[j]>vmax)
             {
                 for (long int i=0; i<nbin; i++)
                 {
