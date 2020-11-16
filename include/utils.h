@@ -8,6 +8,8 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#include "config.h"
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -248,5 +250,9 @@ inline void get_rad_radec(const std::string &s_ra, const std::string &s_dec, dou
     ra = (stod(hhmmss[0])*15. + stod(hhmmss[1])/60. + stod(hhmmss[2])/3600.)/180.*M_PI;
     dec = (stod(ddmmss[0]) + stod(ddmmss[1])/60. + stod(ddmmss[2])/3600.)/180.*M_PI;
 }
+
+void get_gl_gb(double &gl, double &gb, const std::string &s_ra, const std::string &s_dec);
+double get_maxdm_ymw16(double gl, double gb);
+double get_dist_ymw16(double gl, double gb, double dm);
 
 #endif /* UTILS_H_ */

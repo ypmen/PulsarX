@@ -64,6 +64,8 @@ int main(int argc, const char *argv[])
             ("f0", value<double>()->default_value(0), "F0 (Hz)")
             ("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("nosearch", "Do not search dm,f0,f1")
+			("noplot", "Do not generate figures")
+			("noarch", "Do not generate archives")
 			("candfile", value<string>(), "Input cand file")
 			("template", value<string>(), "Input fold template file")
 			("nbin,b", value<int>()->default_value(64), "Number of bins per period")
@@ -119,6 +121,8 @@ int main(int argc, const char *argv[])
 	}
 
 	bool nosearch = vm.count("nosearch");
+	bool noplot = vm.count("noplot");
+	bool noarch = vm.count("noarch");
 	bool contiguous = vm.count("cont");
     string rootname = vm["rootname"].as<string>();
 	string src_name = vm["srcname"].as<string>();
@@ -479,19 +483,34 @@ int main(int argc, const char *argv[])
 	//observation length
 	obsinfo["Obslen"] = to_string(tint);
 
-	ArchiveWriter writer;
-    writer.template_file = vm["template"].as<string>();
-    writer.mode = Integration::FOLD;
-    writer.ibeam = 1;
-    writer.src_name = src_name;
-	writer.ra = s_ra;
-	writer.dec = s_dec;
+	double gl = 0., gb = 0.;
+#ifdef HAVE_SOFA
+	get_gl_gb(gl, gb, s_ra, s_dec);
+#endif
+	obsinfo["GL"] = to_string(gl);
+	obsinfo["GB"] = to_string(gb);
+
+	double ymw16_maxdm = 0.;
+#ifdef HAVE_YMW16
+	ymw16_maxdm = get_maxdm_ymw16(gl, gb);
+#endif
+	obsinfo["MaxDM_YMW16"] = to_string(ymw16_maxdm);
 
 	std::ofstream outfile;
     outfile.open(rootname + "_" + obsinfo["Date"] + "_" + s_ibeam + ".cands");
 
-	outfile<<"#id       dm_old      dm_new      dm_err     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
-	outfile<<"#pepoch "<<fixed<<setprecision(15)<<folder[0].ref_epoch.to_day()<<endl;
+	outfile<<"#Filename "<<obsinfo["Filename"]<<endl;
+	outfile<<"#Telescope "<<obsinfo["Telescope"]<<endl;
+	outfile<<"#Source_name "<<obsinfo["Source_name"]<<endl;
+	outfile<<"#Beam "<<obsinfo["Beam"]<<endl;
+	outfile<<"#Date "<<obsinfo["Date"]<<endl;
+	outfile<<"#RA "<<obsinfo["RA"]<<endl;
+	outfile<<"#DEC "<<obsinfo["DEC"]<<endl;
+	outfile<<"#GL "<<obsinfo["GL"]<<endl;
+	outfile<<"#GB "<<obsinfo["GB"]<<endl;
+	outfile<<"#MaxDM_YMW16 "<<obsinfo["MaxDM_YMW16"]<<endl;
+	outfile<<"#Pepoch "<<fixed<<setprecision(15)<<folder[0].ref_epoch.to_day()<<endl;
+	outfile<<"#id       dm_old      dm_new      dm_err		dist_ymw16     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
 
 	for (long int k=0; k<ncand; k++)
 	{
@@ -499,14 +518,25 @@ int main(int argc, const char *argv[])
 		ss_id << setw(5) << setfill('0') << k+1;
 		string s_id = ss_id.str();
 
-		writer.rootname = rootname + "_" + obsinfo["Date"] + "_" + s_ibeam + "_" + s_id;
+		if (!noarch)
+		{
+			ArchiveWriter writer;
+			writer.template_file = vm["template"].as<string>();
+			writer.mode = Integration::FOLD;
+			writer.ibeam = 1;
+			writer.src_name = src_name;
+			writer.ra = s_ra;
+			writer.dec = s_dec;
+			writer.rootname = rootname + "_" + obsinfo["Date"] + "_" + s_ibeam + "_" + s_id;
 
-		writer.prepare(folder[k], gridsearch[k]);
-		writer.run(folder[k], gridsearch[k]);
-		writer.close();
+			writer.prepare(folder[k], gridsearch[k]);
+			writer.run(folder[k], gridsearch[k]);
+		}
 
 		gridsearch[k].get_snr_width();
 		gridsearch[k].get_error(obsinfo);
+
+		double ymw16_dist = get_dist_ymw16(gl, gb, gridsearch[k].dm);
 
 		/**
 		 * @brief output best and old parameters to bestpar file
@@ -521,6 +551,7 @@ int main(int argc, const char *argv[])
 		outfile<<fixed<<setprecision(8)<<folder[k].dm<<"\t\t";
 		outfile<<fixed<<setprecision(8)<<gridsearch[k].dm<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_dm<<"\t\t";
+		outfile<<fixed<<setprecision(1)<<ymw16_dist<<"\t\t";
 		outfile<<setprecision(15)<<folder[k].f0<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].f0<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_f0<<"\t\t";
@@ -534,8 +565,12 @@ int main(int argc, const char *argv[])
 		outfile<<fixed<<setprecision(5)<<gridsearch[k].snr<<endl;
 
 #ifdef HAVE_PYTHON
-		Pulsar::PulsarPlot psrplot;
-		psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname);
+		if (!noplot)
+		{
+			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
+			Pulsar::PulsarPlot psrplot;
+			psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname);
+		}
 #endif
 	}
 

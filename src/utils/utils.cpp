@@ -651,6 +651,85 @@ bool get_error_from_chisq_matrix(T &xerr, vector<T> &x, vector<T> &vchisq)
     return true;
 }
 
+#ifdef HAVE_SOFA
+#include "sofa.h"
+/**
+ * @brief calculate source GB and GL using sofa lib 
+ * 
+ * @param gl : deg
+ * @param gb : deg
+ * @param s_ra: 00:00:00
+ * @param s_dec: 00:00:00
+ */
+void get_gl_gb(double &gl, double &gb, const std::string &s_ra, const std::string &s_dec)
+{
+    double ra=0., dec=0.;
+    get_rad_radec(s_ra, s_dec, ra, dec);
+    iauIcrs2g(ra, dec, &gl, &gb);
+    gl *= 180./M_PI;
+    gb *= 180./M_PI;
+}
+#endif
+
+#define HAVE_YMW16 1
+#ifdef HAVE_YMW16
+#include "cn.h"
+/**
+ * @brief Get the maxdm ymw16 lib
+ * 
+ * @param gl: degree
+ * @param gb: degree
+ * @return maxdm : pc/cc
+ */
+double get_maxdm_ymw16(double gl, double gb)
+{
+    double ymw16_maxdm = 0.;
+    
+    if (std::getenv("YMW16_DIR") == NULL)
+    {
+        std::cerr<<"Warning: environment variable YMW16_DIR not set. DM YMW16 and Distance YMW16 will not be calculated."<<endl;
+    }
+    else
+    {
+        char dirname[1024];
+        std::strcpy(dirname, std::getenv("YMW16_DIR"));
+        char text[1024]="\0";
+
+        ymw16_maxdm = dmdtau(gl, gb, 1e6, 0, 2, 1, 0, dirname, text);    
+    }
+    
+    return ymw16_maxdm;
+}
+/**
+ * @brief Get the dist ymw16 lib
+ * 
+ * @param gl : degree
+ * @param gb : degree
+ * @param dm : pc/cc
+ * @return dist : pc
+ */
+double get_dist_ymw16(double gl, double gb, double dm)
+{
+    double ymw16_dist = 0.;
+    
+    if (std::getenv("YMW16_DIR") == NULL)
+    {
+        std::cerr<<"Warning: environment variable YMW16_DIR not set. DM YMW16 and Distance YMW16 will not be calculated."<<endl;
+    }
+    else
+    {
+        char dirname[1024];
+        std::strcpy(dirname, std::getenv("YMW16_DIR"));
+        char text[1024]="\0";
+
+        ymw16_dist = dmdtau(gl, gb, dm, 0, 1, 1, 0, dirname, text);
+    }
+    
+    return ymw16_dist;
+}
+
+#endif
+
 template bool get_error_from_chisq_matrix<float>(float &xerr, float &yerr, vector<float> &x, vector<float> &y, vector<float> &mxchisq);
 template bool get_error_from_chisq_matrix<float>(float &xerr, vector<float> &x, vector<float> &vchisq);
 template bool get_error_from_chisq_matrix<double>(double &xerr, double &yerr, vector<double> &x, vector<double> &y, vector<double> &mxchisq);

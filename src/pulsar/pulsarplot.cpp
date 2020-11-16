@@ -12,16 +12,6 @@
 
 #include "config.h"
 
-#define HAVE_YMW16 1
-
-#ifdef HAVE_SOFA
-    #include "sofa.h"
-#endif
-
-#ifdef HAVE_YMW16
-    #include "cn.h"
-#endif
-
 #include "constants.h"
 #include "pulsarplot.h"
 #include "matplotlibcpp.h"
@@ -200,48 +190,22 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     ss_snr<<fixed<<setprecision(2)<<snr;
     s_snr = ss_snr.str();
 
-    /**
-     * @brief calculate source GB and GL using sofa lib 
-     * 
-     */
     std::string s_gl, s_gb;
-    std::string s_ymw16_maxdm, s_ymw16_dist;
 #ifdef HAVE_SOFA
-    double ra=0., dec=0.;
-    get_rad_radec(obsinfo["RA"], obsinfo["DEC"], ra, dec);
-    double gl=0., gb=0.;
-    iauIcrs2g(ra, dec, &gl, &gb);
-    s_gl = to_string(gl/M_PI*180.);
-    s_gb = to_string(gb/M_PI*180.);
-
-    /**
-     * @brief get maximum DM and distance along line of sight based ymw16
-     * 
-     */
-#ifdef HAVE_YMW16
-    if (std::getenv("YMW16_DIR") == NULL)
-    {
-        std::cerr<<"Warning: environment variable YMW16_DIR not set. DM YMW16 and Distance YMW16 will not be calculated."<<endl;
-    }
-    else
-    {
-        char dirname[1024];
-        std::strcpy(dirname, std::getenv("YMW16_DIR"));
-        char text[1024]="\0";
-        double ymw16_maxdm = dmdtau(gl/M_PI*180., gb/M_PI*180., 1e6, 0, 2, 1, 0, dirname, text);
-        double ymw16_dist = dmdtau(gl/M_PI*180., gb/M_PI*180., dm, 0, 1, 1, 0, dirname, text);
-        
-        std::stringstream ss_ymw16_maxdm;
-        ss_ymw16_maxdm<<fixed<<setprecision(1)<<ymw16_maxdm;
-        s_ymw16_maxdm = ss_ymw16_maxdm.str();
-
-        std::stringstream ss_ymw16_dist;
-        ss_ymw16_dist<<fixed<<setprecision(1)<<ymw16_dist;
-        s_ymw16_dist = ss_ymw16_dist.str();
-    }
+    s_gl = obsinfo["GL"];
+    s_gb = obsinfo["GB"];
 #endif
-#else
-    cerr<<"Warning: Sofa lib not found! GB and GL can will not be calculated!"<<endl;
+
+    std::string s_ymw16_maxdm, s_ymw16_dist;
+
+#ifdef HAVE_YMW16
+    std::stringstream ss_ymw16_maxdm;
+    ss_ymw16_maxdm<<fixed<<setprecision(1)<<stod(obsinfo["MaxDM_YMW16"]);
+    s_ymw16_maxdm = ss_ymw16_maxdm.str();
+
+    std::stringstream ss_ymw16_dist;
+    ss_ymw16_dist<<fixed<<setprecision(1)<<stod(obsinfo["Dist_YMW16"]);
+    s_ymw16_dist = ss_ymw16_dist.str();
 #endif
 
     //DM smearing
