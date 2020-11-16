@@ -188,6 +188,7 @@ void GridSearch::prepare(ArchiveLite &arch)
         }
     }
 
+    clfd();
     subints_normalize();
     get_rms();
 }
@@ -562,6 +563,8 @@ void GridSearch::get_rms()
             var += tmp_var;
         }
     }
+
+    var = var==0? 1:var;
 }
 
 /**
@@ -611,6 +614,7 @@ void GridSearch::subints_normalize()
             }
         }
         tmp_var /= (nbin/2)*nchan;
+        tmp_var = tmp_var==0? 1:tmp_var;
 
         for (long int j=0; j<nchan; j++)
         {
@@ -618,6 +622,60 @@ void GridSearch::subints_normalize()
             {
                 profiles[k*nchan*nbin+j*nbin+i] -= tmp_mean;
                 profiles[k*nchan*nbin+j*nbin+i] /= sqrt(tmp_var);
+            }
+        }
+    }
+}
+
+/**
+ * @brief remove rfi based on clfd
+ * 
+ */
+void GridSearch::clfd()
+{
+    vector<float> tfstd(nsubint*nchan, 0.);
+    vector<float> tfstd_sort(nsubint*nchan, 0.);
+    for (long int k=0; k<nsubint; k++)
+    {
+        for (long int j=0; j<nchan; j++)
+        {
+            float tmpvar = 0.;
+            float tmpmean = 0.;
+            for (long int i=0; i<nbin; i++)
+            {
+                float tmp = profiles[k*nchan*nbin+j*nbin+i];
+                tmpmean += tmp;
+                tmpvar += tmp*tmp;
+            }
+            tmpmean /= nbin;
+            tmpvar /= nbin;
+            tmpvar -= tmpmean*tmpmean;
+            tfstd_sort[k*nchan+j] = tfstd[k*nchan+j] = sqrt(tmpvar);
+        }
+    }
+
+    std::nth_element(tfstd_sort.begin(), tfstd_sort.begin()+nsubint*nchan/4, tfstd_sort.end(), std::less<float>());
+    float Q1 = tfstd_sort[nsubint*nchan/4];
+    std::nth_element(tfstd_sort.begin(), tfstd_sort.begin()+nsubint*nchan/4, tfstd_sort.end(), std::greater<float>());
+    float Q3 = tfstd_sort[nsubint*nchan/4];
+
+    float q = 1.5;
+    float R = Q3-Q1;
+    float vmin = Q1-q*R;
+    float vmax = Q3+q*R;
+
+    cout<<Q1<<" "<<Q3<<endl;
+
+    for (long int k=0; k<nsubint; k++)
+    {
+        for (long int j=0; j<nchan; j++)
+        {
+            if (tfstd[k*nchan+j]<vmin or tfstd[k*nchan+j]>vmax)
+            {
+                for (long int i=0; i<nbin; i++)
+                {
+                    profiles[k*nchan*nbin+j*nbin+i] = 0.;
+                }
             }
         }
     }
