@@ -35,7 +35,7 @@ PulsarPlot::PulsarPlot(){}
 
 PulsarPlot::~PulsarPlot(){}
 
-void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool outbest)
+void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname)
 {
     stringstream ss_id;
     ss_id << setw(5) << setfill('0') << id;
@@ -71,9 +71,20 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     mxfph.resize(nchan*nbin*2, 0.);
     mxsnr_ffdot.resize(nf1*nf0, 0.);
 
-    double snr = 0.;
-    double width = 0.;
-    gridsearch.get_snr_width(snr, width);
+    double snr = gridsearch.snr;
+    double width = gridsearch.width;
+    double f0 = gridsearch.f0;
+    double f1 = gridsearch.f1;
+    double dm = gridsearch.dm;
+    double err_f0 = gridsearch.err_f0;
+    double err_f1 = gridsearch.err_f1;
+    double err_dm = gridsearch.err_dm;
+    double p0 = gridsearch.p0;
+    double p1 = gridsearch.p1;
+    double err_p0 = gridsearch.err_p0;
+    double err_p1 = gridsearch.err_p1;
+    double acc = gridsearch.acc;
+    double err_acc = gridsearch.err_acc;
 
     for (long int i=0; i<2*nbin; i++)
     {
@@ -172,26 +183,6 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
         //vsnr_f1[k1] /= nf0;
         vsnr_f1[k1] = mxsnr_ffdot[k1*nf0+if0];
     }
-
-    /** get error f0,f1,p0,p1,a */
-    double obslen = stod(obsinfo["Obslen"]);
-    double f0 = gridsearch.f0;
-    double f1 = gridsearch.f1;
-    double dm = gridsearch.dm;
-    double err_f0=0., err_f1=0., err_dm=0.;
-    double toaerr = width/(pow(M_PI, 0.25)*snr);
-    err_f0 = sqrt(12)*toaerr*f0/obslen;
-    err_f1 = sqrt(320)*toaerr*f0/(obslen*obslen);
-    err_dm = 1./4.148741601e3*(vf[0]*vf.back())/sqrt((vf[0]/vf.back()+vf.back()/vf[0]+1)/3.-1)*toaerr;
-    
-    if (abs(f1)<1000*err_f1) f1 = 0.;
-    
-    double p0 = 1/f0;
-    double p1 = -f1/(f0*f0);
-    double err_p0 = abs(err_f0/(f0*f0));
-    double err_p1 = abs(err_f1/(f0*f0));
-    double acc = f1/f0*CONST_C;
-    double err_acc = abs((err_f1*f0-err_f0*f1)/(f0*f0)*CONST_C);
 
     /**
      * @brief format print the parameters
@@ -419,37 +410,4 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     plt::annotate(obsinfo["Filename"], 0.07, 0.97, {{"xycoords","figure fraction"}, {"annotation_clip", ""}, {"fontsize", "8"}});
 
     plt::save(figname);
-
-    /**
-     * @brief output best and old parameters to bestpar file
-     * 
-     */
-    if (outbest)
-    {
-        std::ofstream outfile;
-        outfile.open(rootname + "_" + obsinfo["Date"] + "_" + obsinfo["Beam"] + ".cands", ios_base::app);
-        /**
-         * @brief id    dm_old  dm_new  f0_old  f0_new  f1_old  f1_new  acc_old acc_new S/N_old S/N_new
-         * 
-         */
-
-        if (id == 1)
-        {
-            outfile<<"#id       dm_old     dm_new     f0_old     f0_new     f1_old     f1_new     acc_old        acc_new      S/N        S/N_new"<<endl;
-        }
-
-        outfile<<s_id<<"\t\t";
-        outfile<<archive.dm<<"\t\t";
-        outfile<<s_dm<<"\t\t";
-        outfile<<archive.f0<<"\t\t";
-        outfile<<s_f0<<"\t\t";
-        outfile<<archive.f1<<"\t\t";
-        outfile<<s_f1<<"\t\t";
-        outfile<<archive.f1/archive.f0*CONST_C<<"\t\t";
-        outfile<<s_acc<<"\t\t";
-        outfile<<archive.snr<<"\t\t";
-        outfile<<s_snr<<endl;
-        outfile.close();
-    }
-
 }

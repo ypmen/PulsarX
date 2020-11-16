@@ -35,6 +35,7 @@
 #include "psrfits.h"
 #include "mjd.h"
 #include "utils.h"
+#include "constants.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -508,6 +509,11 @@ int main(int argc, const char *argv[])
 	writer.ra = s_ra;
 	writer.dec = s_dec;
 
+	std::ofstream outfile;
+    outfile.open(rootname + "_" + obsinfo["Date"] + "_" + s_ibeam + ".cands");
+	
+	outfile<<"#id       dm_old      dm_new      dm_err     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
+
 	for (long int k=0; k<ncand; k++)
 	{
 		stringstream ss_id;
@@ -520,11 +526,44 @@ int main(int argc, const char *argv[])
 		writer.run(folder[k], gridsearch[k]);
 		writer.close();
 
+		gridsearch[k].get_snr_width();
+		gridsearch[k].get_error(obsinfo);
+
+		/**
+		 * @brief output best and old parameters to bestpar file
+		 * 
+		 */
+		if (outbest)
+		{
+			/**
+			 * @brief id    dm_old  dm_new  f0_old  f0_new  f1_old  f1_new  acc_old acc_new S/N_old S/N_new
+			 * 
+			 */
+
+			outfile<<k+1<<"\t\t";
+			outfile<<folder[k].dm<<"\t\t";
+			outfile<<gridsearch[k].dm<<"\t\t";
+			outfile<<gridsearch[k].err_dm<<"\t\t";
+			outfile<<folder[k].f0<<"\t\t";
+			outfile<<gridsearch[k].f0<<"\t\t";
+			outfile<<gridsearch[k].err_f0<<"\t\t";
+			outfile<<folder[k].f1<<"\t\t";
+			outfile<<gridsearch[k].f1<<"\t\t";
+			outfile<<gridsearch[k].err_f1<<"\t\t";
+			outfile<<folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
+			outfile<<gridsearch[k].acc<<"\t\t";
+			outfile<<gridsearch[k].err_acc<<"\t\t";
+			outfile<<folder[k].snr<<"\t\t";
+			outfile<<gridsearch[k].snr<<endl;
+		}
+
 #ifdef HAVE_PYTHON
 		Pulsar::PulsarPlot psrplot;
-		psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname, outbest);
+		psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname);
 #endif
 	}
+
+	outfile.close();
 
 	if (verbose)
 	{

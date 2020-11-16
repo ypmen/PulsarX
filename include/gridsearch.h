@@ -10,6 +10,7 @@
 #define GRIDSEARCH
 
 #include <vector>
+#include <map>
 
 #include "archivelite.h"
 
@@ -57,7 +58,8 @@ namespace Pulsar
         }
     public:
         float get_chisq(vector<float> &pro);
-        void get_snr_width(double &snr, double &width);
+        void get_snr_width();
+        void get_error(std::map<std::string, std::string> &obsinfo);
         void get_rms();
         void subints_normalize();
     public:
@@ -91,6 +93,22 @@ namespace Pulsar
         vector<double> profile;
         vector<float> mxsnr_ffdot; 
         vector<float> vsnr_dm;
+    /**
+     * @brief derived parameters
+     * 
+     */
+    public:
+        double snr;
+        double width;
+        double p0;
+        double p1;
+        double acc;
+        double err_f0;
+        double err_f1;
+        double err_p0;
+        double err_p1;
+        double err_dm;
+        double err_acc;
     };
 }
 

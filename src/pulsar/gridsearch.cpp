@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "constants.h"
 #include "dedisperse.h"
 #include "gridsearch.h"
 #include "dedispersionlite.h"
@@ -39,6 +40,18 @@ GridSearch::GridSearch()
     nbin = 0;
     mean = 0.;
     var = 0.;
+
+    snr = 0.;
+    width = 0.;
+    p0 = 0.;
+    p1 = 0.;
+    acc = 0.;
+    err_f0 = 0.;
+    err_f1 = 0.;
+    err_p0 = 0.;
+    err_p1 = 0.;
+    err_dm = 0.;
+    err_acc = 0.;
 }
 
 GridSearch::GridSearch(const GridSearch &gridsearch)
@@ -72,6 +85,18 @@ GridSearch::GridSearch(const GridSearch &gridsearch)
     profile = gridsearch.profile;
     mxsnr_ffdot = gridsearch.mxsnr_ffdot;
     vsnr_dm = gridsearch.vsnr_dm;
+
+    snr = gridsearch.snr;
+    width = gridsearch.width;
+    p0 = gridsearch.p0;
+    p1 = gridsearch.p1;
+    acc = gridsearch.acc;
+    err_f0 = gridsearch.err_f0;
+    err_f1 = gridsearch.err_f1;
+    err_p0 = gridsearch.err_p0;
+    err_p1 = gridsearch.err_p1;
+    err_dm = gridsearch.err_dm;
+    err_acc = gridsearch.err_dm;
 }
 
 GridSearch & GridSearch::operator=(const GridSearch &gridsearch)
@@ -105,6 +130,18 @@ GridSearch & GridSearch::operator=(const GridSearch &gridsearch)
     profile = gridsearch.profile;
     mxsnr_ffdot = gridsearch.mxsnr_ffdot;
     vsnr_dm = gridsearch.vsnr_dm;
+
+    snr = gridsearch.snr;
+    width = gridsearch.width;
+    p0 = gridsearch.p0;
+    p1 = gridsearch.p1;
+    acc = gridsearch.acc;
+    err_f0 = gridsearch.err_f0;
+    err_f1 = gridsearch.err_f1;
+    err_p0 = gridsearch.err_p0;
+    err_p1 = gridsearch.err_p1;
+    err_dm = gridsearch.err_dm;
+    err_acc = gridsearch.err_dm;
 
     return *this;
 }
@@ -379,7 +416,7 @@ float GridSearch::get_chisq(vector<float> &pro)
  * 
  * @return snr
  */
-void GridSearch::get_snr_width(double &snr, double &width)
+void GridSearch::get_snr_width()
 {
     profile.resize(nbin, 0.);
     for (long int k=0; k<nsubint; k++)
@@ -430,7 +467,7 @@ void GridSearch::get_snr_width(double &snr, double &width)
     }
 
     snr = 0.;
-    width = 0;
+    width = 0.;
     for (long int w=1; w<=nbin/2; w++)
     {
         double boxsum = 0.;
@@ -454,6 +491,30 @@ void GridSearch::get_snr_width(double &snr, double &width)
     }
 
     width /= f0*nbin;
+}
+
+/**
+ * @brief Calculate the derived parameters and errors
+ * 
+ * @param obsinfo 
+ */
+void GridSearch::get_error(std::map<std::string, std::string> &obsinfo)
+{
+    /** get error f0,f1,p0,p1,a */
+    double obslen = stod(obsinfo["Obslen"]);
+    double toaerr = width/(pow(M_PI, 0.25)*snr);
+    err_f0 = sqrt(12)*toaerr*f0/obslen;
+    err_f1 = sqrt(320)*toaerr*f0/(obslen*obslen);
+    err_dm = 1./4.148741601e3*(frequencies[0]*frequencies.back())/sqrt((frequencies[0]/frequencies.back()+frequencies.back()/frequencies[0]+1)/3.-1)*toaerr;
+    
+    if (abs(f1)<1000*err_f1) f1 = 0.;
+    
+    p0 = 1/f0;
+    p1 = -f1/(f0*f0);
+    err_p0 = abs(err_f0/(f0*f0));
+    err_p1 = abs(err_f1/(f0*f0));
+    acc = f1/f0*CONST_C;
+    err_acc = abs((err_f1*f0-err_f0*f1)/(f0*f0)*CONST_C);
 }
 
 /**
