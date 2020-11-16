@@ -324,10 +324,10 @@ void SubbandDedispersion::preparedump()
 
         ofstream outfile;
         outfile.open(rootname + "_" + s_dm + ".dat", ios::binary|ios::app);
-        outfile.write((char *)(&dm), sizeof(double));
-        outfile.write((char *)(&tsamp), sizeof(double));
-        outfile.write((char *)(&fmin), sizeof(double));
-        outfile.write((char *)(&fmax), sizeof(double));
+        // outfile.write((char *)(&dm), sizeof(double));
+        // outfile.write((char *)(&tsamp), sizeof(double));
+        // outfile.write((char *)(&fmin), sizeof(double));
+        // outfile.write((char *)(&fmax), sizeof(double));
         outfile.close();
     }
 }

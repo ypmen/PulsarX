@@ -512,6 +512,7 @@ int main(int argc, const char *argv[])
     outfile.open(rootname + "_" + obsinfo["Date"] + "_" + s_ibeam + ".cands");
 	
 	outfile<<"#id       dm_old      dm_new      dm_err     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
+	outfile<<"#pepoch "<<fixed<<setprecision(15)<<folder[0].ref_epoch.to_day()<<endl;
 
 	for (long int k=0; k<ncand; k++)
 	{
