@@ -538,20 +538,20 @@ int main(int argc, const char *argv[])
 		 */
 
 		outfile<<k+1<<"\t\t";
-		outfile<<folder[k].dm<<"\t\t";
-		outfile<<gridsearch[k].dm<<"\t\t";
-		outfile<<gridsearch[k].err_dm<<"\t\t";
-		outfile<<folder[k].f0<<"\t\t";
-		outfile<<gridsearch[k].f0<<"\t\t";
-		outfile<<gridsearch[k].err_f0<<"\t\t";
-		outfile<<folder[k].f1<<"\t\t";
-		outfile<<gridsearch[k].f1<<"\t\t";
-		outfile<<gridsearch[k].err_f1<<"\t\t";
-		outfile<<folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
-		outfile<<gridsearch[k].acc<<"\t\t";
-		outfile<<gridsearch[k].err_acc<<"\t\t";
-		outfile<<folder[k].snr<<"\t\t";
-		outfile<<gridsearch[k].snr<<endl;
+		outfile<<fixed<<setprecision(8)<<folder[k].dm<<"\t\t";
+		outfile<<fixed<<setprecision(8)<<gridsearch[k].dm<<"\t\t";
+		outfile<<setprecision(15)<<gridsearch[k].err_dm<<"\t\t";
+		outfile<<setprecision(15)<<folder[k].f0<<"\t\t";
+		outfile<<setprecision(15)<<gridsearch[k].f0<<"\t\t";
+		outfile<<setprecision(15)<<gridsearch[k].err_f0<<"\t\t";
+		outfile<<setprecision(15)<<folder[k].f1<<"\t\t";
+		outfile<<setprecision(15)<<gridsearch[k].f1<<"\t\t";
+		outfile<<setprecision(15)<<gridsearch[k].err_f1<<"\t\t";
+		outfile<<setprecision(15)<<folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
+		outfile<<setprecision(15)<<gridsearch[k].acc<<"\t\t";
+		outfile<<setprecision(15)<<gridsearch[k].err_acc<<"\t\t";
+		outfile<<fixed<<setprecision(5)<<folder[k].snr<<"\t\t";
+		outfile<<fixed<<setprecision(5)<<gridsearch[k].snr<<endl;
 
 #ifdef HAVE_PYTHON
 		Pulsar::PulsarPlot psrplot;
