@@ -65,7 +65,6 @@ int main(int argc, const char *argv[])
             ("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("nosearch", "Do not search dm,f0,f1")
 			("candfile", value<string>(), "Input cand file")
-			("outbest", "Dump original parameters and best parameters to text")
 			("template", value<string>(), "Input fold template file")
 			("nbin,b", value<int>()->default_value(64), "Number of bins per period")
 			("tsubint,L", value<double>()->default_value(1), "Time length per integration (s)")
@@ -512,29 +511,26 @@ int main(int argc, const char *argv[])
 		 * @brief output best and old parameters to bestpar file
 		 * 
 		 */
-		if (outbest)
-		{
-			/**
-			 * @brief id    dm_old  dm_new  f0_old  f0_new  f1_old  f1_new  acc_old acc_new S/N_old S/N_new
-			 * 
-			 */
+		/**
+		 * @brief id    dm_old  dm_new  f0_old  f0_new  f1_old  f1_new  acc_old acc_new S/N_old S/N_new
+		 * 
+		 */
 
-			outfile<<k+1<<"\t\t";
-			outfile<<folder[k].dm<<"\t\t";
-			outfile<<gridsearch[k].dm<<"\t\t";
-			outfile<<gridsearch[k].err_dm<<"\t\t";
-			outfile<<folder[k].f0<<"\t\t";
-			outfile<<gridsearch[k].f0<<"\t\t";
-			outfile<<gridsearch[k].err_f0<<"\t\t";
-			outfile<<folder[k].f1<<"\t\t";
-			outfile<<gridsearch[k].f1<<"\t\t";
-			outfile<<gridsearch[k].err_f1<<"\t\t";
-			outfile<<folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
-			outfile<<gridsearch[k].acc<<"\t\t";
-			outfile<<gridsearch[k].err_acc<<"\t\t";
-			outfile<<folder[k].snr<<"\t\t";
-			outfile<<gridsearch[k].snr<<endl;
-		}
+		outfile<<k+1<<"\t\t";
+		outfile<<folder[k].dm<<"\t\t";
+		outfile<<gridsearch[k].dm<<"\t\t";
+		outfile<<gridsearch[k].err_dm<<"\t\t";
+		outfile<<folder[k].f0<<"\t\t";
+		outfile<<gridsearch[k].f0<<"\t\t";
+		outfile<<gridsearch[k].err_f0<<"\t\t";
+		outfile<<folder[k].f1<<"\t\t";
+		outfile<<gridsearch[k].f1<<"\t\t";
+		outfile<<gridsearch[k].err_f1<<"\t\t";
+		outfile<<folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
+		outfile<<gridsearch[k].acc<<"\t\t";
+		outfile<<gridsearch[k].err_acc<<"\t\t";
+		outfile<<folder[k].snr<<"\t\t";
+		outfile<<gridsearch[k].snr<<endl;
 
 #ifdef HAVE_PYTHON
 		Pulsar::PulsarPlot psrplot;
