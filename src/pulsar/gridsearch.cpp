@@ -225,7 +225,6 @@ void GridSearch::runFFdot()
         double df1 = df1start + k1*df1step;
         for (long int k0=0; k0<ndf0; k0++)
         {
-
             double df0 = df0start + k0*df0step;
 
             vector<float> pro(nbin, 0.);
@@ -349,7 +348,7 @@ bool GridSearch::bestprofiles()
         fmin = frequencies[j]<fmin? frequencies[j]:fmin;
     }
 
-    int maxtdelayn = round(2*(bestdf0*tsuboff[nsubint-1])*nbin);
+    int maxtdelayn = round(2*(bestdf0*tsuboff[nsubint-1]+0.5*bestdf1*tsuboff[nsubint-1]*tsuboff[nsubint-1])*nbin);
     int maxfdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, fmin)*(f0+bestdf0)*nbin);
 
     if (abs(maxtdelayn)==0 and abs(maxfdelayn)==0)
@@ -513,7 +512,7 @@ void GridSearch::get_error(std::map<std::string, std::string> &obsinfo)
     err_f1 = sqrt(320)*toaerr*f0/(obslen*obslen);
     err_dm = 1./4.148741601e3*(frequencies[0]*frequencies.back())/sqrt((frequencies[0]/frequencies.back()+frequencies.back()/frequencies[0]+1)/3.-1)*toaerr;
     
-    if (abs(f1)<1000*err_f1) f1 = 0.;
+    if (abs(f1)<err_f1/1000) f1 = 0.;
     
     p0 = 1/f0;
     p1 = -f1/(f0*f0);
@@ -778,9 +777,9 @@ void GridSearch::clfd()
         fstd_sort[j] = fstd[j] = sqrt(tmpvar);
     }
 
-    std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nsubint/4, fstd_sort.end(), std::less<float>());
+    std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nchan/4, fstd_sort.end(), std::less<float>());
     Q1 = fstd_sort[nchan/4];
-    std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nsubint/4, fstd_sort.end(), std::greater<float>());
+    std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nchan/4, fstd_sort.end(), std::greater<float>());
     Q3 = fstd_sort[nchan/4];
 
     R = Q3-Q1;
