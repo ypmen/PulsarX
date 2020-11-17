@@ -646,19 +646,37 @@ void GridSearch::clfd()
     for (long int k=0; k<nsubint; k++)
     {
         for (long int j=0; j<nchan; j++)
-        {
-            float tmpvar = 0.;
-            float tmpmean = 0.;
+        {        
+            double boxsum = 0.;
+            for (long int i=0; i<nbin/2; i++)
+            {
+                boxsum += profiles[k*nchan*nbin+j*nbin+i];
+            }
+            double min = boxsum;
+            long int istart = 0;
+            long int iend = nbin/2;
             for (long int i=0; i<nbin; i++)
             {
-                float tmp = profiles[k*nchan*nbin+j*nbin+i];
-                tmpmean += tmp;
-                tmpvar += tmp*tmp;
+                boxsum -= profiles[k*nchan*nbin+j*nbin+i];
+                boxsum += profiles[k*nchan*nbin+j*nbin+(i+nbin/2)%nbin];
+                if (boxsum < min)
+                {
+                    min = boxsum;
+                    istart = i+1;
+                    iend = nbin/2+i+1;
+                }
             }
-            tmpmean /= nbin;
-            tmpvar /= nbin;
-            tmpvar -= tmpmean*tmpmean;
-            tfstd_sort[k*nchan+j] = tfstd[k*nchan+j] = sqrt(tmpvar);
+
+            double tmp_mean = min/(nbin/2);
+            double tmp_var = 0.;
+            for (long int i=istart; i<iend; i++)
+            {
+                double tmp = profiles[k*nchan*nbin+j*nbin+i%nbin];
+                tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
+            }
+            tmp_var /= (nbin/2);
+
+            tfstd_sort[k*nchan+j] = tfstd[k*nchan+j] = sqrt(tmp_var);
         }
     }
 
@@ -703,19 +721,37 @@ void GridSearch::clfd()
                 tmppro[i] += profiles[k*nchan*nbin+j*nbin+i];
             }
         }
-
-        float tmpmean = 0.;
-        float tmpvar = 0.;
+       
+        double boxsum = 0.;
+        for (long int i=0; i<nbin/2; i++)
+        {
+            boxsum += tmppro[i];
+        }
+        double min = boxsum;
+        long int istart = 0;
+        long int iend = nbin/2;
         for (long int i=0; i<nbin; i++)
         {
-            tmpmean += tmppro[i];
-            tmpvar += tmppro[i]*tmppro[i];
+            boxsum -= tmppro[i];
+            boxsum += tmppro[(i+nbin/2)%nbin];
+            if (boxsum < min)
+            {
+                min = boxsum;
+                istart = i+1;
+                iend = nbin/2+i+1;
+            }
         }
-        tmpmean /= nbin;
-        tmpvar /= nbin;
-        tmpvar -= tmpmean*tmpmean;
 
-        tstd_sort[k] = tstd[k] = sqrt(tmpvar);
+        double tmp_mean = min/(nbin/2);
+        double tmp_var = 0.;
+        for (long int i=istart; i<iend; i++)
+        {
+            double tmp = tmppro[i%nbin];
+            tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
+        }
+        tmp_var /= (nbin/2);
+
+        tstd_sort[k] = tstd[k] = sqrt(tmp_var);
     }
 
     std::nth_element(tstd_sort.begin(), tstd_sort.begin()+nsubint/4, tstd_sort.end(), std::less<float>());
@@ -763,18 +799,36 @@ void GridSearch::clfd()
 
     for (long int j=0; j<nchan; j++)
     {
-        float tmpmean = 0.;
-        float tmpvar = 0.;
+        double boxsum = 0.;
+        for (long int i=0; i<nbin/2; i++)
+        {
+            boxsum += fph[j*nbin+i];
+        }
+        double min = boxsum;
+        long int istart = 0;
+        long int iend = nbin/2;
         for (long int i=0; i<nbin; i++)
         {
-            tmpmean += fph[j*nbin+i];
-            tmpvar += fph[j*nbin+i]*fph[j*nbin+i];
+            boxsum -= fph[j*nbin+i];
+            boxsum += fph[(i+nbin/2)%nbin];
+            if (boxsum < min)
+            {
+                min = boxsum;
+                istart = i+1;
+                iend = nbin/2+i+1;
+            }
         }
-        tmpmean /= nbin;
-        tmpvar /= nbin;
-        tmpvar -= tmpmean*tmpmean;
 
-        fstd_sort[j] = fstd[j] = sqrt(tmpvar);
+        double tmp_mean = min/(nbin/2);
+        double tmp_var = 0.;
+        for (long int i=istart; i<iend; i++)
+        {
+            double tmp = fph[j*nbin+i%nbin];
+            tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
+        }
+        tmp_var /= (nbin/2);
+
+        fstd_sort[j] = fstd[j] = sqrt(tmp_var);
     }
 
     std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nchan/4, fstd_sort.end(), std::less<float>());
