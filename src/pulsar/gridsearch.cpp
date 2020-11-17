@@ -750,23 +750,26 @@ void GridSearch::clfd()
     vector<float> fstd(nchan, 0.);
     vector<float> fstd_sort(nchan, 0.);
 
-    for (long int j=0; j<nchan; j++)
+    vector<float> fph(nchan*nbin, 0.);
+    for (long int k=0; k<nsubint; k++)
     {
-        vector<float> tmppro(nbin, 0.);
-        for (long int k=0; k<nsubint; k++)
+        for (long int j=0; j<nchan; j++)
         {
             for (long int i=0; i<nbin; i++)
             {
-                tmppro[i] += profiles[k*nchan*nbin+j*nbin+i];
+                fph[j*nbin+i] += profiles[k*nchan*nbin+j*nbin+i];
             }
         }
+    }
 
+    for (long int j=0; j<nchan; j++)
+    {
         float tmpmean = 0.;
         float tmpvar = 0.;
         for (long int i=0; i<nbin; i++)
         {
-            tmpmean += tmppro[i];
-            tmpvar += tmppro[i]*tmppro[i];
+            tmpmean += fph[j*nbin+i];
+            tmpvar += fph[j*nbin+i]*fph[j*nbin+i];
         }
         tmpmean /= nbin;
         tmpvar /= nbin;
