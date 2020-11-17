@@ -435,39 +435,14 @@ void GridSearch::get_snr_width()
         }
     }
 
-    double boxsum = 0.;
-    for (long int i=0; i<nbin/2; i++)
-    {
-        boxsum += profile[i];
-    }
-    double min = boxsum;
-    long int istart = 0;
-    long int iend = nbin/2;
-    for (long int i=0; i<nbin; i++)
-    {
-        boxsum -= profile[i];
-        boxsum += profile[(i+nbin/2)%nbin];
-        if (boxsum < min)
-        {
-            min = boxsum;
-            istart = i+1;
-            iend = nbin/2+i+1;
-        }
-    }
+    double tmp_mean = 0.;
+    double tmp_var = 0.;
 
-    double tmp_mean = min/(nbin/2);
-    // double tmp_var = 0.;
-    // for (long int i=istart; i<iend; i++)
-    // {
-    //     double tmp = profile[i%nbin];
-    //     tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
-    // }
-    // tmp_var /= (nbin/2);
+    get_mean_var<std::vector<double>::iterator>(profile.begin(), nbin, tmp_mean, tmp_var);
 
     for (long int i=0; i<nbin; i++)
     {
         profile[i] -= tmp_mean;
-        //profile[i] /= sqrt(tmp_var);
         profile[i] /= sqrt(var);
     }
 
@@ -534,34 +509,10 @@ void GridSearch::get_rms()
     {
         for (long int j=0; j<nchan; j++)
         {
-            double boxsum = 0.;
-            for (long int i=0; i<nbin/2; i++)
-            {
-                boxsum += profiles[k*nchan*nbin+j*nbin+i];
-            }
-            double min = boxsum;
-            long int istart = 0;
-            long int iend = nbin/2;
-            for (long int i=0; i<nbin; i++)
-            {
-                boxsum -= profiles[k*nchan*nbin+j*nbin+i];
-                boxsum += profiles[k*nchan*nbin+j*nbin+(i+nbin/2)%nbin];
-                if (boxsum < min)
-                {
-                    min = boxsum;
-                    istart = i+1;
-                    iend = nbin/2+i+1;
-                }
-            }
-
-            double tmp_mean = min/(nbin/2);
+            double tmp_mean = 0.;
             double tmp_var = 0.;
-            for (long int i=istart; i<iend; i++)
-            {
-                double tmp = profiles[k*nchan*nbin+j*nbin+i%nbin];
-                tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
-            }
-            tmp_var /= (nbin/2);
+
+            get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
 
             mean += tmp_mean;
             var += tmp_var;
@@ -579,45 +530,11 @@ void GridSearch::subints_normalize()
 {
     for (long int k=0; k<nsubint; k++)
     {
-        double boxsum = 0.;
-        for (long int j=0; j<nchan; j++)
-        {
-            for (long int i=0; i<nbin/2; i++)
-            {
-                boxsum += profiles[k*nchan*nbin+j*nbin+i];
-            }
-        }
-        double min = boxsum;
-        long int istart = 0;
-        long int iend = nbin/2;
-
-        for (long int i=0; i<nbin; i++)
-        {
-            for (long int j=0; j<nchan; j++)
-            {
-                boxsum -= profiles[k*nchan*nbin+j*nbin+i];
-                boxsum += profiles[k*nchan*nbin+j*nbin+(i+nbin/2)%nbin];
-            }
-
-            if (boxsum < min)
-            {
-                min = boxsum;
-                istart = i+1;
-                iend = nbin/2+i+1;
-            }
-        }
-
-        double tmp_mean = min/((nbin/2)*nchan);
+        double tmp_mean = 0.;
         double tmp_var = 0.;
-        for (long int j=0; j<nchan; j++)
-        {
-            for (long int i=istart; i<iend; i++)
-            {
-                double tmp = profiles[k*nchan*nbin+j*nbin+i%nbin];
-                tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
-            }
-        }
-        tmp_var /= (nbin/2)*nchan;
+
+        get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin, nchan, nbin, tmp_mean, tmp_var);
+
         tmp_var = tmp_var==0? 1:tmp_var;
 
         for (long int j=0; j<nchan; j++)
@@ -647,34 +564,10 @@ void GridSearch::clfd()
     {
         for (long int j=0; j<nchan; j++)
         {        
-            double boxsum = 0.;
-            for (long int i=0; i<nbin/2; i++)
-            {
-                boxsum += profiles[k*nchan*nbin+j*nbin+i];
-            }
-            double min = boxsum;
-            long int istart = 0;
-            long int iend = nbin/2;
-            for (long int i=0; i<nbin; i++)
-            {
-                boxsum -= profiles[k*nchan*nbin+j*nbin+i];
-                boxsum += profiles[k*nchan*nbin+j*nbin+(i+nbin/2)%nbin];
-                if (boxsum < min)
-                {
-                    min = boxsum;
-                    istart = i+1;
-                    iend = nbin/2+i+1;
-                }
-            }
-
-            double tmp_mean = min/(nbin/2);
+            double tmp_mean = 0.;
             double tmp_var = 0.;
-            for (long int i=istart; i<iend; i++)
-            {
-                double tmp = profiles[k*nchan*nbin+j*nbin+i%nbin];
-                tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
-            }
-            tmp_var /= (nbin/2);
+
+            get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
 
             tfstd_sort[k*nchan+j] = tfstd[k*nchan+j] = sqrt(tmp_var);
         }
@@ -722,34 +615,10 @@ void GridSearch::clfd()
             }
         }
        
-        double boxsum = 0.;
-        for (long int i=0; i<nbin/2; i++)
-        {
-            boxsum += tmppro[i];
-        }
-        double min = boxsum;
-        long int istart = 0;
-        long int iend = nbin/2;
-        for (long int i=0; i<nbin; i++)
-        {
-            boxsum -= tmppro[i];
-            boxsum += tmppro[(i+nbin/2)%nbin];
-            if (boxsum < min)
-            {
-                min = boxsum;
-                istart = i+1;
-                iend = nbin/2+i+1;
-            }
-        }
-
-        double tmp_mean = min/(nbin/2);
+        double tmp_mean = 0.;
         double tmp_var = 0.;
-        for (long int i=istart; i<iend; i++)
-        {
-            double tmp = tmppro[i%nbin];
-            tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
-        }
-        tmp_var /= (nbin/2);
+
+        get_mean_var<std::vector<float>::iterator>(tmppro.begin(), nbin, tmp_mean, tmp_var);
 
         tstd_sort[k] = tstd[k] = sqrt(tmp_var);
     }
@@ -799,34 +668,10 @@ void GridSearch::clfd()
 
     for (long int j=0; j<nchan; j++)
     {
-        double boxsum = 0.;
-        for (long int i=0; i<nbin/2; i++)
-        {
-            boxsum += fph[j*nbin+i];
-        }
-        double min = boxsum;
-        long int istart = 0;
-        long int iend = nbin/2;
-        for (long int i=0; i<nbin; i++)
-        {
-            boxsum -= fph[j*nbin+i];
-            boxsum += fph[(i+nbin/2)%nbin];
-            if (boxsum < min)
-            {
-                min = boxsum;
-                istart = i+1;
-                iend = nbin/2+i+1;
-            }
-        }
-
-        double tmp_mean = min/(nbin/2);
+        double tmp_mean = 0.;
         double tmp_var = 0.;
-        for (long int i=istart; i<iend; i++)
-        {
-            double tmp = fph[j*nbin+i%nbin];
-            tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
-        }
-        tmp_var /= (nbin/2);
+
+        get_mean_var<std::vector<float>::iterator>(fph.begin()+j*nbin, nbin, tmp_mean, tmp_var);
 
         fstd_sort[j] = fstd[j] = sqrt(tmp_var);
     }

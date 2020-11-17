@@ -255,4 +255,10 @@ void get_gl_gb(double &gl, double &gb, const std::string &s_ra, const std::strin
 double get_maxdm_ymw16(double gl, double gb);
 double get_dist_ymw16(double gl, double gb, double dm);
 
+template <typename T>
+void get_mean_var(T profile, int size, double &mean, double &var);
+
+template <typename T>
+void get_mean_var(T profiles, int nrow, int ncol, double &mean, double &var);
+
 #endif /* UTILS_H_ */

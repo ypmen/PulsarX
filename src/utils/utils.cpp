@@ -726,8 +726,100 @@ double get_dist_ymw16(double gl, double gb, double dm)
     return ymw16_dist;
 }
 
+template <typename T>
+void get_mean_var(T profile, int size, double &mean, double &var)
+{
+    long int nbin = size;
+
+    double boxsum = 0.;
+    for (long int i=0; i<nbin/2; i++)
+    {
+        boxsum += profile[i];
+    }
+    double min = boxsum;
+    long int istart = 0;
+    long int iend = nbin/2;
+    for (long int i=0; i<nbin; i++)
+    {
+        boxsum -= profile[i];
+        boxsum += profile[(i+nbin/2)%nbin];
+        if (boxsum < min)
+        {
+            min = boxsum;
+            istart = i+1;
+            iend = nbin/2+i+1;
+        }
+    }
+
+    double tmp_mean = min/(nbin/2);
+    double tmp_var = 0.;
+    for (long int i=istart; i<iend; i++)
+    {
+        double tmp = profile[i%nbin];
+        tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
+    }
+    tmp_var /= (nbin/2);
+
+    mean = tmp_mean;
+    var = tmp_var;
+}
+
+template <typename T>
+void get_mean_var(T profiles, int nrow, int ncol, double &mean, double &var)
+{
+    long int nchan = nrow;
+    long int nbin = ncol;
+
+    double boxsum = 0.;
+    for (long int j=0; j<nchan; j++)
+    {
+        for (long int i=0; i<nbin/2; i++)
+        {
+            boxsum += profiles[j*nbin+i];
+        }
+    }
+    double min = boxsum;
+    long int istart = 0;
+    long int iend = nbin/2;
+
+    for (long int i=0; i<nbin; i++)
+    {
+        for (long int j=0; j<nchan; j++)
+        {
+            boxsum -= profiles[j*nbin+i];
+            boxsum += profiles[j*nbin+(i+nbin/2)%nbin];
+        }
+
+        if (boxsum < min)
+        {
+            min = boxsum;
+            istart = i+1;
+            iend = nbin/2+i+1;
+        }
+    }
+
+    double tmp_mean = min/((nbin/2)*nchan);
+    double tmp_var = 0.;
+    for (long int j=0; j<nchan; j++)
+    {
+        for (long int i=istart; i<iend; i++)
+        {
+            double tmp = profiles[j*nbin+i%nbin];
+            tmp_var += (tmp-tmp_mean)*(tmp-tmp_mean);
+        }
+    }
+    tmp_var /= (nbin/2)*nchan;
+
+    mean = tmp_mean;
+    var = tmp_var;
+}
+
 template bool get_error_from_chisq_matrix<float>(float &xerr, float &yerr, vector<float> &x, vector<float> &y, vector<float> &mxchisq);
 template bool get_error_from_chisq_matrix<float>(float &xerr, vector<float> &x, vector<float> &vchisq);
 template bool get_error_from_chisq_matrix<double>(double &xerr, double &yerr, vector<double> &x, vector<double> &y, vector<double> &mxchisq);
 template bool get_error_from_chisq_matrix<double>(double &xerr, vector<double> &x, vector<double> &vchisq);
 
+template void get_mean_var<std::vector<float>::iterator>(std::vector<float>::iterator profile, int size, double &mean, double &var);
+template void get_mean_var<std::vector<float>::iterator>(std::vector<float>::iterator profiles, int nrow, int ncol, double &mean, double &var);
+template void get_mean_var<std::vector<double>::iterator>(std::vector<double>::iterator profile, int size, double &mean, double &var);
+template void get_mean_var<std::vector<double>::iterator>(std::vector<double>::iterator profiles, int nrow, int ncol, double &mean, double &var);
