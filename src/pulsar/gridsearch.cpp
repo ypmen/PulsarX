@@ -194,7 +194,8 @@ void GridSearch::prepare(ArchiveLite &arch)
 
     if (clfd_q > 0)
         clfd();
-    subints_normalize();
+    //subints_normalize();
+    normalize();
     get_rms();
 }
 
@@ -543,6 +544,32 @@ void GridSearch::subints_normalize()
             {
                 profiles[k*nchan*nbin+j*nbin+i] -= tmp_mean;
                 profiles[k*nchan*nbin+j*nbin+i] /= sqrt(tmp_var);
+            }
+        }
+    }
+}
+
+/**
+ * @brief normalize all profiles
+ * 
+ */
+void GridSearch::normalize()
+{
+    for (long int k=0; k<nsubint; k++)
+    {
+        for (long int j=0; j<nchan; j++)
+        {
+            double tmp_mean = 0.;
+            double tmp_var = 0.;
+
+            get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+
+            tmp_var = tmp_var==0? 1:tmp_var;
+
+            for (long int i=0; i<nbin; i++)
+            {
+                profiles[k*nchan*nbin+j*nbin+i] -= tmp_mean;
+                profiles[k*nchan*nbin+j*nbin+i] /= tmp_var;
             }
         }
     }

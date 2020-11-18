@@ -62,6 +62,7 @@ namespace Pulsar
         void get_error(std::map<std::string, std::string> &obsinfo);
         void get_rms();
         void subints_normalize();
+        void normalize();
         void clfd();
     public:
         double df0start;
