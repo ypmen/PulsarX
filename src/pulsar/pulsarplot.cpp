@@ -372,4 +372,6 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     plt::annotate(obsinfo["Filename"], 0.07, 0.97, {{"xycoords","figure fraction"}, {"annotation_clip", ""}, {"fontsize", "8"}});
 
     plt::save(figname);
+
+    plt::close();
 }
