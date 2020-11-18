@@ -303,7 +303,7 @@ int main(int argc, const char *argv[])
 
     for (long int k=0; k<ncand; k++)
 	{
-		folder[k].start_mjd = tstarts[idx[0]];
+		folder[k].start_mjd = tstarts[idx[0]]+(ceil(1.*dedisp.offset/ndump)*ndump-dedisp.offset)*tsamp*td;
 		folder[k].ref_epoch = tstarts[idx[0]]+(ntotal*tsamp/2.);
         folder[k].resize(1, subdata.nchans, folder[k].nbin);
 		folder[k].prepare(subdata);
@@ -399,7 +399,7 @@ int main(int argc, const char *argv[])
 					for (long int k=0; k<ncand; k++)
 					{
                         dedisp.get_subdata(subdata, k);
-                        if (dedisp.counter > dedisp.offset+dedisp.ndump)
+                        if (dedisp.counter >= dedisp.offset+dedisp.ndump)
 						{
 							folder[k].run(subdata);
 						}
@@ -430,7 +430,7 @@ int main(int argc, const char *argv[])
 		Pulsar::GridSearch gs;
 		gridsearch.push_back(gs);
 	}
-	
+
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(num_threads)
 #endif
