@@ -425,6 +425,12 @@ int main(int argc, const char *argv[])
 	double tint = ntotal*tsamp;
 
 	vector<Pulsar::GridSearch> gridsearch(ncand);
+	for (long int k=0; k<ncand; k++)
+	{
+		Pulsar::GridSearch gs;
+		gridsearch.push_back(gs);
+	}
+	
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(num_threads)
 #endif
