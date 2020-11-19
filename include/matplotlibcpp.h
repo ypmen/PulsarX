@@ -470,7 +470,8 @@ bool plot(const std::vector<Numeric> &x, const std::vector<Numeric> &y, const st
 
     Py_DECREF(args);
     Py_DECREF(kwargs);
-    if(res) Py_DECREF(res);
+    if (!res) throw std::runtime_error("failed plot");
+    Py_DECREF(res);
 
     return res;
 }
@@ -1467,7 +1468,7 @@ bool loglog(const std::vector<NumericX>& x, const std::vector<NumericY>& y, cons
 }
 
 template<typename NumericX, typename NumericY>
-bool errorbar(const std::vector<NumericX> &x, const std::vector<NumericY> &y, const std::vector<NumericX> &yerr, const std::vector<NumericX> &xerr, const std::map<std::string, std::string> &keywords = {})
+bool errorbar(const std::vector<NumericX> &x, const std::vector<NumericY> &y, const std::vector<NumericX> &yerr, const std::vector<NumericX> &xerr, const std::vector<NumericX> &xlolims, const std::vector<NumericX> &xuplims, const std::vector<NumericX> &ylolims, const std::vector<NumericX> &yuplims, const std::map<std::string, std::string> &keywords = {})
 {
     assert(x.size() == y.size());
 
@@ -1478,6 +1479,20 @@ bool errorbar(const std::vector<NumericX> &x, const std::vector<NumericY> &y, co
     PyObject* yerrarray = detail::get_array(yerr);
     PyObject* xerrarray = detail::get_array(xerr);
 
+    PyObject* xlolims_arr = NULL;
+    PyObject* xuplims_arr = NULL;
+    PyObject* ylolims_arr = NULL;
+    PyObject* yuplims_arr = NULL;
+
+    if (!xlolims.empty())
+        xlolims_arr = detail::get_array(xlolims);
+    if (!xuplims.empty())
+        xuplims_arr = detail::get_array(xuplims);
+    if (!ylolims.empty())
+        ylolims_arr = detail::get_array(ylolims);
+    if (!yuplims.empty())
+        yuplims_arr = detail::get_array(yuplims);
+
     // construct keyword args
     PyObject* kwargs = PyDict_New();
     for(std::map<std::string, std::string>::const_iterator it = keywords.begin(); it != keywords.end(); ++it)
@@ -1487,6 +1502,14 @@ bool errorbar(const std::vector<NumericX> &x, const std::vector<NumericY> &y, co
 
     PyDict_SetItemString(kwargs, "yerr", yerrarray);
     PyDict_SetItemString(kwargs, "xerr", xerrarray);
+    if (xlolims_arr)
+        PyDict_SetItemString(kwargs, "xlolims", xlolims_arr);
+    if (xuplims_arr)
+        PyDict_SetItemString(kwargs, "xuplims", xuplims_arr);
+    if (ylolims_arr)
+        PyDict_SetItemString(kwargs, "lolims", ylolims_arr);
+    if (yuplims_arr)
+        PyDict_SetItemString(kwargs, "uplims", yuplims_arr);
 
     PyObject *plot_args = PyTuple_New(2);
     PyTuple_SetItem(plot_args, 0, xarray);

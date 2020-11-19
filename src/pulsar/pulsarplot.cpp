@@ -291,10 +291,16 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
                       {"bottom", "on"}, {"top", "on"}, {"left", "on"}, {"right", "on"}, 
                       {"labelbottom", ""}, {"labeltop", ""}, {"labelleft", ""}, {"labelright", "on"}});
 
+    double xpos = archive.f0-gridsearch.f0;
+    double ypos = archive.f1-gridsearch.f1;
+    xpos = xpos <vdf0[0]? vdf0[0]: xpos;
+    xpos = xpos >vdf0.back()? vdf0.back(): xpos;
+    ypos = ypos <vdf1[0]? vdf1[0]: ypos;
+    ypos = ypos >vdf1.back()? vdf1.back(): ypos;
     //chi2-f0
     plt::subplot2grid(nrows, ncols, 4, 4, 2, 4);
     plt::plot(vdf0, vsnr_f0);
-    plt::axvline(archive.f0-gridsearch.f0, 0, 1, {{"color", "red"}});
+    plt::axvline(xpos, 0, 1, {{"color", "red"}});
     plt::annotate("P0 (Hz/s) = "+s_p0, 0.25, 1.1, {{"xycoords","axes fraction"}, {"annotation_clip", ""}, {"fontsize", "11"}});
     plt::xlabel("F0 - " + to_string(gridsearch.f0) + " (Hz)");
     plt::ylabel("$\\chi^2$");
@@ -307,18 +313,20 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     //chi2-f0-f1
     plt::subplot2grid(nrows, ncols, 6, 4, 4, 4);
     plt::pcolormesh(vdf0, vdf1, mxsnr_ffdot);
-    plt::errorbar(vector<double>{archive.f0-gridsearch.f0}, vector<double>{archive.f1-gridsearch.f1}, vector<double>{abs(vdf1.back()-vdf1[0])/10}, vector<double>{abs(vdf0.back()-vdf0[0])/10}, {{"color", "red"}});
     plt::axis("auto");
+
+    plt::plot(vector<double>{xpos}, vector<double>{ypos}, {{"markersize", "40"}, {"marker", "+"}, {"color", "red"}});
     plt::tick_params({{"which", "both"}, {"direction", "in"}, 
                       {"bottom", "on"}, {"top", "on"}, {"left", "on"}, {"right", "on"}, 
                       {"labelbottom", ""}, {"labeltop", ""}, {"labelleft", ""}, {"labelright", ""}});
+
 
     //chi2-f1
     std::stringstream ss_f1;
     ss_f1<<fixed<<setprecision(5)<<scientific<<f1;
     plt::subplot2grid(nrows, ncols, 6, 8, 4, 4);
     plt::plot(vsnr_f1, vdf1);
-    plt::axhline(archive.f1-gridsearch.f1, 0, 1, {{"color", "red"}});
+    plt::axhline(ypos, 0, 1, {{"color", "red"}});
     plt::annotate("P1 (s/s) = "+s_p1, -0.5, 1.1, {{"xycoords","axes fraction"}, {"annotation_clip", ""}, {"fontsize", "11"}});
     plt::xlabel("$\\chi^2$");
     plt::ylabel("F1 -" + ss_f1.str() + " (Hz/s)");
