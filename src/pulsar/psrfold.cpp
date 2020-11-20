@@ -531,6 +531,11 @@ int main(int argc, const char *argv[])
 		pepoch_offset += folder[0].profiles[l].offs_sub;
 	}
 	pepoch_offset /= folder[0].profiles.size();
+	//pepoch
+	stringstream ss_pepoch;
+    ss_pepoch << setprecision(9) << fixed << (tstarts[idx[0]]+pepoch_offset).to_day();
+    string s_pepoch = ss_pepoch.str();
+	obsinfo["Pepoch"] = s_pepoch;
 
 	std::ofstream outfile;
 	outfile.open(rootname + "_" + obsinfo["Date"] + "_" + s_ibeam + ".cands");
@@ -545,7 +550,7 @@ int main(int argc, const char *argv[])
 	outfile<<"#GL "<<obsinfo["GL"]<<endl;
 	outfile<<"#GB "<<obsinfo["GB"]<<endl;
 	outfile<<"#MaxDM_YMW16 "<<obsinfo["MaxDM_YMW16"]<<endl;
-	outfile<<"#Pepoch "<<fixed<<setprecision(15)<<(tstarts[idx[0]]+pepoch_offset).to_day()<<endl;
+	outfile<<"#Pepoch "<<obsinfo["Pepoch"]<<endl;
 	outfile<<"#id       dm_old      dm_new      dm_err		dist_ymw16     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
 
 	for (long int k=0; k<ncand; k++)

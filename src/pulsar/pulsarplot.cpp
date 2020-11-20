@@ -370,6 +370,7 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     plt::text(0.46, 0.36, "F1 (Hz/s) = " + s_f1, {{"fontsize", fontsize}});
     plt::text(0.46, 0.25, "MaxDM YMW16  (pc/cc) = " + s_ymw16_maxdm, {{"fontsize", fontsize}});
     plt::text(0.46, 0.14, "Distance YMW16 (pc) = " + s_ymw16_dist, {{"fontsize", fontsize}});
+    plt::text(0.46, 0.03, "Pepoch (MJD) = " + obsinfo["Pepoch"], {{"fontsize", fontsize}});
 
     plt::tick_params({{"which", "both"}, {"direction", "in"}, 
                       {"bottom", ""}, {"top", ""}, {"left", ""}, {"right", ""}, 
