@@ -293,10 +293,13 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
 
     double xpos = archive.f0-gridsearch.f0;
     double ypos = archive.f1-gridsearch.f1;
+    double dmpos = archive.dm;
     xpos = xpos <vdf0[0]? vdf0[0]: xpos;
     xpos = xpos >vdf0.back()? vdf0.back(): xpos;
     ypos = ypos <vdf1[0]? vdf1[0]: ypos;
     ypos = ypos >vdf1.back()? vdf1.back(): ypos;
+    dmpos = dmpos <vdm[0]? vdm[0]:dmpos;
+    dmpos = dmpos >vdm.back()? vdm.back():dmpos;
     //chi2-f0
     plt::subplot2grid(nrows, ncols, 4, 4, 2, 4);
     plt::plot(vdf0, vsnr_f0);
@@ -339,7 +342,7 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     //chi2-dm
     plt::subplot2grid(nrows, ncols, 10, 4, 2, 4);
     plt::plot(vdm, vsnr_dm);
-    plt::axvline(archive.dm, 0, 1, {{"color", "red"}});
+    plt::axvline(dmpos, 0, 1, {{"color", "red"}});
     plt::annotate("DM (pc/cc) = "+s_dm, 0.25, 1.1, {{"xycoords","axes fraction"}, {"annotation_clip", ""}, {"fontsize", "11"}});
     plt::xlabel("DM (pc/cc)");
     plt::ylabel("$\\chi^2$");

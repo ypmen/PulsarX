@@ -315,13 +315,13 @@ int main(int argc, const char *argv[])
 			for (long int i=0; i<NSBLK; i++)
 			{
 				count++;
-                if (++ns_filn == fil[n].nsamples)
-                {
-                    goto next;
-                }
 
 				if (count-1<nstart or count-1>nend)
 				{
+					if (++ns_filn == fil[n].nsamples)
+					{
+						goto next;
+					}
 					pcur += nifs*nchans;
 					continue;
 				}
@@ -386,6 +386,10 @@ int main(int argc, const char *argv[])
                     bcnt1 = 0;
 				}
 
+				if (++ns_filn == fil[n].nsamples)
+                {
+                    goto next;
+                }
 				pcur += nifs*nchans;
 			}
 		}

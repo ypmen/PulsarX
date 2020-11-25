@@ -18,6 +18,7 @@ RUN apt-get install -y git \
     libcfitsio-dev \
     libpng-dev \
     libfftw3-dev \
+    pgplot5 \
     wget \
     make \
     libx11-dev \
@@ -38,10 +39,17 @@ RUN make && make test
 #install PulsarX
 WORKDIR $HOME/software
 RUN git clone https://github.com/ypmen/PulsarX.git
+#install BasebandX
+RUN git clone https://github.com/ypmen/BasebandX.git
 
 WORKDIR $HOME/software/PulsarX
 RUN ./bootstrap
 RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS=-L$HOME/software/sofa/20200721/c/src CPPFLAGS=-I$HOME/software/sofa/20200721/c/src
+RUN make && make install
+
+WORKDIR $HOME/software/BasebandX
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3"
 RUN make && make install
 
 ENV YMW16_DIR=$HOME/software/PulsarX/src/ymw16
