@@ -397,6 +397,22 @@ int main(int argc, const char *argv[])
 		fil[n].close();
 	}
 
+	/**
+	 * @brief flush the end data
+	 * 
+	 */
+	fill(rfi.buffer.begin(), rfi.buffer.end(), 0.);
+	int nleft = dedisp.offset/ndump;
+	for (long int l=0; l<nleft; l++)
+	{
+		dedisp.run(rfi);
+		for (long int k=0; k<ncand; k++)
+		{
+			dedisp.get_subdata(subdata, k);
+			folder[k].run(subdata);
+		}
+	}
+
 	double fmin = 1e6;
     double fmax = 0.;
     for (long int j=0; j<databuf.nchans; j++)
@@ -508,12 +524,8 @@ int main(int argc, const char *argv[])
 	
 	obsinfo["MaxDM_YMW16"] = to_string(ymw16_maxdm);
 
-	double pepoch_offset = 0;
-	for (long int l=0; l<folder[0].profiles.size(); l++)
-	{
-		pepoch_offset += folder[0].profiles[l].offs_sub;
-	}
-	pepoch_offset /= folder[0].profiles.size();
+	double pepoch_offset = ntotal*tsamp/2.;
+	
 	//pepoch
 	stringstream ss_pepoch;
     ss_pepoch << setprecision(9) << fixed << (tstarts[idx[0]]+pepoch_offset).to_day();

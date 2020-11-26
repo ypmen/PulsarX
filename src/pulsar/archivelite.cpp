@@ -28,6 +28,7 @@ ArchiveLite::ArchiveLite()
 ArchiveLite::ArchiveLite(const ArchiveLite &arch)
 {
     start_mjd = arch.start_mjd;
+    ref_epoch = arch.ref_epoch;
     f0 = arch.f0;
     f1 = arch.f1;
     dm = arch.dm;
@@ -46,6 +47,7 @@ ArchiveLite::ArchiveLite(const ArchiveLite &arch)
 ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
 {
     start_mjd = arch.start_mjd;
+    ref_epoch = arch.ref_epoch;
     f0 = arch.f0;
     f1 = arch.f1;
     dm = arch.dm;
@@ -96,7 +98,7 @@ bool ArchiveLite::run(DataBuffer<float> &databuffer)
     MJD epoch = get_epoch(start_time, end_time);
     sub_int.offs_sub = (epoch-start_mjd).to_second();
     
-    double phi = get_phase(sub_mjd);
+    double phi = get_phase(sub_mjd, ref_epoch);
     double f = get_ffold(epoch, ref_epoch);
 
     fill(hits.begin(), hits.end(), 0);

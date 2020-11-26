@@ -54,12 +54,9 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
 
 void PulsarSearch::run(DataBuffer<float> &databuffer)
 {
-
     downsample.run(databuffer);
     
-    
     equalize.run(downsample);
-    
     
     rfi.zap(equalize, zaplist);
 	

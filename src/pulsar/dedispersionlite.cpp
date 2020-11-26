@@ -60,7 +60,7 @@ void DedispersionLite::prepare(DataBuffer<float> &databuffer)
 		fmin = frequencies[j]<fmin? frequencies[j]:fmin;
 	}
     long int maxdelayn = ceil(dmdelay(*max_element(vdm.begin(), vdm.end()), fmax, fmin)/tsamp);
-    nsamples = maxdelayn + ndump;
+    nsamples = ceil(1.*maxdelayn/ndump)*ndump + ndump;
     buffer.resize(nsamples*nchans, 0.);
     bufferT.resize(nchans*nsamples, 0.);
 

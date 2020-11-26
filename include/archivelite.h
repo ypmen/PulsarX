@@ -95,9 +95,9 @@ namespace Pulsar
             outfile.close();
         }
     private:
-        double get_phase(MJD &mjd)
+        double get_phase(MJD &mjd, MJD &mjdref)
         {
-            long double t = mjd.to_second();
+            long double t = (mjd-mjdref).to_second();
             double phi = f0*t + 0.5*f1*t*t;
             phi -= floor(phi);
             return phi;

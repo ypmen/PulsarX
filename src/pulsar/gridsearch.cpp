@@ -167,12 +167,7 @@ void GridSearch::prepare(ArchiveLite &arch)
     tsuboff.resize(nsubint, 0.);
     profiles.resize(nsubint*nchan*nbin, 0.);
 
-    double tcentre = 0.;
-    for (long int l=0; l<nsubint; l++)
-    {
-        tcentre += arch.profiles[l].offs_sub;
-    }
-    tcentre /= nsubint;
+    double tcentre = (arch.ref_epoch-arch.start_mjd).to_second();
 
     int npol = arch.npol;
     for (long int l=0; l<nsubint; l++)
@@ -270,12 +265,9 @@ void GridSearch::runDM()
 
     vector<float> mxfph(nchan*nbin, 0.); 
 
-    double ffoldmean = 0.;
-
     long int m = 0;
     for (long int k=0; k<nsubint; k++)
     {
-        ffoldmean += ffold[k];
         long int l = 0;
         for (long int j=0; j<nchan; j++)
         {
@@ -285,7 +277,6 @@ void GridSearch::runDM()
             }
         }
     }
-    ffoldmean /= nsubint;
 
     double fmin = 1e6;
     double fmax = 0.;
@@ -308,7 +299,7 @@ void GridSearch::runDM()
         float *pmxfph = &mxfph[0];
         for (long int j=0; j<nchan; j++)
         {
-            int delayn = round(DedispersionLite::dmdelay(ddm, fmax, frequencies[j])*ffoldmean*nbin);
+            int delayn = round(DedispersionLite::dmdelay(ddm, fmax, frequencies[j])*f0*nbin);
             delayn %= nbin;
             if (delayn<0) delayn += nbin;
             int nleft = nbin - delayn;
@@ -349,8 +340,8 @@ bool GridSearch::bestprofiles()
         fmin = frequencies[j]<fmin? frequencies[j]:fmin;
     }
 
-    int maxtdelayn = round(2*(bestdf0*tsuboff[nsubint-1]+0.5*bestdf1*tsuboff[nsubint-1]*tsuboff[nsubint-1])*nbin);
-    int maxfdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, fmin)*(f0+bestdf0)*nbin);
+    int maxtdelayn = round(2*(bestdf0*tsuboff[0]+0.5*bestdf1*tsuboff[0]*tsuboff[0])*nbin);
+    int maxfdelayn = round(2*DedispersionLite::dmdelay(bestddm, fmax, fmin)*(f0+bestdf0)*nbin);
 
     if (abs(maxtdelayn)==0 and abs(maxfdelayn)==0)
     {
