@@ -8,6 +8,7 @@
 
 #include "dedisperse.h"
 #include "archivelite.h"
+#include "constants.h"
 
 using namespace Pulsar;
 
@@ -17,6 +18,7 @@ ArchiveLite::ArchiveLite()
     sub_mjd = 0.;
     f0 = 0.;
     f1 = 0.;
+    acc = 0.;
     dm = 0.;
     snr = 0.;
     nbin = 0;
@@ -31,6 +33,7 @@ ArchiveLite::ArchiveLite(const ArchiveLite &arch)
     ref_epoch = arch.ref_epoch;
     f0 = arch.f0;
     f1 = arch.f1;
+    acc = arch.acc;
     dm = arch.dm;
     snr = arch.snr;
     nbin = arch.nbin;
@@ -50,6 +53,7 @@ ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
     ref_epoch = arch.ref_epoch;
     f0 = arch.f0;
     f1 = arch.f1;
+    acc = arch.acc;
     dm = arch.dm;
     snr = arch.snr;
     nbin = arch.nbin;
@@ -85,6 +89,16 @@ void ArchiveLite::prepare(DataBuffer<float> &databuffer)
     frequencies = databuffer.frequencies;
 
     sub_mjd = start_mjd + 0.5*databuffer.tsamp;
+
+    if (f1 == 0)
+    {
+        f1 = acc/CONST_C*f0;
+    }
+
+    if (acc == 0)
+    {
+        acc = f1/f0*CONST_C;
+    }
 }
 
 bool ArchiveLite::run(DataBuffer<float> &databuffer)

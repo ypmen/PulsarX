@@ -62,6 +62,7 @@ int main(int argc, const char *argv[])
 			("dm", value<double>()->default_value(0), "DM (pc/cc)")
             ("f0", value<double>()->default_value(0), "F0 (Hz)")
             ("f1", value<double>()->default_value(0), "F1 (Hz/s)")
+			("acc", value<double>()->default_value(0), "Acceleration (m/s/s)")
 			("nosearch", "Do not search dm,f0,f1")
 			("noplot", "Do not generate figures")
 			("noarch", "Do not generate archives")
@@ -649,6 +650,7 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
     /** archive */
     fdr.f0 = vm["f0"].as<double>();
     fdr.f1 = vm["f1"].as<double>();
+	fdr.acc = vm["acc"].as<double>();
     fdr.nbin = vm["nbin"].as<int>();
 
     dedisp.vdm.push_back(vm["dm"].as<double>());
@@ -668,6 +670,7 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
             boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
 
             dedisp.vdm.push_back(stod(parameters[1]));
+			fdr.acc = stod(parameters[2]);
             fdr.f0 = stod(parameters[3]);
             fdr.f1 = stod(parameters[4]);
 			fdr.snr = stod(parameters[5]);

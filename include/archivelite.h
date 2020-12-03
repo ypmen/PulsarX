@@ -132,6 +132,7 @@ namespace Pulsar
         MJD ref_epoch;
         double f0;
         double f1;
+        double acc;
         double dm;
         double snr;
     public:
