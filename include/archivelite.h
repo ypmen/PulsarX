@@ -95,37 +95,37 @@ namespace Pulsar
             outfile.close();
         }
     private:
-        double get_phase(MJD &mjd, MJD &mjdref)
+        double get_phase(MJD mjd, MJD &mjdref)
         {
             long double t = (mjd-mjdref).to_second();
             double phi = f0*t + 0.5*f1*t*t;
             phi -= floor(phi);
             return phi;
         }
-        double get_ffold(MJD &mjd, MJD &mjdref)
+        double get_ffold(MJD mjd, MJD &mjdref)
         {
             long double t = (mjd-mjdref).to_second();
             double f = f0 + f1*t;
             return f;
         }
-        MJD get_epoch(MJD &start_time, MJD &end_time)
+        MJD get_epoch(MJD &start_time, MJD &end_time, MJD &ref_epoch)
         {
             long double t = (start_time.to_second()+end_time.to_second())/2.;
+            t -= ref_epoch.to_second();
             long int phi = floor(f0*t+0.5*f1*t*t);
             long double tepoch = 0.;
             if (f1 != 0)
             {
-                if (phi > 0)
-                    tepoch = (sqrt(f0*f0+2*f1*phi)-f0)/f1;
-                else if (phi < 0)
-                    tepoch = (-sqrt(f0*f0+2*f1*phi)-f0)/f1;
-                else
-                    tepoch = 0.;
+                double tmp = f0*f0+2*f1*phi;
+                tmp = tmp<0? 0:tmp;
+                long double tepoch1 = (sqrt(tmp)-f0)/f1;
+                long double tepoch2 = (-sqrt(f0*f0+2*f1*phi)-f0)/f1;
+                tepoch = abs(t-tepoch1)<abs(t-tepoch2) ? tepoch1:tepoch2;
             }
             else
                 tepoch = phi/f0;
 
-            return MJD(tepoch/86400.);
+            return MJD((tepoch+ref_epoch.to_second())/86400.);
         }
     public:
         MJD start_mjd;

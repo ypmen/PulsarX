@@ -12,6 +12,8 @@
 
 using namespace Pulsar;
 
+#define NSBLK 1024
+
 ArchiveLite::ArchiveLite()
 {
     start_mjd = 0.;
@@ -109,16 +111,22 @@ bool ArchiveLite::run(DataBuffer<float> &databuffer)
     sub_int.tsubint = databuffer.nsamples*databuffer.tsamp;
     MJD start_time = sub_mjd;
     MJD end_time = sub_mjd + (databuffer.nsamples-1)*databuffer.tsamp;
-    MJD epoch = get_epoch(start_time, end_time);
+    MJD epoch = get_epoch(start_time, end_time, ref_epoch);
     sub_int.offs_sub = (epoch-start_mjd).to_second();
     
-    double phi = get_phase(sub_mjd, ref_epoch);
-    double f = get_ffold(epoch, ref_epoch);
+    double phi = 0.;
+    double f = 0.;
 
     fill(hits.begin(), hits.end(), 0);
     vector<int> binplan(databuffer.nsamples);
     for (long int i=0; i<databuffer.nsamples; i++)
     {
+        if (i%NSBLK == 0)
+        {
+            phi = get_phase(sub_mjd+i*databuffer.tsamp, ref_epoch);
+            f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
+        }
+
         phi -= floor(phi);
 		int ibin = int(phi*nbin);
         binplan[i] = ibin;
