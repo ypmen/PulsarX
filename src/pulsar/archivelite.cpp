@@ -12,7 +12,10 @@
 #include "archivelite.h"
 #include "constants.h"
 
-#include <lapack.h>
+extern "C" {
+void dgesv_( int* n, int* nrhs, double* a, int* lda, int* ipiv,
+                double* b, int* ldb, int* info );
+}
 
 using namespace Pulsar;
 
