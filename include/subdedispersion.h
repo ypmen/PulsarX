@@ -37,7 +37,7 @@ namespace RealTime
             vector<float> subdata;
             get_subdata(subdata, idm);
             vector<float> subdataT(ndump*nchans, 0.);
-            transpose_pad(&subdataT[0], &subdata[0], nchans, ndump);
+            transpose_pad<float>(&subdataT[0], &subdata[0], nchans, ndump);
 
             outfile.write((char *)(&subdataT[0]), sizeof(float)*ndump*nchans);
         

@@ -65,7 +65,7 @@ void Subband::run(vector<float> &data)
 
     for (long int k=0; k<nsub; k++)
     {
-        transpose_pad(&bufferT[0]+k*nchans*nsamples, &buffer[0]+k*nsamples*nchans, nsamples, nchans);
+        transpose_pad<float>(&bufferT[0]+k*nchans*nsamples, &buffer[0]+k*nsamples*nchans, nsamples, nchans);
     }
 
     fill(buffertim.begin(), buffertim.end(), 0.);
@@ -257,7 +257,7 @@ void SubbandDedispersion::run(DataBuffer<float> &databuffer, long int ns)
         }
     }
 
-    transpose_pad(&bufferT[0], &buffer[0], nsamples, nchans);
+    transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
 
     fill(buffersub.begin(), buffersub.end(), 0);
     for (long int j=0; j<nchans; j++)
@@ -274,7 +274,7 @@ void SubbandDedispersion::run(DataBuffer<float> &databuffer, long int ns)
         }
     }
 
-    transpose_pad(&buffersubT[0], &buffersub[0], nsubband, nsub*ndump);
+    transpose_pad<float>(&buffersubT[0], &buffersub[0], nsubband, nsub*ndump);
 
     sub.run(buffersubT);
 

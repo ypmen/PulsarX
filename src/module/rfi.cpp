@@ -221,7 +221,7 @@ bool RFI::kadaneF(DataBuffer<float> &databuffer, float threRFI2, double widthlim
 
     vector<float> bufferT(nchans*nsamples, 0.);
 
-    transpose_pad(&bufferT[0], &databuffer.buffer[0], nsamples, nchans);
+    transpose_pad<float>(&bufferT[0], &databuffer.buffer[0], nsamples, nchans);
 
     long int nsamples_ds = nsamples/td;
     long int nchans_ds = nchans/fd;
@@ -337,7 +337,7 @@ bool RFI::kadaneF(DataBuffer<float> &databuffer, float threRFI2, double widthlim
         
     }
 
-    transpose_pad(&buffer[0], &bufferT[0], nchans, nsamples);
+    transpose_pad<float>(&buffer[0], &bufferT[0], nchans, nsamples);
 
     equalized = databuffer.equalized;
 

@@ -88,6 +88,7 @@ int main(int argc, const char *argv[])
 			("threKadaneF", value<float>()->default_value(7), "S/N threshold of KadaneF")
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
+			("render", "Using new folding algorithm")
             ("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("cont", "Input files are contiguous")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
@@ -380,7 +381,10 @@ int main(int argc, const char *argv[])
                         dedisp.get_subdata(subdata, k);
                         if (dedisp.counter >= dedisp.offset+dedisp.ndump)
 						{
-							folder[k].run(subdata);
+							if (vm.count("render") == 0)
+								folder[k].runDspsr(subdata);
+							else
+								folder[k].runRender(subdata);				
 						}
 					}
 
@@ -410,7 +414,10 @@ int main(int argc, const char *argv[])
 		for (long int k=0; k<ncand; k++)
 		{
 			dedisp.get_subdata(subdata, k);
-			folder[k].run(subdata);
+			if (vm.count("render") == 0)
+				folder[k].runDspsr(subdata);
+			else
+				folder[k].runRender(subdata);				
 		}
 	}
 

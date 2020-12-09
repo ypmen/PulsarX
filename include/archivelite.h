@@ -81,7 +81,8 @@ namespace Pulsar
         ArchiveLite & operator=(const ArchiveLite &arch);
         ~ArchiveLite();
         void prepare(DataBuffer<float> &databuffer);
-        bool run(DataBuffer<float> &databuffer);
+        bool runDspsr(DataBuffer<float> &databuffer);
+        bool runRender(DataBuffer<float> &databuffer);
         void resize(int np, int nc, int nb);
         void dump2bin(const string &rootname)
         {
@@ -144,9 +145,6 @@ namespace Pulsar
         vector<IntegrationLite> profiles;
         MJD sub_mjd;
         IntegrationLite sub_int;
-        vector<int> hits;
-        vector<float> profilesTPF;
-        vector<float> profilesPFT;
     };
 }
 

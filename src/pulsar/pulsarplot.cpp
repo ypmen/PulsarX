@@ -323,7 +323,6 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
                       {"bottom", "on"}, {"top", "on"}, {"left", "on"}, {"right", "on"}, 
                       {"labelbottom", ""}, {"labeltop", ""}, {"labelleft", ""}, {"labelright", ""}});
 
-
     //chi2-f1
     std::stringstream ss_f1;
     ss_f1<<fixed<<setprecision(5)<<scientific<<f1;

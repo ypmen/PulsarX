@@ -16,6 +16,8 @@ RUN apt-get install -y git \
     gfortran \
     libboost-program-options-dev \
     libcfitsio-dev \
+    libblas-dev \
+    liblapack-dev \
     libpng-dev \
     libfftw3-dev \
     pgplot5 \

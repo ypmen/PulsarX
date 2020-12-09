@@ -91,7 +91,7 @@ void DedispersionLite::run(DataBuffer<float> &databuffer)
         }
     }
 
-    transpose_pad(&bufferT[0], &buffer[0], nsamples, nchans);
+    transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
 
     int ndm = vdm.size();
     int nch = ceil(nchans/nsubband);
@@ -114,8 +114,7 @@ void DedispersionLite::run(DataBuffer<float> &databuffer)
         }
     }
     
-
-    transpose_pad(&buffersub[0], &buffersubT[0], nsubband, ndm*ndump);
+    transpose_pad<float>(&buffersub[0], &buffersubT[0], nsubband, ndm*ndump);
 
     for (long int i=0; i<nspace; i++)
     {

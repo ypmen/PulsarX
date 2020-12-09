@@ -91,9 +91,12 @@ fftw_plan plan_transpose(int rows, int cols, double *in, double *out);
 
 void runMedian(float *data, float *datMedian, long int size, int w);
 
-void transpose(float *out, float *in, int m, int n);
-void transpose_pad(float *out, float *in, int m, int n);
-void transpose_pad(float *out, float *in, int m, int n, int tiley, int tilex);
+template <typename T>
+void transpose(T *out, T *in, int m, int n);
+template <typename T>
+void transpose_pad(T *out, T *in, int m, int n);
+template <typename T>
+void transpose_pad(T *out, T *in, int m, int n, int tiley, int tilex);
 
 void cmul(vector<complex<float>> &x, vector<complex<float>> &y);
 

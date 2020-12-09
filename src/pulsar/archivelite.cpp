@@ -6,9 +6,13 @@
  * @desc [description]
  */
 
+#include <string.h>
+
 #include "dedisperse.h"
 #include "archivelite.h"
 #include "constants.h"
+
+#include <lapack.h>
 
 using namespace Pulsar;
 
@@ -42,9 +46,6 @@ ArchiveLite::ArchiveLite(const ArchiveLite &arch)
     nchan = arch.nchan;
     npol = arch.npol;
     tbin = arch.tbin;
-    hits = arch.hits;
-    profilesTPF = arch.profilesTPF;
-    profilesPFT = arch.profilesPFT;
     frequencies = arch.frequencies;    
     profiles = arch.profiles;
 }
@@ -62,9 +63,6 @@ ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
     nchan = arch.nchan;
     npol = arch.npol;
     tbin = arch.tbin;
-    hits = arch.hits;
-    profilesTPF = arch.profilesTPF;
-    profilesPFT = arch.profilesPFT;
     frequencies = arch.frequencies;    
     profiles = arch.profiles;
 
@@ -79,9 +77,6 @@ void ArchiveLite::resize(int np, int nc, int nb)
     nchan = nc;
     nbin = nb;
     frequencies.resize(nchan, 0.);
-    hits.resize(nbin, 0);
-    profilesTPF.resize(nbin*npol*nchan, 0.);
-    profilesPFT.resize(npol*nchan*nbin, 0.);
 
     sub_int.resize(npol, nchan, nbin);
 }
@@ -103,7 +98,7 @@ void ArchiveLite::prepare(DataBuffer<float> &databuffer)
     }
 }
 
-bool ArchiveLite::run(DataBuffer<float> &databuffer)
+bool ArchiveLite::runDspsr(DataBuffer<float> &databuffer)
 {
     if (databuffer.counter <= 0)
         return false;
@@ -116,6 +111,10 @@ bool ArchiveLite::run(DataBuffer<float> &databuffer)
     
     double phi = 0.;
     double f = 0.;
+
+    vector<int> hits(nbin, 0);
+    vector<float> profilesTPF(nbin*npol*nchan, 0.);
+    vector<float> profilesPFT(npol*nchan*nbin, 0.);
 
     fill(hits.begin(), hits.end(), 0);
     vector<int> binplan(databuffer.nsamples);
@@ -143,7 +142,7 @@ bool ArchiveLite::run(DataBuffer<float> &databuffer)
         }
     }
 
-    transpose_pad(&profilesPFT[0], &profilesTPF[0], nbin, npol*nchan);
+    transpose_pad<float>(&profilesPFT[0], &profilesTPF[0], nbin, npol*nchan);
 
     for (long int ipol=0; ipol<npol; ipol++)
     {
@@ -175,7 +174,153 @@ bool ArchiveLite::run(DataBuffer<float> &databuffer)
         }
     }
 
-    sub_int.ffold = f;
+    sub_int.ffold = get_ffold(epoch, ref_epoch);
+    
+    sub_mjd += sub_int.tsubint;
+
+    profiles.push_back(sub_int);
+
+    return true;
+}
+
+bool ArchiveLite::runRender(DataBuffer<float> &databuffer)
+{
+    if (databuffer.counter <= 0)
+        return false;
+
+    sub_int.tsubint = databuffer.nsamples*databuffer.tsamp;
+    MJD start_time = sub_mjd;
+    MJD end_time = sub_mjd + (databuffer.nsamples-1)*databuffer.tsamp;
+    MJD epoch = get_epoch(start_time, end_time, ref_epoch);
+    sub_int.offs_sub = (epoch-start_mjd).to_second();
+    
+
+    double phi = 0.;
+    double f = 0.;
+
+    vector<double> mxWTW(nbin*nbin, 0.);
+    vector<double> vWTd_T(nbin*databuffer.nchans, 0.);
+
+    for (long int i=0; i<databuffer.nsamples; i++)
+    {
+        if (i%NSBLK == 0)
+        {
+            phi = get_phase(sub_mjd+(i-0.5)*databuffer.tsamp, ref_epoch);
+            f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
+        }
+
+        double low_phi = phi;
+        double high_phi = phi + f*databuffer.tsamp;
+        phi = high_phi;
+
+        if (low_phi > high_phi)
+        {
+            double tmp = low_phi;
+            low_phi = high_phi;
+            high_phi = tmp;
+        }
+
+        long int low_phin = floor(low_phi*nbin);
+        long int high_phin = floor(high_phi*nbin);
+        long int nphi = high_phin-low_phin+1;
+
+        if (nphi == 1)
+        {
+            double vWli0 = 1.;
+
+            vWli0 = (high_phi-low_phi)*nbin;
+
+            long int l=low_phin%nbin;
+            l = l<0 ? l+nbin:l;
+            {
+                mxWTW[l*nbin+l] += vWli0*vWli0;
+            }
+
+            for (long int j=0; j<databuffer.nchans; j++)
+            {       
+                vWTd_T[l*databuffer.nchans+j] += vWli0*databuffer.buffer[i*databuffer.nchans+j];
+            }
+        }
+        else if (nphi == 2)
+        {
+            double vWli0=1., vWli1=1.;
+
+            vWli0 = 1.-(low_phi*nbin-floor(low_phi*nbin));
+            vWli1 = high_phi*nbin-floor(high_phi*nbin);
+
+            long int l=low_phin%nbin;
+            l = l<0 ? l+nbin:l;
+            long int m = high_phin%nbin;
+            m = m<0 ? m+nbin:m;
+
+            mxWTW[l*nbin+l] += vWli0*vWli0;
+            mxWTW[l*nbin+m] += vWli0*vWli1;
+            mxWTW[m*nbin+l] += vWli1*vWli0;
+            mxWTW[m*nbin+m] += vWli1*vWli1;
+
+            for (long int j=0; j<databuffer.nchans; j++)
+            {
+                vWTd_T[l*databuffer.nchans+j] += vWli0*databuffer.buffer[i*databuffer.nchans+j];
+                vWTd_T[m*databuffer.nchans+j] += vWli1*databuffer.buffer[i*databuffer.nchans+j];
+            }
+        }
+        else
+        {
+            vector<double> vWli(nphi, 1.);
+            vector<int> binplan(nphi, 0);
+
+            vWli[0] = 1.-(low_phi*nbin-floor(low_phi*nbin));
+            vWli[nphi-1] = high_phi*nbin-floor(high_phi*nbin);
+
+            for (long int l=0; l<nphi; l++)
+            {
+                binplan[l] = (low_phin+l)%nbin;
+                binplan[l] = binplan[l]<0 ? binplan[l]+nbin:binplan[l];
+            }
+
+            for (long int l=0; l<nphi; l++)
+            {
+                for (long int m=0; m<nphi; m++)
+                {
+                    mxWTW[binplan[l]*nbin+binplan[m]] += vWli[l]*vWli[m];
+                }
+            }
+
+            for (long int l=0; l<nphi; l++)
+            {
+                for (long int j=0; j<databuffer.nchans; j++)
+                {
+                    vWTd_T[binplan[l]*databuffer.nchans+j] += vWli[l]*databuffer.buffer[i*databuffer.nchans+j];
+                }
+            }
+        }
+    }
+
+    vector<double> vWTd(databuffer.nchans*nbin, 0.);
+    transpose_pad<double>(&vWTd[0], &vWTd_T[0], nbin, npol*nchan);
+
+    int n = nbin;
+    int nrhs = databuffer.nchans;
+    vector<int> ipiv(n);
+    int info;
+
+    dgesv_(&n, &nrhs, &mxWTW[0], &n, &ipiv[0], &vWTd[0], &n, &info);
+
+    for (long int ipol=0; ipol<npol; ipol++)
+    {
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(num_threads)
+#endif
+        for (long int ichan=0; ichan<nchan; ichan++)
+        {
+            for (long int ibin=0; ibin<nbin; ibin++)
+            {
+                sub_int.data[ipol*nchan*nbin+ichan*nbin+ibin] = vWTd[ipol*nchan*nbin+ichan*nbin+ibin];
+            }
+        }
+    }
+
+    sub_int.ffold = get_ffold(epoch, ref_epoch);
     
     sub_mjd += sub_int.tsubint;
 

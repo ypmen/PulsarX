@@ -24,6 +24,8 @@ AC_CHECK_LIB([fftw3], [fftw_malloc], [], [echo "library not found!";exit -1])
 AC_CHECK_LIB([fftw3_threads], [fftw_init_threads], [], [echo "library not found!";exit -1])
 AC_CHECK_LIB([fftw3f], [fftwf_malloc], [], [echo "library not found!";exit -1])
 AC_CHECK_LIB([fftw3f_threads], [fftwf_init_threads], [], [echo "library not found!";exit -1])
+AC_CHECK_LIB([lapack], [dgesv_], [], [echo "library not found!";exit -1])
+
 X_LIB_SOFA([echo "library found"], [echo "library not found!"])
 
 LIBS="$LIBS -lgfortran -lm -lquadmath -lX11"

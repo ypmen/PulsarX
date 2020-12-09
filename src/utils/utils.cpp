@@ -73,7 +73,8 @@ fftw_plan plan_transpose(int rows, int cols, double *in, double *out)
                               in, out, /*kind=*/NULL, flags);
 }
 
-void transpose(float *out, float *in, int m, int n)
+template <typename T>
+void transpose(T *out, T *in, int m, int n)
 {
     const int tilex = 16;
     const int tiley = 64;
@@ -84,13 +85,13 @@ void transpose(float *out, float *in, int m, int n)
     int blockx = n / tilex;
     int blocky = m / tiley;
 
-    float *temp = new float[num_threads * tiley * tilex];
+    T *temp = new T[num_threads * tiley * tilex];
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(num_threads)
 #endif
     for (long int s = 0; s < blocky*blockx; s++)
     {
-        float *ptemp = temp;
+        T *ptemp = temp;
 #ifdef _OPENMP
         ptemp = temp + omp_get_thread_num()*tiley*tilex;
 #endif
@@ -116,7 +117,8 @@ void transpose(float *out, float *in, int m, int n)
     delete[] temp;
 }
 
-void transpose_pad(float *out, float *in, int m, int n)
+template <typename T>
+void transpose_pad(T *out, T *in, int m, int n)
 {
     const int tilex = 16;
     const int tiley = 64;
@@ -127,13 +129,13 @@ void transpose_pad(float *out, float *in, int m, int n)
     int blockx = npad / tilex;
     int blocky = mpad / tiley;
 
-    float *temp = new float[num_threads * tiley * tilex];
+    T *temp = new T[num_threads * tiley * tilex];
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(num_threads)
 #endif
     for (long int s = 0; s < blocky*blockx; s++)
     {
-        float *ptemp = temp;
+        T *ptemp = temp;
 #ifdef _OPENMP
         ptemp = temp + omp_get_thread_num()*tiley*tilex;
 #endif
@@ -213,7 +215,8 @@ void transpose_pad(float *out, float *in, int m, int n)
     delete[] temp;
 }
 
-void transpose_pad(float *out, float *in, int m, int n, int tiley, int tilex)
+template <typename T>
+void transpose_pad(T *out, T *in, int m, int n, int tiley, int tilex)
 {
     int npad = ceil(n*1./tilex)*tilex;
     int mpad = ceil(m*1./tiley)*tiley;
@@ -221,13 +224,13 @@ void transpose_pad(float *out, float *in, int m, int n, int tiley, int tilex)
     int blockx = npad / tilex;
     int blocky = mpad / tiley;
 
-    float *temp = new float[num_threads * tiley * tilex];
+    T *temp = new T[num_threads * tiley * tilex];
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(num_threads)
 #endif
     for (long int s = 0; s < blocky*blockx; s++)
     {
-        float *ptemp = temp;
+        T *ptemp = temp;
 #ifdef _OPENMP
         ptemp = temp + omp_get_thread_num()*tiley*tilex;
 #endif
@@ -823,3 +826,11 @@ template void get_mean_var<std::vector<float>::iterator>(std::vector<float>::ite
 template void get_mean_var<std::vector<float>::iterator>(std::vector<float>::iterator profiles, int nrow, int ncol, double &mean, double &var);
 template void get_mean_var<std::vector<double>::iterator>(std::vector<double>::iterator profile, int size, double &mean, double &var);
 template void get_mean_var<std::vector<double>::iterator>(std::vector<double>::iterator profiles, int nrow, int ncol, double &mean, double &var);
+
+template void transpose<float>(float *out, float *in, int m, int n);
+template void transpose_pad<float>(float *out, float *in, int m, int n);
+template void transpose_pad<float>(float *out, float *in, int m, int n, int tiley, int tilex);
+
+template void transpose<double>(double *out, double *in, int m, int n);
+template void transpose_pad<double>(double *out, double *in, int m, int n);
+template void transpose_pad<double>(double *out, double *in, int m, int n, int tiley, int tilex);
