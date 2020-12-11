@@ -21,6 +21,7 @@
 #define NEIGHBORS 2
 #define LOWLEVEL 0.1  //[0-1]
 #define HIGHLEVEL 0.9 //[0-1]
+#define HAVE_YMW16 1
 
 extern unsigned int dbscan_radius;
 extern unsigned int dbscan_k;

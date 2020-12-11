@@ -39,6 +39,9 @@
 /* Define to 1 if you have the `fftw3_threads' library (-lfftw3_threads). */
 #undef HAVE_LIBFFTW3_THREADS
 
+/* Define to 1 if you have the `lapack' library (-llapack). */
+#undef HAVE_LIBLAPACK
+
 /* Define to 1 if you have the `png' library (-lpng). */
 #undef HAVE_LIBPNG
 

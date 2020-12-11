@@ -1809,7 +1809,11 @@ bool SubintHDU::unload_data(fitsfile *fptr)
 	    	return false;
 	    }
 
-		fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan*nbits/8, &status);
+		if (nbits != 32)
+			fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan*nbits/8, &status);
+		else
+			fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan, &status);
+
 		if (status)
 	    {
 	    	cerr<<"Error: can not resize column DATA"<<endl;
@@ -2071,7 +2075,11 @@ bool SubintHDU::unload_integration(fitsfile *fptr, int k)
 
 		if (k==0)
 		{
-			fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan*nbits/8, &status);
+			if (nbits != 32)
+				fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan*nbits/8, &status);
+			else
+				fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan, &status);
+
 			if (status)
 			{
 				cerr<<"Error: can not resize column DATA"<<endl;
@@ -2340,7 +2348,11 @@ bool SubintHDU::unload_integration(fitsfile *fptr, Integration &it)
 
 		if (k==0)
 		{
-			fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan*nbits/8, &status);
+			if (nbits != 32)
+				fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan*nbits/8, &status);
+			else
+				fits_modify_vector_len(fptr, colnum, nsblk*npol*nchan, &status);
+			
 			if (status)
 			{
 				cerr<<"Error: can not resize column DATA"<<endl;

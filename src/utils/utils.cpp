@@ -674,6 +674,7 @@ void get_gl_gb(double &gl, double &gb, const std::string &s_ra, const std::strin
 }
 #endif
 
+#ifdef HAVE_YMW16
 #include "cn.h"
 /**
  * @brief Get the maxdm ymw16 lib
@@ -728,6 +729,7 @@ double get_dist_ymw16(double gl, double gb, double dm)
     
     return ymw16_dist;
 }
+#endif
 
 template <typename T>
 void get_mean_var(T profile, int size, double &mean, double &var)
