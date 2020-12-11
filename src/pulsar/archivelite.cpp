@@ -227,6 +227,8 @@ bool ArchiveLite::runRender(DataBuffer<float> &databuffer)
         long int high_phin = floor(high_phi*nbin);
         long int nphi = high_phin-low_phin+1;
 
+        assert(nphi<=nbin);
+
         if (nphi == 1)
         {
             double vWli0 = 1.;
