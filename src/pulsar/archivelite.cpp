@@ -196,7 +196,7 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
     MJD end_time = sub_mjd + (databuffer.nsamples-1)*databuffer.tsamp;
     MJD epoch = get_epoch(start_time, end_time, ref_epoch);
     sub_int.offs_sub = (epoch-start_mjd).to_second();
-    
+    sub_int.ffold = get_ffold(epoch, ref_epoch);
 
     double phi = 0.;
     double f = 0.;
@@ -305,6 +305,7 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
     {
         for (long int m=0; m<nbin; m++)
         {
+            mxWTW[l*nbin+m] /= (databuffer.nsamples*databuffer.tsamp*sub_int.ffold);
             mxWTW[l*nbin+m] += 1;
         }
     }
@@ -317,8 +318,6 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
     int info;
 
     sgesv_(&n, &nrhs, &mxWTW[0], &n, &ipiv[0], &sub_int.data[0], &n, &info);
-
-    sub_int.ffold = get_ffold(epoch, ref_epoch);
     
     sub_mjd += sub_int.tsubint;
 
