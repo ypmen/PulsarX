@@ -406,7 +406,7 @@ int main(int argc, const char *argv[])
 							if (vm.count("render") == 0)
 								folder[k].runDspsr(subdata);
 							else
-								folder[k].runRender(subdata);				
+								folder[k].runTRLSM(subdata);				
 						}
 					}
 
@@ -434,7 +434,7 @@ int main(int argc, const char *argv[])
 			if (vm.count("render") == 0)
 				folder[k].runDspsr(subdata);
 			else
-				folder[k].runRender(subdata);				
+				folder[k].runTRLSM(subdata);				
 		}
 	}
 

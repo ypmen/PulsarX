@@ -82,7 +82,7 @@ namespace Pulsar
         ~ArchiveLite();
         void prepare(DataBuffer<float> &databuffer);
         bool runDspsr(DataBuffer<float> &databuffer);
-        bool runRender(DataBuffer<float> &databuffer);
+        bool runTRLSM(DataBuffer<float> &databuffer);
         void resize(int np, int nc, int nb);
         void dump2bin(const string &rootname)
         {

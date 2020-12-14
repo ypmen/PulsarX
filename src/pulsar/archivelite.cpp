@@ -13,8 +13,8 @@
 #include "constants.h"
 
 extern "C" {
-void dgesv_( int* n, int* nrhs, double* a, int* lda, int* ipiv,
-                double* b, int* ldb, int* info );
+void sgesv_( int* n, int* nrhs, float* a, int* lda, int* ipiv,
+                float* b, int* ldb, int* info );
 }
 
 using namespace Pulsar;
@@ -186,7 +186,7 @@ bool ArchiveLite::runDspsr(DataBuffer<float> &databuffer)
     return true;
 }
 
-bool ArchiveLite::runRender(DataBuffer<float> &databuffer)
+bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 {
     if (databuffer.counter <= 0)
         return false;
@@ -201,8 +201,8 @@ bool ArchiveLite::runRender(DataBuffer<float> &databuffer)
     double phi = 0.;
     double f = 0.;
 
-    vector<double> mxWTW(nbin*nbin, 0.);
-    vector<double> vWTd_T(nbin*databuffer.nchans, 0.);
+    vector<float> mxWTW(nbin*nbin, 0.);
+    vector<float> vWTd_T(nbin*databuffer.nchans, 0.);
 
     for (long int i=0; i<databuffer.nsamples; i++)
     {
@@ -231,7 +231,7 @@ bool ArchiveLite::runRender(DataBuffer<float> &databuffer)
 
         if (nphi == 1)
         {
-            double vWli0 = 1.;
+            float vWli0 = 1.;
 
             vWli0 = (high_phi-low_phi)*nbin;
 
@@ -248,7 +248,7 @@ bool ArchiveLite::runRender(DataBuffer<float> &databuffer)
         }
         else if (nphi == 2)
         {
-            double vWli0=1., vWli1=1.;
+            float vWli0=1., vWli1=1.;
 
             vWli0 = 1.-(low_phi*nbin-floor(low_phi*nbin));
             vWli1 = high_phi*nbin-floor(high_phi*nbin);
@@ -271,7 +271,7 @@ bool ArchiveLite::runRender(DataBuffer<float> &databuffer)
         }
         else
         {
-            vector<double> vWli(nphi, 1.);
+            vector<float> vWli(nphi, 1.);
             vector<int> binplan(nphi, 0);
 
             vWli[0] = 1.-(low_phi*nbin-floor(low_phi*nbin));
@@ -301,29 +301,22 @@ bool ArchiveLite::runRender(DataBuffer<float> &databuffer)
         }
     }
 
-    vector<double> vWTd(databuffer.nchans*nbin, 0.);
-    transpose_pad<double>(&vWTd[0], &vWTd_T[0], nbin, npol*nchan);
+    for (long int l=0; l<nbin; l++)
+    {
+        for (long int m=0; m<nbin; m++)
+        {
+            mxWTW[l*nbin+m] += 1;
+        }
+    }
+
+    transpose_pad<float>(&sub_int.data[0], &vWTd_T[0], nbin, npol*nchan);
 
     int n = nbin;
     int nrhs = databuffer.nchans;
     vector<int> ipiv(n);
     int info;
 
-    dgesv_(&n, &nrhs, &mxWTW[0], &n, &ipiv[0], &vWTd[0], &n, &info);
-
-    for (long int ipol=0; ipol<npol; ipol++)
-    {
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(num_threads)
-#endif
-        for (long int ichan=0; ichan<nchan; ichan++)
-        {
-            for (long int ibin=0; ibin<nbin; ibin++)
-            {
-                sub_int.data[ipol*nchan*nbin+ichan*nbin+ibin] = vWTd[ipol*nchan*nbin+ichan*nbin+ibin];
-            }
-        }
-    }
+    sgesv_(&n, &nrhs, &mxWTW[0], &n, &ipiv[0], &sub_int.data[0], &n, &info);
 
     sub_int.ffold = get_ffold(epoch, ref_epoch);
     
