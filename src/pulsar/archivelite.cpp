@@ -306,8 +306,8 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
         for (long int m=0; m<nbin; m++)
         {
             mxWTW[l*nbin+m] /= (databuffer.nsamples*databuffer.tsamp*sub_int.ffold);
-            mxWTW[l*nbin+m] += 1;
         }
+        mxWTW[l*nbin+l] += 1;
     }
 
     transpose_pad<float>(&sub_int.data[0], &vWTd_T[0], nbin, npol*nchan);
