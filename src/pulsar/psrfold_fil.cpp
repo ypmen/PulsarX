@@ -264,12 +264,15 @@ int main(int argc, const char *argv[])
 	downsample.td = td;
     downsample.fd = fd;
     downsample.prepare(databuf);
+	downsample.close();
 
 	Equalize equalize;
 	equalize.prepare(downsample);
+	equalize.close();
 
     RFI rfi;
 	rfi.prepare(equalize);
+	rfi.close();
     
     Pulsar::DedispersionLite dedisp;
 	vector<Pulsar::ArchiveLite> folder;
@@ -414,7 +417,7 @@ int main(int argc, const char *argv[])
 	 * @brief flush the end data
 	 * 
 	 */
-	fill(rfi.buffer.begin(), rfi.buffer.end(), 0.);
+	rfi.open();
 	int nleft = dedisp.offset/ndump;
 	for (long int l=0; l<nleft; l++)
 	{

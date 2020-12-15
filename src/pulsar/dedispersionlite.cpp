@@ -89,6 +89,8 @@ void DedispersionLite::run(DataBuffer<float> &databuffer)
         }
     }
 
+    databuffer.close();
+
     vector<float> bufferT(nchans*nsamples, 0.);
 
     transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
