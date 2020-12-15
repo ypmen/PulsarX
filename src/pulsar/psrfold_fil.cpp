@@ -344,11 +344,17 @@ int main(int argc, const char *argv[])
 
 				if (ntot%ndump == 0)
 				{
+					downsample.open();
     				downsample.run(databuf);
+					databuf.close();
 
+    				equalize.open();
     				equalize.run(downsample);
+					downsample.close();
 
+					rfi.open();
 					rfi.zap(equalize, zaplist);
+					equalize.close();
 
 					for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
                     {
@@ -375,6 +381,7 @@ int main(int argc, const char *argv[])
                     }
 
                     dedisp.run(rfi);
+					rfi.close();
 
 					for (long int k=0; k<ncand; k++)
 					{
@@ -389,6 +396,7 @@ int main(int argc, const char *argv[])
 					}
 
                     bcnt1 = 0;
+					databuf.open();
 				}
 
 				if (++ns_filn == fil[n].nsamples)

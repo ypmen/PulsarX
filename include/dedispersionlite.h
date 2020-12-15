@@ -73,11 +73,9 @@ namespace Pulsar
         vector<double> frequencies;
         vector<long int> delayn;
         vector<float> buffer;
-        vector<float> bufferT;
         vector<double> frequencies_sub;
         vector<float> buffertim;
         vector<float> buffersub;
-        vector<float> buffersubT;
     public:
         static double dmdelay(double dm, double fh, double fl)
 	    {

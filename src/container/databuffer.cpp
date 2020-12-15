@@ -85,6 +85,19 @@ void DataBuffer<T>::run(DataBuffer<T> &databuffer)
 };
 
 template <typename T>
+void DataBuffer<T>::open()
+{
+    buffer.resize(nsamples*nchans, 0.);
+}
+
+template <typename T>
+void DataBuffer<T>::close()
+{
+    buffer.clear();
+    buffer.shrink_to_fit();
+}
+
+template <typename T>
 void DataBuffer<T>::dump2txt(const string fname)
 {
     ofstream outfile;

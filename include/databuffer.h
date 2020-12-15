@@ -33,6 +33,8 @@ public:
     virtual ~DataBuffer();
     virtual void prepare(DataBuffer<T> &databuffer);
     virtual void run(DataBuffer<T> &databuffer);
+    void open();
+    void close();
     void dump2txt(const string fname);
     void dump2bin(const string fname);
     void dump(const string fname);

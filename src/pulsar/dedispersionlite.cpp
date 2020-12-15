@@ -39,7 +39,6 @@ void DedispersionLite::prepare(DataBuffer<float> &databuffer)
 
     buffertim.resize(vdm.size()*ndump, 0.);
     buffersub.resize(vdm.size()*ndump*nsubband, 0.);
-    buffersubT.resize(nsubband*vdm.size()*ndump, 0.);
 
     vector<int> fcnt(nsubband, 0);
     for (long int j=0; j<nchans; j++)
@@ -62,7 +61,6 @@ void DedispersionLite::prepare(DataBuffer<float> &databuffer)
     long int maxdelayn = ceil(dmdelay(*max_element(vdm.begin(), vdm.end()), fmax, fmin)/tsamp);
     nsamples = ceil(1.*maxdelayn/ndump)*ndump + ndump;
     buffer.resize(nsamples*nchans, 0.);
-    bufferT.resize(nchans*nsamples, 0.);
 
     delayn.resize(vdm.size()*nchans, 0);
     int ndm = vdm.size();
@@ -91,12 +89,15 @@ void DedispersionLite::run(DataBuffer<float> &databuffer)
         }
     }
 
+    vector<float> bufferT(nchans*nsamples, 0.);
+
     transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
 
     int ndm = vdm.size();
     int nch = ceil(nchans/nsubband);
 
-    fill(buffersubT.begin(), buffersubT.end(), 0.);
+    vector<float> buffersubT(nsubband*vdm.size()*ndump, 0.);
+
     fill(buffertim.begin(), buffertim.end(), 0.);
 
     for (long int j=0; j<nchans; j++)
