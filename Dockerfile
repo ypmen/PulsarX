@@ -18,6 +18,7 @@ RUN apt-get install -y git \
     libcfitsio-dev \
     libblas-dev \
     liblapack-dev \
+    libeigen3-dev \
     libpng-dev \
     libfftw3-dev \
     pgplot5 \
