@@ -304,7 +304,7 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     plt::subplot2grid(nrows, ncols, 4, 4, 2, 4);
     plt::plot(vdf0, vsnr_f0);
     plt::axvline(xpos, 0, 1, {{"color", "red"}});
-    plt::annotate("P0 (Hz/s) = "+s_p0, 0.25, 1.1, {{"xycoords","axes fraction"}, {"annotation_clip", ""}, {"fontsize", "11"}});
+    plt::annotate("P0 (s) = "+s_p0, 0.25, 1.1, {{"xycoords","axes fraction"}, {"annotation_clip", ""}, {"fontsize", "11"}});
     plt::xlabel("F0 - " + to_string(gridsearch.f0) + " (Hz)");
     plt::ylabel("$\\chi^2$");
     plt::autoscale(true, "x", true);
