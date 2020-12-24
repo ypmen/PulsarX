@@ -430,6 +430,7 @@ int main(int argc, const char *argv[])
 		}
 		psf[n].close();
 	}
+	databuf.close();
 
 	/**
 	 * @brief flush the end data
@@ -449,7 +450,6 @@ int main(int argc, const char *argv[])
 				folder[k].runTRLSM(subdata);				
 		}
 	}
-	databuf.close();
 
 	rfi.close();
 	dedisp.close();
