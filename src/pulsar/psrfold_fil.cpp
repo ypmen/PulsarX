@@ -413,6 +413,7 @@ int main(int argc, const char *argv[])
         next:
 		fil[n].close();
 	}
+	databuf.close();
 
 	/**
 	 * @brief flush the end data
@@ -432,6 +433,9 @@ int main(int argc, const char *argv[])
 				folder[k].runTRLSM(subdata);				
 		}
 	}
+
+	rfi.close();
+	dedisp.close();
 
 	double fmin = 1e6;
     double fmax = 0.;
@@ -472,6 +476,7 @@ int main(int argc, const char *argv[])
 		gridsearch[k].clfd_q = vm["clfd"].as<double>();
 
 		gridsearch[k].prepare(folder[k]);
+		folder[k].close();
 		
 		if (!nosearch)
 		{

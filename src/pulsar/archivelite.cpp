@@ -196,7 +196,7 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
     MJD end_time = sub_mjd + (databuffer.nsamples-1)*databuffer.tsamp;
     MJD epoch = get_epoch(start_time, end_time, ref_epoch);
     sub_int.offs_sub = (epoch-start_mjd).to_second();
-    sub_int.ffold = get_ffold(epoch, ref_epoch);
+    sub_int.ffold = abs(get_ffold(epoch, ref_epoch));
 
     double phi = 0.;
     double f = 0.;

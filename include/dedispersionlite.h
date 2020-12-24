@@ -22,6 +22,20 @@ namespace Pulsar
     public:
         DedispersionLite();
         ~DedispersionLite();
+        void close()
+        {
+            delayn.clear();
+            delayn.shrink_to_fit();
+
+            buffer.clear();
+            buffer.shrink_to_fit();
+
+            buffersub.clear();
+            buffersub.shrink_to_fit();
+
+            buffertim.clear();
+            buffertim.shrink_to_fit();
+        }
         void prepare(DataBuffer<float> &databuffer);
         void run(DataBuffer<float> &databuffer);
         void dumpsubdata(const string &rootname, int idm) const

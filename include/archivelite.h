@@ -80,6 +80,14 @@ namespace Pulsar
         ArchiveLite(const ArchiveLite &arch);
         ArchiveLite & operator=(const ArchiveLite &arch);
         ~ArchiveLite();
+        void close()
+        {
+            for (auto p=profiles.begin(); p!=profiles.end(); ++p)
+            {
+                p->data.clear();
+                p->data.shrink_to_fit();
+            }
+        }
         void prepare(DataBuffer<float> &databuffer);
         bool runDspsr(DataBuffer<float> &databuffer);
         bool runTRLSM(DataBuffer<float> &databuffer);
