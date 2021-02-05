@@ -340,10 +340,19 @@ bool GridSearch::bestprofiles()
         fmin = frequencies[j]<fmin? frequencies[j]:fmin;
     }
 
-    int maxtdelayn = round(2*(bestdf0*tsuboff[0]+0.5*bestdf1*tsuboff[0]*tsuboff[0])*nbin);
-    int maxfdelayn = round(2*DedispersionLite::dmdelay(bestddm, fmax, fmin)*(f0+bestdf0)*nbin);
+    int maxdelayn = -1;
+    for (long int k=0; k<nsubint; k++)
+    {
+        int tdelayn = round((bestdf0*tsuboff[k]+0.5*bestdf1*tsuboff[k]*tsuboff[k])*nbin);
+        for (long int j=0; j<nchan; j++)
+        {
+            int fdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, frequencies[j])*(f0+bestdf0+(f1+bestdf1)*tsuboff[k])*nbin);
+            int delayn = (tdelayn-fdelayn)%nbin;
+            maxdelayn = abs(delayn) > maxdelayn ? abs(delayn) : maxdelayn;
+        }
+    }
 
-    if (abs(maxtdelayn)==0 and abs(maxfdelayn)==0)
+    if (maxdelayn < 2)
     {
         bestddm = 0.;
         bestdf0 = 0;

@@ -57,6 +57,7 @@ namespace RealTime
             outfile.close();
         }
     public:
+        bool inplace;
         string rootname;
         int ndump;
         int nchans;
@@ -68,6 +69,8 @@ namespace RealTime
         vector<double> vdm;
         vector<double> frequencies;
         vector<int> fcnt;
+        vector<int> decodeidm;
+        vector<int> decodeisub;
     public:
         long int counter;
         vector<int> mxdelayn;
@@ -135,7 +138,7 @@ namespace RealTime
         static double dmdelay(double dm, double fh, double fl)
         {
             return 4.148741601e3*dm*(1./(fl*fl)-1./(fh*fh));
-        }    
+        }
     };
 }
 

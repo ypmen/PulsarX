@@ -90,6 +90,10 @@ fftwf_plan plan_transpose(int rows, int cols, float *in, float *out);
 fftw_plan plan_transpose(int rows, int cols, double *in, double *out);
 
 void runMedian(float *data, float *datMedian, long int size, int w);
+template <typename T>
+void runMedian2(T *data, T *datMedian, long int size, int w);
+template <typename T>
+void runMedian3(T *data, T *datMedian, long int size, int w);
 
 template <typename T>
 void transpose(T *out, T *in, int m, int n);

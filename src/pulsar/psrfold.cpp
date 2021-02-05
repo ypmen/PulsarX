@@ -63,6 +63,7 @@ int main(int argc, const char *argv[])
             ("f0", value<double>()->default_value(0), "F0 (Hz)")
             ("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("acc", value<double>()->default_value(0), "Acceleration (m/s/s)")
+			("scale", value<int>()->default_value(1), "F0,F1,dm search range scale in phase")
 			("nosearch", "Do not search dm,f0,f1")
 			("noplot", "Do not generate figures")
 			("noarch", "Do not generate archives")
@@ -123,6 +124,7 @@ int main(int argc, const char *argv[])
 		return -1;
 	}
 
+	int scale = vm["scale"].as<int>();
 	bool nosearch = vm.count("nosearch");
 	bool noplot = vm.count("noplot");
 	bool noarch = vm.count("noarch");
@@ -480,15 +482,15 @@ int main(int argc, const char *argv[])
 		double f0 = folder[k].f0;
 		double f1 = folder[k].f1;
 
-		gridsearch[k].ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-		gridsearch[k].ddmstep = 1./3*abs(gridsearch[k].ddmstart/folder[k].nbin);
-		gridsearch[k].nddm = 6*folder[k].nbin;
-		gridsearch[k].df0start = -3*1./tint;
-		gridsearch[k].df0step = 1./3*abs(gridsearch[k].df0start/folder[k].nbin);
-		gridsearch[k].ndf0 = 6*folder[k].nbin;
-		gridsearch[k].df1start = -3*2./(tint*tint);
-		gridsearch[k].df1step = 1./3*abs(gridsearch[k].df1start/folder[k].nbin);
-		gridsearch[k].ndf1 = 6*folder[k].nbin;
+		gridsearch[k].ddmstart = -scale*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
+		gridsearch[k].ddmstep = 1./scale*abs(gridsearch[k].ddmstart/folder[k].nbin);
+		gridsearch[k].nddm = 2*abs(scale)*folder[k].nbin;
+		gridsearch[k].df0start = -scale*1./tint;
+		gridsearch[k].df0step = 1./scale*abs(gridsearch[k].df0start/folder[k].nbin);
+		gridsearch[k].ndf0 = 2*abs(scale)*folder[k].nbin;
+		gridsearch[k].df1start = -scale*2./(tint*tint);
+		gridsearch[k].df1step = 1./scale*abs(gridsearch[k].df1start/folder[k].nbin);
+		gridsearch[k].ndf1 = 2*abs(scale)*folder[k].nbin;
 
 		gridsearch[k].clfd_q = vm["clfd"].as<double>();
 
@@ -523,6 +525,28 @@ int main(int argc, const char *argv[])
 				//cout<<gridsearch[k].dm<<" "<<gridsearch[k].f0<<" "<<gridsearch[k].f1<<endl;
 			}
 		}
+
+		/**
+		 * @brief recalculate the mxsbr_ffdot and vsnr_dm with scale = 3 for plotting
+		 * 
+		 */
+
+		dm = folder[k].dm;
+		f0 = folder[k].f0;
+		f1 = folder[k].f1;
+
+		gridsearch[k].ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
+		gridsearch[k].ddmstep = 1./3*abs(gridsearch[k].ddmstart/folder[k].nbin);
+		gridsearch[k].nddm = 2*3*folder[k].nbin;
+		gridsearch[k].df0start = -3*1./tint;
+		gridsearch[k].df0step = 1./3*abs(gridsearch[k].df0start/folder[k].nbin);
+		gridsearch[k].ndf0 = 2*3*folder[k].nbin;
+		gridsearch[k].df1start = -3*2./(tint*tint);
+		gridsearch[k].df1step = 1./3*abs(gridsearch[k].df1start/folder[k].nbin);
+		gridsearch[k].ndf1 = 2*3*folder[k].nbin;
+
+		gridsearch[k].runFFdot();
+		gridsearch[k].runDM();
 	}
 
 	/** form obsinfo*/

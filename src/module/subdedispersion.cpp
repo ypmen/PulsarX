@@ -84,7 +84,7 @@ void Subband::run(vector<float> &data)
                 }
             }
         }
-    }    
+    }
 
     for (long int k=0; k<nsub; k++)
     {
@@ -222,7 +222,7 @@ void SubbandDedispersion::prepare(DataBuffer<float> &databuffer)
         sub.vdm[i] = dms + i*ddm;
     }
     sub.frequencies.resize(nsubband, 0.);
-    sub.frequencies = freq;
+    sub.frequencies = frefsub;
     sub.fcnt.resize(nsubband, 0);
     sub.fcnt = fcnt;
     sub.prepare();
@@ -280,7 +280,7 @@ void SubbandDedispersion::run(DataBuffer<float> &databuffer, long int ns)
 
     mean = 0.;
     var = 0.;
-    for (long int i=0; i<ndump; i++)
+    for (long int i=0; i<nsamples; i++)
     {
         float temp = 0.;
         for (long int j=0; j<nchans; j++)
@@ -290,8 +290,8 @@ void SubbandDedispersion::run(DataBuffer<float> &databuffer, long int ns)
         mean += temp;
         var += temp*temp;
     }
-    mean /= ndump;
-    var /= ndump;
+    mean /= nsamples;
+    var /= nsamples;
     var -= mean*mean;
 
     for (long int i=0; i<nspace; i++)
