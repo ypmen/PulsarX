@@ -153,12 +153,6 @@ void RFI::zero(DataBuffer<float> &databuffer)
 
 bool RFI::mask(DataBuffer<float> &databuffer, float threRFI2, int td, int fd)
 {
-    if (!databuffer.equalized)
-    {
-        cerr<<"Error: data is not equalize"<<endl;
-        return false;
-    }
-
     long int nsamples_ds = nsamples/td;
     long int nchans_ds = nchans/fd;
 
@@ -184,9 +178,17 @@ bool RFI::mask(DataBuffer<float> &databuffer, float threRFI2, int td, int fd)
 
     buffer = databuffer.buffer;
 
-    float var = 1.;
-    int wn = td*fd;
-    float thre = threRFI2*wn*var;
+    vector<float> buffer_dscopy = buffer_ds;
+	std::nth_element(buffer_dscopy.begin(), buffer_dscopy.begin()+nsamples_ds*nchans_ds/4, buffer_dscopy.end(), std::less<float>());
+    float Q1 = buffer_dscopy[nsamples_ds*nchans_ds/4];
+	std::nth_element(buffer_dscopy.begin(), buffer_dscopy.begin()+nsamples_ds*nchans_ds/2, buffer_dscopy.end(), std::less<float>());
+    float Q2 = buffer_dscopy[nsamples_ds*nchans_ds/2];
+    std::nth_element(buffer_dscopy.begin(), buffer_dscopy.begin()+nsamples_ds*nchans_ds/4, buffer_dscopy.end(), std::greater<float>());
+    float Q3 = buffer_dscopy[nsamples_ds*nchans_ds/4];
+
+	float mean = Q2;
+	float var = ((Q3-Q1)/1.349)*((Q3-Q1)/1.349);
+    float thre = threRFI2*var;
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(num_threads)
@@ -199,8 +201,8 @@ bool RFI::mask(DataBuffer<float> &databuffer, float threRFI2, int td, int fd)
             {
                 for (long int k=0; k<fd; k++)
                 {
-                    if (buffer_ds[i*nchans_ds+j]*buffer_ds[i*nchans_ds+j]>thre)
-                        buffer[(i*td+n)*nchans+j*fd+k] = 0.;
+                    if ((buffer_ds[i*nchans_ds+j]-mean)*(buffer_ds[i*nchans_ds+j]-mean)>thre)
+                        buffer[(i*td+n)*nchans+j*fd+k] = mean;
                 }
             }
         }

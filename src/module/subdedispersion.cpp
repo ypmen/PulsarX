@@ -16,6 +16,8 @@ using namespace RealTime;
 
 Subband::Subband()
 {
+    inplace = false;
+
     counter = 0;
     ndump = 0;
     nchans = 0;
@@ -107,11 +109,25 @@ void Subband::get_subdata(vector<float> &subdata, int idm) const
     int isub = idm/ndm_per_sub;
     int isubdm = idm%ndm_per_sub;
 
-    for (long int j=0; j<nchans; j++)
+    if (!inplace)
     {
-        for (long int i=0; i<ndump; i++)
+        for (long int j=0; j<nchans; j++)
         {
-            subdata[j*ndump+i] = bufferT[(isub*nchans+j)*nsamples+i+mxdelayn[(isub*nchans+j)*ndm_per_sub+isubdm]];
+            for (long int i=0; i<ndump; i++)
+            {
+                subdata[j*ndump+i] = bufferT[(isub*nchans+j)*nsamples+i+mxdelayn[(isub*nchans+j)*ndm_per_sub+isubdm]];
+            }
+        }
+    }
+    else
+    {
+        int isub_real = decodeisub[isub];
+        for (long int j=0; j<nchans; j++)
+        {
+            for (long int i=0; i<ndump; i++)
+            {
+                subdata[j*ndump+i] = bufferT[(isub_real*nchans+j)*nsamples+i+mxdelayn[(isub*nchans+j)*ndm_per_sub+isubdm]];
+            }
         }
     }
 }
@@ -119,9 +135,20 @@ void Subband::get_subdata(vector<float> &subdata, int idm) const
 void Subband::get_timdata(vector<float> &timdata, int idm) const
 {
     timdata.resize(ndump, 0.);
-    for (long int i=0; i<ndump; i++)
+    if (!inplace)
     {
-        timdata[i] = buffertim[idm*ndump+i];
+        for (long int i=0; i<ndump; i++)
+        {
+            timdata[i] = buffertim[idm*ndump+i];
+        }
+    }
+    else
+    {
+        int idm_real = decodeidm[idm];
+        for (long int i=0; i<ndump; i++)
+        {
+            timdata[i] = buffertim[idm_real*ndump+i];
+        }
     }
 }
 
@@ -278,21 +305,21 @@ void SubbandDedispersion::run(DataBuffer<float> &databuffer, long int ns)
 
     sub.run(buffersubT);
 
-    mean = 0.;
-    var = 0.;
-    for (long int i=0; i<nsamples; i++)
-    {
-        float temp = 0.;
-        for (long int j=0; j<nchans; j++)
-        {
-            temp += buffer[i*nchans+j];
-        }
-        mean += temp;
-        var += temp*temp;
-    }
-    mean /= nsamples;
-    var /= nsamples;
-    var -= mean*mean;
+    // mean = 0.;
+    // var = 0.;
+    // for (long int i=0; i<nsamples; i++)
+    // {
+    //     float temp = 0.;
+    //     for (long int j=0; j<nchans; j++)
+    //     {
+    //         temp += buffer[i*nchans+j];
+    //     }
+    //     mean += temp;
+    //     var += temp*temp;
+    // }
+    // mean /= nsamples;
+    // var /= nsamples;
+    // var -= mean*mean;
 
     for (long int i=0; i<nspace; i++)
     {
@@ -324,10 +351,10 @@ void SubbandDedispersion::preparedump()
 
         ofstream outfile;
         outfile.open(rootname + "_" + s_dm + ".dat", ios::binary|ios::app);
-        // outfile.write((char *)(&dm), sizeof(double));
-        // outfile.write((char *)(&tsamp), sizeof(double));
-        // outfile.write((char *)(&fmin), sizeof(double));
-        // outfile.write((char *)(&fmax), sizeof(double));
+        outfile.write((char *)(&dm), sizeof(double));
+        outfile.write((char *)(&tsamp), sizeof(double));
+        outfile.write((char *)(&fmin), sizeof(double));
+        outfile.write((char *)(&fmax), sizeof(double));
         outfile.close();
     }
 }

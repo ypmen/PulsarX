@@ -7,6 +7,7 @@
 
 #include <limits>
 #include <assert.h>
+#include <set>
 #include "utils.h"
 #include "AVL.h"
 #include "dedisperse.h"
@@ -284,6 +285,272 @@ void runMedian(float *data, float *datMedian, long int size, int w)
             treeMedian.insertValue(data[b - 1]);
 
         datMedian[k++] = treeMedian.getMedian();
+    }
+}
+
+template <typename T>
+void runMedian2(T *data, T *datMedian, long int size, int w)
+{
+    w = w > size ? size : w;
+
+    std::multiset<T, greater<T>> lowhalf;
+    std::multiset<T, less<T>> highhalf;
+
+    int a = 0-w/2-1;
+    int b = 0+(w-1)/2;
+
+    lowhalf.insert(data[0]);
+    T median = data[0];
+
+    for (long int i=1; i<b; i++)
+    {
+        if (data[i] >= median)
+        {
+            highhalf.insert(data[i]);
+        }
+        else
+        {
+            lowhalf.insert(data[i]);
+        }
+
+        if (lowhalf.size() > highhalf.size()+1)
+        {
+            highhalf.insert(*lowhalf.begin());
+            lowhalf.erase(lowhalf.begin());
+        }
+        else if (highhalf.size() > lowhalf.size()+1)
+        {
+            lowhalf.insert(*highhalf.begin());
+            highhalf.erase(highhalf.begin());
+        }
+
+        if (lowhalf.size() > highhalf.size())
+        {
+            median = *lowhalf.begin();
+        }
+        else if (highhalf.size() > lowhalf.size())
+        {
+            median = *highhalf.begin();
+        }
+        else
+        {
+            median = (*lowhalf.begin()+*highhalf.begin())/2;
+        }
+    }
+
+    for (long int i=0; i<w/2+1; i++)
+    {
+        if (data[b] >= median)
+        {
+            highhalf.insert(data[b]);
+        }
+        else
+        {
+            lowhalf.insert(data[b]);
+        }
+
+        if (lowhalf.size() > highhalf.size()+1)
+        {
+            highhalf.insert(*lowhalf.begin());
+            lowhalf.erase(lowhalf.begin());
+        }
+        else if (highhalf.size() > lowhalf.size()+1)
+        {
+            lowhalf.insert(*highhalf.begin());
+            highhalf.erase(highhalf.begin());
+        }
+
+        if (lowhalf.size() > highhalf.size())
+        {
+            median = *lowhalf.begin();
+        }
+        else if (highhalf.size() > lowhalf.size())
+        {
+            median = *highhalf.begin();
+        }
+        else
+        {
+            median = (*lowhalf.begin()+*highhalf.begin())/2;
+        }
+
+        datMedian[i] = median;
+
+        a++;
+        b++;
+    }
+
+    for (long int i=w/2+1; i<size-(w-1)/2; i++)
+    {
+        if (data[b] >= median)
+        {
+            highhalf.insert(data[b]);
+        }
+        else
+        {
+            lowhalf.insert(data[b]);
+        }
+
+        auto it = lowhalf.find(data[a]);
+        if (it != lowhalf.end())
+            lowhalf.erase(it);
+        else
+            highhalf.erase(highhalf.find(data[a]));
+
+        if (lowhalf.size() > highhalf.size()+1)
+        {
+            highhalf.insert(*lowhalf.begin());
+            lowhalf.erase(lowhalf.begin());
+        }
+        else if (highhalf.size() > lowhalf.size()+1)
+        {
+            lowhalf.insert(*highhalf.begin());
+            highhalf.erase(highhalf.begin());
+        }
+
+        if (lowhalf.size() > highhalf.size())
+        {
+            median = *lowhalf.begin();
+        }
+        else if (highhalf.size() > lowhalf.size())
+        {
+            median = *highhalf.begin();
+        }
+        else
+        {
+            median = (*lowhalf.begin()+*highhalf.begin())/2;
+        }
+
+        datMedian[i] = median;
+
+        a++;
+        b++;
+    }
+
+    for (long int i=size-(w-1)/2; i<size; i++)
+    {
+        auto it = lowhalf.find(data[a]);
+        if (it != lowhalf.end())
+            lowhalf.erase(it);
+        else
+            highhalf.erase(highhalf.find(data[a]));
+
+        if (lowhalf.size() > highhalf.size()+1)
+        {
+            highhalf.insert(*lowhalf.begin());
+            lowhalf.erase(lowhalf.begin());
+        }
+        else if (highhalf.size() > lowhalf.size()+1)
+        {
+            lowhalf.insert(*highhalf.begin());
+            highhalf.erase(highhalf.begin());
+        }
+
+        if (lowhalf.size() > highhalf.size())
+        {
+            median = *lowhalf.begin();
+        }
+        else if (highhalf.size() > lowhalf.size())
+        {
+            median = *highhalf.begin();
+        }
+        else
+        {
+            median = (*lowhalf.begin()+*highhalf.begin())/2;
+        }
+
+        datMedian[i] = median;
+
+        a++;
+        b++;
+    }
+}
+
+template <typename T>
+void runMedian3(T *data, T *datMedian, long int size, int w)
+{
+    multiset<T, greater<T>> treeMedian;
+
+    w = w > size ? size : w;
+    long int k = 0;
+
+    int a = -floor(w * 0.5);
+    int b = ceil(w * 0.5);
+
+    for (long int i = 0; i < b; i++)
+    {
+        treeMedian.insert(data[i]);
+    }
+
+    if (treeMedian.size()%2 == 1)
+    {
+        int tmp = 0;
+        for (auto it=treeMedian.begin(); it!=treeMedian.end(); ++it)
+        {
+            if (tmp++ == treeMedian.size()/2)
+            {
+                datMedian[k++] = *it;
+            }
+        }
+    }
+    else
+    {
+        int tmp = 0;
+        for (auto it=treeMedian.begin(); it!=treeMedian.end(); ++it)
+        {
+            if (tmp == treeMedian.size()/2-1)
+            {
+                datMedian[k] = *it;
+            }
+
+            if (tmp == treeMedian.size()/2)
+            {
+                datMedian[k] += *it;
+            }
+            tmp++;
+        }
+        datMedian[k] /= 2;
+        k++;
+    }
+
+    for (long int i = 1; i < size; i++)
+    {
+        a++;
+        b++;
+        if (a > 0)
+            treeMedian.erase(treeMedian.find(data[a - 1]));
+        if (b <= size)
+            treeMedian.insert(data[b - 1]);
+
+        if (treeMedian.size()%2 == 1)
+        {
+            int tmp = 0;
+            for (auto it=treeMedian.begin(); it!=treeMedian.end(); ++it)
+            {
+                if (tmp++ == treeMedian.size()/2)
+                {
+                    datMedian[k++] = *it;
+                }
+            }
+        }
+        else
+        {
+            int tmp = 0;
+            for (auto it=treeMedian.begin(); it!=treeMedian.end(); ++it)
+            {
+                if (tmp == treeMedian.size()/2-1)
+                {
+                    datMedian[k] = *it;
+                }
+
+                if (tmp == treeMedian.size()/2)
+                {
+                    datMedian[k] += *it;
+                }
+                tmp++;
+            }
+            datMedian[k] /= 2;
+            k++;
+        }
     }
 }
 
@@ -832,7 +1099,14 @@ template void get_mean_var<std::vector<double>::iterator>(std::vector<double>::i
 template void transpose<float>(float *out, float *in, int m, int n);
 template void transpose_pad<float>(float *out, float *in, int m, int n);
 template void transpose_pad<float>(float *out, float *in, int m, int n, int tiley, int tilex);
+template void transpose<complex<float>>(complex<float> *out, complex<float> *in, int m, int n);
+template void transpose_pad<complex<float>>(complex<float> *out, complex<float> *in, int m, int n);
+template void transpose_pad<complex<float>>(complex<float> *out, complex<float> *in, int m, int n, int tiley, int tilex);
 
 template void transpose<double>(double *out, double *in, int m, int n);
 template void transpose_pad<double>(double *out, double *in, int m, int n);
 template void transpose_pad<double>(double *out, double *in, int m, int n, int tiley, int tilex);
+
+template void runMedian2<float>(float *data, float *datMedian, long int size, int w);
+
+template void runMedian3<float>(float *data, float *datMedian, long int size, int w);

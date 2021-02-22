@@ -42,7 +42,6 @@ void Equalize::prepare(DataBuffer<float> &databuffer)
 
 void Equalize::run(DataBuffer<float> &databuffer)
 {
-
     fill(chmean.begin(), chmean.end(), 0.);
     fill(chstd.begin(), chstd.end(), 0.);
 
