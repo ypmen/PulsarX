@@ -144,6 +144,7 @@ namespace Pulsar
         double acc;
         double dm;
         double snr;
+        long int nblock;
     public:
         int nbin;
         int nchan;
@@ -153,6 +154,13 @@ namespace Pulsar
         vector<IntegrationLite> profiles;
         MJD sub_mjd;
         IntegrationLite sub_int;
+    private:
+        int iblock;
+        vector<float> mxWTW;
+        vector<float> vWTd_T;
+        vector<int> hits;
+        vector<float> profilesTPF;
+        vector<float> profilesPFT;
     };
 }
 

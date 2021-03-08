@@ -254,7 +254,8 @@ int main(int argc, const char *argv[])
 
 	float *buffer = new float [nchans];
 
-    long int ndump = (int)(vm["tsubint"].as<double>()/tsamp)/td*td;
+	long int ndump = ceil((1./tsamp)/td)*td;
+	int nblock = ceil(vm["tsubint"].as<double>());
 
 	DataBuffer<float> databuf(ndump, nchans);
 	databuf.tsamp = tsamp;
@@ -292,6 +293,7 @@ int main(int argc, const char *argv[])
         folder[k].start_mjd = tstarts[idx[0]]+(ceil(1.*dedisp.offset/ndump)*ndump-dedisp.offset)*tsamp*td;
 		folder[k].ref_epoch = tstarts[idx[0]]+(ntotal*tsamp/2.);
         folder[k].resize(1, subdata.nchans, folder[k].nbin);
+		folder[k].nblock = nblock;
 		folder[k].prepare(subdata);
         folder[k].dm = dedisp.vdm[k];
 	}
