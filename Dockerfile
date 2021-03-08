@@ -39,11 +39,18 @@ RUN wget https://www.iausofa.org/2020_0721_C/sofa_c-20200721.tar.gz --no-check-c
 WORKDIR $HOME/software/sofa/20200721/c/src
 RUN make && make test
 
-#install PulsarX
 WORKDIR $HOME/software
+#install PlotX
+RUN git clone https://github.com/ypmen/PlotX.git
+#install PulsarX
 RUN git clone https://github.com/ypmen/PulsarX.git
 #install BasebandX
 RUN git clone https://github.com/ypmen/BasebandX.git
+
+WORKDIR $HOME/software/PlotX
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software
+RUN make && make install
 
 WORKDIR $HOME/software/PulsarX
 RUN ./bootstrap
