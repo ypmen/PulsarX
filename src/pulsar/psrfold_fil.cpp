@@ -423,10 +423,10 @@ int main(int argc, const char *argv[])
 	 * @brief flush the end data
 	 * 
 	 */
-	rfi.open();
 	int nleft = dedisp.offset/ndump;
 	for (long int l=0; l<nleft; l++)
 	{
+		rfi.open();
 		dedisp.run(rfi);
 		for (long int k=0; k<ncand; k++)
 		{
