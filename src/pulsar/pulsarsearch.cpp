@@ -146,6 +146,9 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
         int id = 0;
         while (getline(ddplan, line))
         {
+            boost::trim(line);
+			if (line.rfind("#", 0) == 0) continue;
+
             vector<string> parameters;
             boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
             
@@ -156,7 +159,7 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
             sp.ndm = stol(parameters[4]);
             
             sp.rfilist.clear();
-            for (auto opt=parameters.begin()+9; opt!=parameters.end(); ++opt)
+            for (auto opt=parameters.begin()+5; opt!=parameters.end(); ++opt)
             {
                 if (*opt=="mask" or *opt=="kadaneF" or *opt=="kadaneT")
                 {
