@@ -698,7 +698,8 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
         while (getline(candfile, line))
         {
 			boost::trim(line);
-			if (line.rfind("#", 0) == 0) continue;
+			if(!isdigit(line[0])) continue;
+			
             vector<string> parameters;
             boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
 

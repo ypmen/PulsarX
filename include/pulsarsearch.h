@@ -15,6 +15,7 @@
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp> 
 
+#include "filterbank.h"
 #include "subdedispersion.h"
 #include "databuffer.h"
 #include "downsample.h"
@@ -60,6 +61,12 @@ public:
     int ibeam;
     string rootname;
     int id;
+
+    float outmean;
+    float outstd;
+    int outnbits;
+
+    Filterbank fildedisp;
 };
 
 void plan(variables_map &vm, vector<PulsarSearch> &search);

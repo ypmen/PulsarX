@@ -48,6 +48,9 @@ int main(int argc, const char *argv[])
 			("ndm", value<int>()->default_value(200), "Number of DM")
 			("ddplan", value<string>(), "Input ddplan file")
 			("seglen,l", value<float>()->default_value(1), "Time length per segment (s)")
+			("mean", value<float>()->default_value(10), "Mean of dedispersed time series")
+			("std", value<float>()->default_value(3), "Standard deviation of dedispersed time series")
+			("nbits", value<int>()->default_value(8), "Data type of dedispersed time series")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
@@ -87,14 +90,13 @@ int main(int argc, const char *argv[])
 	}
 
 	bool contiguous = vm.count("cont");
-
     string rootname = vm["rootname"].as<string>();
-
     num_threads = vm["threads"].as<unsigned int>();
-
 	vector<double> jump = vm["jump"].as<vector<double>>();
-
 	vector<string> fnames = vm["input"].as<vector<string>>();
+	float outmean = vm["mean"].as<float>();
+	float outstd = vm["std"].as<float>();
+	int outnbits = vm["nbits"].as<int>();
 
 	long int nfil = fnames.size();
 	Filterbank *fil = new Filterbank [nfil];
@@ -177,6 +179,8 @@ int main(int argc, const char *argv[])
 	{
 		search[k].ibeam = ibeam;
         search[k].rootname = rootname + "_" + s_ibeam + '_' + to_string(ncover);
+		search[k].fildedisp = fil[0];
+		search[k].fildedisp.tstart = tstarts[idx[0]].to_day();
 		search[k].prepare(databuf);
 	}
 
@@ -229,7 +233,8 @@ int main(int argc, const char *argv[])
 	                {
                         search[k].dedisp.rootname = rootname + "_" + s_ibeam + '_' + to_string(ncover);
                         search[k].dedisp.prepare(search[k].rfi);
-                        search[k].dedisp.preparedump();
+						search[k].fildedisp.tstart = (tstarts[idx[0]] + count*tsamp/86400.).to_day();
+                        search[k].dedisp.preparedump(search[k].fildedisp, outnbits);
 	                }
                 }
 

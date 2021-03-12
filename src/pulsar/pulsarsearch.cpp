@@ -29,6 +29,10 @@ PulsarSearch::PulsarSearch()
     
     ibeam = 1;
     id = 1;
+
+    outmean = 0.;
+    outstd = 0.;
+    outnbits = 0;
 }
 
 PulsarSearch::~PulsarSearch(){}
@@ -49,7 +53,7 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
     dedisp.ndump = rfi.nsamples;
     dedisp.rootname = rootname;
     dedisp.prepare(rfi);
-    dedisp.preparedump();
+    dedisp.preparedump(fildedisp, outnbits);
 }
 
 void PulsarSearch::run(DataBuffer<float> &databuffer)
@@ -84,9 +88,8 @@ void PulsarSearch::run(DataBuffer<float> &databuffer)
         }
 	}
 
-    
     dedisp.run(rfi, rfi.nsamples);
-    dedisp.rundump();
+    dedisp.rundump(outmean, outstd, outnbits);
 }
 
 void plan(variables_map &vm, vector<PulsarSearch> &search)
@@ -95,12 +98,6 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
 
     sp.td = vm["td"].as<int>();
 	sp.fd = vm["fd"].as<int>();
-
-	//fast
-	// sp.zaplist.push_back(pair<double, double>(1170, 1186));
-	// sp.zaplist.push_back(pair<double, double>(1197, 1215));
-	// sp.zaplist.push_back(pair<double, double>(1260, 1271));
-	// sp.zaplist.push_back(pair<double, double>(1470, 1500));
 
 	vector<string> rfi_opts;
 	if (vm.count("rfi"))
@@ -138,6 +135,10 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
 	sp.ddm = vm["ddm"].as<double>();
 	sp.ndm = vm["ndm"].as<int>();
 
+    sp.outmean = vm["mean"].as<float>();
+    sp.outstd = vm["std"].as<float>();
+    sp.outnbits = vm["nbits"].as<int>();
+
     if (vm.count("ddplan"))
     {
         string filename = vm["ddplan"].as<string>();
@@ -147,7 +148,7 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
         while (getline(ddplan, line))
         {
             boost::trim(line);
-			if (line.rfind("#", 0) == 0) continue;
+			if(!isdigit(line[0])) continue;
 
             vector<string> parameters;
             boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);

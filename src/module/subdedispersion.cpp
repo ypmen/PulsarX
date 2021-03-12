@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <assert.h>
+
 #include "subdedispersion.h"
 
 using namespace std;
@@ -425,7 +426,7 @@ void SubbandDedispersion::run(DataBuffer<float> &databuffer, long int ns)
     counter += ndump;
 }
 
-void SubbandDedispersion::preparedump()
+void SubbandDedispersion::preparedump(Filterbank &fil, int nbits)
 {
     double fmin = 1e6;
 	double fmax = 0.;
@@ -435,6 +436,8 @@ void SubbandDedispersion::preparedump()
         fmin = frequencies[j]<fmin? frequencies[j]:fmin;
     }
 
+    double dt = (ceil(1.*offset/ndump)*ndump-offset)*tsamp;
+
     for (long int k=0; k<ndm; k++)
     {
         double dm = sub.vdm[k];
@@ -442,28 +445,73 @@ void SubbandDedispersion::preparedump()
         ss_dm << "DM" /*<< setw(8)*/ << setprecision(2) << fixed << setfill('0') << dm;
         string s_dm = ss_dm.str();
 
-        ofstream outfile;
-        outfile.open(rootname + "_" + s_dm + ".dat", ios::binary|ios::app);
-        outfile.write((char *)(&dm), sizeof(double));
-        outfile.write((char *)(&tsamp), sizeof(double));
-        outfile.write((char *)(&fmin), sizeof(double));
-        outfile.write((char *)(&fmax), sizeof(double));
-        outfile.close();
+        std::string fname = rootname + "_" + s_dm + ".dat";
+        fil.filename = fname;
+        fil.tstart += dt;
+        fil.refdm = dm;
+        fil.tsamp = tsamp;
+        fil.nchans = 1;
+        fil.nbits = nbits;
+        fil.nifs = 1;
+        fil.data_type = 2;
+        if (!fil.write_header())
+            std::cout<<"Error: Can not write dedisperse series header"<<std::endl;
+        fil.close();
     }
 }
 
-void SubbandDedispersion::rundump()
+void SubbandDedispersion::rundump(float mean, float std, int nbits)
 {
+    if (counter < offset+ndump) return;
+    
     for (long int k=0; k<ndm; k++)
     {
         double dm = sub.vdm[k];
         stringstream ss_dm;
         ss_dm << "DM" /*<< setw(8)*/ << setprecision(2) << fixed << setfill('0') << dm;
         string s_dm = ss_dm.str();
-
+        
+        std::string fname = rootname + "_" + s_dm + ".dat";
         ofstream outfile;
-        outfile.open(rootname + "_" + s_dm + ".dat", ios::binary|ios::app);
-        outfile.write((char *)(&sub.buffertim[0]+k*sub.ndump), sizeof(float)*sub.ndump);
+        outfile.open(fname, ios::binary|ios::app);
+
+        if (nbits == 8)
+        {
+            double meantim=0., stdtim=0.;
+            for (long int i=0; i<sub.ndump; i++)
+            {
+                meantim += sub.buffertim[k*sub.ndump+i];
+                stdtim += sub.buffertim[k*sub.ndump+i]*sub.buffertim[k*sub.ndump+i];
+            }
+            meantim /= sub.ndump;
+            stdtim /= sub.ndump;
+            stdtim -= meantim*meantim;
+            stdtim = std::sqrt(stdtim);
+
+            float scl = std/stdtim;
+            float offs = mean-scl*meantim;
+
+            std::vector<unsigned char> tim8bit(sub.ndump, 0);
+            for (long int i=0; i<sub.ndump; i++)
+            {
+                float tmp = scl*sub.buffertim[k*sub.ndump+i]+offs;
+                tmp = std::max(0.f, tmp);
+                tmp = std::min(255.f, tmp);
+                tim8bit[i] = tmp;
+            }
+
+            outfile.write((char *)(tim8bit.data()), sizeof(unsigned char)*sub.ndump);
+        }
+        else if (nbits == 32)
+        {
+            outfile.write((char *)(sub.buffertim.data()+k*sub.ndump), sizeof(float)*sub.ndump);
+        }
+        else
+        {
+            outfile.write((char *)(sub.buffertim.data()+k*sub.ndump), sizeof(float)*sub.ndump);
+            std::cout<<"Warning: data type not supported, use float instead"<<std::endl;
+        }
+
         outfile.close();
     }
 }
