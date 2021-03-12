@@ -21,6 +21,7 @@
 #include "downsample.h"
 #include "equalize.h"
 #include "rfi.h"
+#include "baseline.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -36,12 +37,16 @@ public:
     //components
     Downsample downsample;
     Equalize equalize;
+    BaseLine baseline;
     RFI rfi;
     RealTime::SubbandDedispersion dedisp;
 
     //downsample
     int td;
     int fd;
+
+    //baseline
+    float bswidth;
 
     //rfi
     vector<pair<double, double>> zaplist;

@@ -122,6 +122,7 @@ Filterbank::Filterbank(const Filterbank &fil)
 
 	if (fil.frequency_table != NULL)
 	{
+		if (frequency_table != NULL) delete [] frequency_table;
 		frequency_table = new double [16320];
 		memcpy(frequency_table, fil.frequency_table, sizeof(double)*16320);
 	}
@@ -130,6 +131,7 @@ Filterbank::Filterbank(const Filterbank &fil)
 
 	if (fil.data != NULL)
 	{
+		if (data != NULL) delete [] data;
 		switch (nbits)
 		{
 		case 8:
@@ -182,6 +184,7 @@ Filterbank & Filterbank::operator=(const Filterbank &fil)
 
 	if (fil.frequency_table != NULL)
 	{
+		if (frequency_table != NULL) delete [] frequency_table;
 		frequency_table = new double [16320];
 		memcpy(frequency_table, fil.frequency_table, sizeof(double)*16320);
 	}
@@ -190,6 +193,7 @@ Filterbank & Filterbank::operator=(const Filterbank &fil)
 
 	if (fil.data != NULL)
 	{
+		if (data != NULL) delete [] data;
 		switch (nbits)
 		{
 		case 8:

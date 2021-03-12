@@ -17,6 +17,7 @@ PulsarSearch::PulsarSearch()
 {
     td = 1;
     fd = 1;
+    bswidth = 0.1;
     threMask = 7;
     bandlimit = 10;
     bandlimitKT = 10.;
@@ -42,10 +43,17 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
     downsample.td = td;
     downsample.fd = fd;
     downsample.prepare(databuffer);
+    downsample.close();
 
     equalize.prepare(downsample);
+    equalize.close();
 
-    rfi.prepare(equalize);
+    baseline.width = bswidth;
+    baseline.prepare(equalize);
+    baseline.close();
+
+    rfi.prepare(baseline);
+    rfi.close();
 
     dedisp.dms = dms;
     dedisp.ddm = ddm;
@@ -58,11 +66,20 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
 
 void PulsarSearch::run(DataBuffer<float> &databuffer)
 {
+    downsample.open();
     downsample.run(databuffer);
+    databuffer.close();
     
+    equalize.open();
     equalize.run(downsample);
-    
-    rfi.zap(equalize, zaplist);
+    downsample.close();
+
+    baseline.open();
+    baseline.run(equalize);
+    equalize.close();
+
+    rfi.open();
+    rfi.zap(baseline, zaplist);
 	
     for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
 	{
@@ -87,8 +104,12 @@ void PulsarSearch::run(DataBuffer<float> &databuffer)
 			rfi.zero(rfi);
         }
 	}
+    baseline.close();
 
     dedisp.run(rfi, rfi.nsamples);
+    rfi.close();
+
+    databuffer.open();
     dedisp.rundump(outmean, outstd, outnbits);
 }
 
@@ -98,6 +119,8 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
 
     sp.td = vm["td"].as<int>();
 	sp.fd = vm["fd"].as<int>();
+
+    sp.bswidth = vm["baseline"].as<float>();
 
 	vector<string> rfi_opts;
 	if (vm.count("rfi"))
