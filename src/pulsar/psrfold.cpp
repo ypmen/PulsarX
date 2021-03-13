@@ -538,7 +538,7 @@ int main(int argc, const char *argv[])
 		f0 = folder[k].f0;
 		f1 = folder[k].f1;
 
-		gridsearch[k].ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
+		gridsearch[k].ddmstart = std::max(-3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin), -dm);
 		gridsearch[k].ddmstep = 1./3*abs(gridsearch[k].ddmstart/folder[k].nbin);
 		gridsearch[k].nddm = 2*3*folder[k].nbin;
 		gridsearch[k].df0start = -3*1./tint;

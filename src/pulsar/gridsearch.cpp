@@ -296,27 +296,34 @@ void GridSearch::runDM()
         
         double ddm = ddmstart + k*ddmstep;
         
-        float *pmxfph = &mxfph[0];
-        for (long int j=0; j<nchan; j++)
+        if (dm+ddm >= 0)
         {
-            int delayn = round(DedispersionLite::dmdelay(ddm, fmax, frequencies[j])*f0*nbin);
-            delayn %= nbin;
-            if (delayn<0) delayn += nbin;
-            int nleft = nbin - delayn;
-            float *pd = pmxfph + delayn;
-            for (long int i=0; i<nleft; i++)
+            float *pmxfph = &mxfph[0];
+            for (long int j=0; j<nchan; j++)
             {
-                pro[i] += pd[i];
+                int delayn = round(DedispersionLite::dmdelay(ddm, fmax, frequencies[j])*f0*nbin);
+                delayn %= nbin;
+                if (delayn<0) delayn += nbin;
+                int nleft = nbin - delayn;
+                float *pd = pmxfph + delayn;
+                for (long int i=0; i<nleft; i++)
+                {
+                    pro[i] += pd[i];
+                }
+                pd = pmxfph + delayn - nbin;
+                for (long int i=nleft; i<nbin; i++)
+                {
+                    pro[i] += pd[i];
+                }
+                pmxfph += nbin;
             }
-            pd = pmxfph + delayn - nbin;
-            for (long int i=nleft; i<nbin; i++)
-            {
-                pro[i] += pd[i];
-            }
-            pmxfph += nbin;
-        }
 
-        vsnr_dm[k] = get_chisq(pro);
+            vsnr_dm[k] = get_chisq(pro);
+        }
+        else
+        {
+            vsnr_dm[k] = 0.;
+        }
 
         if (vsnr_dm[k] > maxsnr)
         {
