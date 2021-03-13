@@ -147,8 +147,6 @@ Filterbank::Filterbank(const Filterbank &fil)
 		default: cerr<<"Error: data type not support"<<endl; break;
 		}
 	}
-
-	fptr = fil.fptr;
 }
 
 Filterbank & Filterbank::operator=(const Filterbank &fil)
@@ -209,8 +207,6 @@ Filterbank & Filterbank::operator=(const Filterbank &fil)
 		default: cerr<<"Error: data type not support"<<endl; break;
 		}
 	}
-
-	fptr = fil.fptr;
 
 	return *this;
 }
@@ -645,9 +641,12 @@ bool Filterbank::write_header()
     fwrite(&nifs, sizeof(nifs), 1, fptr);
     //put_string(fptr, "npuls");
     //fwrite (&npuls, sizeof(npuls), 1, fptr);
-    put_string(fptr, "refdm");
-    fwrite (&refdm, sizeof(refdm), 1, fptr);
-    put_string(fptr, "HEADER_END");
+	if (data_type == 2)
+	{
+    	put_string(fptr, "refdm");
+    	fwrite (&refdm, sizeof(refdm), 1, fptr);
+	}
+	put_string(fptr, "HEADER_END");
     return true;
 }
 

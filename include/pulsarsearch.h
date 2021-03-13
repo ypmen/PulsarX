@@ -71,6 +71,8 @@ public:
     float outstd;
     int outnbits;
 
+    bool presto;
+
     Filterbank fildedisp;
 };
 

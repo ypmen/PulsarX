@@ -40,7 +40,7 @@ int main(int argc, const char *argv[])
 			("help,h", "Help")
 			("verbose,v", "Print debug information")
 			("threads,t", value<unsigned int>()->default_value(1), "Number of threads")
-			("jump,j", value<vector<double>>()->multitoken()->default_value(vector<double>{7200, 0}, "7200, 0"), "Time jump at the beginning and end (s)")
+			("jump,j", value<vector<double>>()->multitoken()->default_value(vector<double>{7200, 0}, "7200, 0"), "Segment length and following jump length (s)")
 			("td", value<int>()->default_value(1), "Time downsample")
 			("fd", value<int>()->default_value(1), "Frequency downsample")
 			("dms", value<double>()->default_value(0), "DM start")
@@ -62,6 +62,7 @@ int main(int argc, const char *argv[])
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("threMask", value<float>()->default_value(3), "S/N threshold of Mask")
             ("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
+			("presto", "Output presto tim and inf")
 			("cont", "Input files are contiguous")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
 
@@ -271,6 +272,14 @@ int main(int argc, const char *argv[])
 		}
         next:
 		fil[n].close();
+	}
+
+	if (vm.count("presto"))
+	{
+		for (auto sp=search.begin(); sp!=search.end(); ++sp)
+		{
+			(*sp).dedisp.makeinf((*sp).fildedisp);
+		}
 	}
 
 	if (verbose)
