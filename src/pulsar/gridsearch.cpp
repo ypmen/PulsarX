@@ -441,10 +441,12 @@ void GridSearch::get_snr_width()
 
     get_mean_var<std::vector<double>::iterator>(profile.begin(), nbin, tmp_mean, tmp_var);
 
+    tmp_var = tmp_var==0. ? 1.:tmp_var;
+
     for (long int i=0; i<nbin; i++)
     {
         profile[i] -= tmp_mean;
-        profile[i] /= sqrt(var);
+        profile[i] /= sqrt(tmp_var);
     }
 
     snr = 0.;
@@ -565,6 +567,7 @@ void GridSearch::normalize()
             get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
 
             tmp_var = tmp_var==0? 1:tmp_var;
+            tmp_var = std::sqrt(tmp_var);
 
             for (long int i=0; i<nbin; i++)
             {

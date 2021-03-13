@@ -52,6 +52,7 @@ int main(int argc, const char *argv[])
 			("std", value<float>()->default_value(3), "Standard deviation of dedispersed time series")
 			("nbits", value<int>()->default_value(8), "Data type of dedispersed time series")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
+			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
 			("baseline", value<float>()->default_value(0.1), "Remove baseline of width (s)")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
@@ -171,8 +172,11 @@ int main(int argc, const char *argv[])
     long int ncover = 0;
 
     stringstream ss_ibeam;
-    ss_ibeam << "M" << setw(2) << setfill('0') << ibeam;
-    string s_ibeam = ss_ibeam.str();
+	if (vm.count("incoherent"))
+    	ss_ibeam << "ifbf" << setw(5) << setfill('0') << ibeam;
+	else
+		ss_ibeam << "cfbf" << setw(5) << setfill('0') << ibeam;
+	string s_ibeam = ss_ibeam.str();
 
     ncover++;
 	long int nsearch = search.size();

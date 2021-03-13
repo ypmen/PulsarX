@@ -507,7 +507,7 @@ int main(int argc, const char *argv[])
 				f11 = gridsearch[k].f1;
 
 				cont++;
-				//cout<<gridsearch[k].dm<<" "<<gridsearch[k].f0<<" "<<gridsearch[k].f1<<endl;
+				cout<<gridsearch[k].dm<<" "<<gridsearch[k].f0<<" "<<gridsearch[k].f1<<endl;
 			}
 		}
 
