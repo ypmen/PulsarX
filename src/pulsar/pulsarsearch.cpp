@@ -188,7 +188,6 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
             sp.ddm = stod(parameters[3]);
             sp.ndm = stol(parameters[4]);
             
-            sp.rfilist.clear();
             for (auto opt=parameters.begin()+5; opt!=parameters.end(); ++opt)
             {
                 if (*opt=="mask" or *opt=="kadaneF" or *opt=="kadaneT")
