@@ -71,7 +71,7 @@ public:
     float outstd;
     int outnbits;
 
-    bool presto;
+    string format;
 
     Filterbank fildedisp;
 };

@@ -34,8 +34,6 @@ PulsarSearch::PulsarSearch()
     outmean = 0.;
     outstd = 0.;
     outnbits = 0;
-
-    presto = false;
 }
 
 PulsarSearch::~PulsarSearch(){}
@@ -57,7 +55,7 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
     rfi.prepare(baseline);
     rfi.close();
 
-    if (presto) outnbits = 32;
+    if (format == "presto") outnbits = 32;
 
     dedisp.dms = dms;
     dedisp.ddm = ddm;
@@ -65,7 +63,7 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
     dedisp.ndump = rfi.nsamples;
     dedisp.rootname = rootname;
     dedisp.prepare(rfi);
-    dedisp.preparedump(fildedisp, outnbits, presto);
+    dedisp.preparedump(fildedisp, outnbits, format);
 }
 
 void PulsarSearch::run(DataBuffer<float> &databuffer)
@@ -114,7 +112,7 @@ void PulsarSearch::run(DataBuffer<float> &databuffer)
     rfi.close();
 
     databuffer.open();
-    dedisp.rundump(outmean, outstd, outnbits);
+    dedisp.rundump(outmean, outstd, outnbits, format);
 }
 
 void plan(variables_map &vm, vector<PulsarSearch> &search)
@@ -166,7 +164,7 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
     sp.outstd = vm["std"].as<float>();
     sp.outnbits = vm["nbits"].as<int>();
 
-    sp.presto = vm.count("presto");
+    sp.format = vm["format"].as<string>();
 
     if (vm.count("ddplan"))
     {

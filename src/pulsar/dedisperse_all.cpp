@@ -46,7 +46,7 @@ int main(int argc, const char *argv[])
 			("ndm", value<int>()->default_value(200), "Number of DM")
 			("ddplan", value<string>(), "Input ddplan file")
 			("seglen,l", value<float>()->default_value(1), "Time length per segment (s)")
-			("mean", value<float>()->default_value(10), "Mean of dedispersed time series")
+			("mean", value<float>()->default_value(0), "Mean of dedispersed time series")
 			("std", value<float>()->default_value(3), "Standard deviation of dedispersed time series")
 			("nbits", value<int>()->default_value(8), "Data type of dedispersed time series")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
@@ -60,7 +60,7 @@ int main(int argc, const char *argv[])
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("threMask", value<float>()->default_value(3), "S/N threshold of Mask")
             ("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
-			("presto", "Output presto tim and inf")
+			("format", value<string>()->default_value("pulsarx"), "Output format of dedispersed data [pulsarx(default),sigproc,presto]")
 			("cont", "Input files are contiguous")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
 
@@ -199,7 +199,7 @@ int main(int argc, const char *argv[])
 	for (long int k=0; k<nsearch; k++)
 	{
 		search[k].ibeam = ibeam;
-        search[k].rootname = rootname + "_" + s_ibeam + '_' + to_string(ncover);
+        search[k].rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
 		search[k].fildedisp.tstart = tstarts[idx[0]].to_day();
 		search[k].fildedisp.ibeam = ibeam;
 		search[k].fildedisp.fch1 = databuf.frequencies.front();
@@ -258,7 +258,7 @@ int main(int argc, const char *argv[])
                         search[k].dedisp.rootname = rootname + "_" + s_ibeam + '_' + to_string(ncover);
                         search[k].dedisp.prepare(search[k].rfi);
                         search[k].fildedisp.tstart = (tstarts[idx[0]] + count*tsamp/86400.).to_day();
-                        search[k].dedisp.preparedump(search[k].fildedisp, outnbits);
+                        search[k].dedisp.preparedump(search[k].fildedisp, outnbits, vm["format"].as<string>());
 	                }
                 }
 
@@ -291,11 +291,18 @@ int main(int argc, const char *argv[])
 		psf[n].close();
 	}
 
-	if (vm.count("presto"))
+	if (vm["format"].as<string>() == "presto")
 	{
 		for (auto sp=search.begin(); sp!=search.end(); ++sp)
 		{
 			(*sp).dedisp.makeinf((*sp).fildedisp);
+		}
+	}
+	else if (vm["format"].as<string>() != "sigproc")
+	{
+		for (auto sp=search.begin(); sp!=search.end(); ++sp)
+		{
+			(*sp).dedisp.modifynblock();
 		}
 	}
 
