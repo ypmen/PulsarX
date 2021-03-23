@@ -44,16 +44,20 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
     downsample.fd = fd;
     downsample.prepare(databuffer);
     downsample.close();
+    downsample.closable = true;
 
     equalize.prepare(downsample);
     equalize.close();
+    equalize.closable = true;
 
     baseline.width = bswidth;
     baseline.prepare(equalize);
     baseline.close();
+    baseline.closable = true;
 
     rfi.prepare(baseline);
     rfi.close();
+    rfi.closable = true;
 
     if (format == "presto") outnbits = 32;
 
@@ -68,50 +72,47 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
 
 void PulsarSearch::run(DataBuffer<float> &databuffer)
 {
-    downsample.open();
-    downsample.run(databuffer);
-    databuffer.close();
+    DataBuffer<float> *data = downsample.run(databuffer);
     
-    equalize.open();
-    equalize.run(downsample);
-    downsample.close();
+    data = equalize.run(*data);
 
-    baseline.open();
-    baseline.run(equalize);
-    equalize.close();
+    data = baseline.run(*data);
 
-    rfi.open();
-    rfi.zap(baseline, zaplist);
+    data = rfi.zap(*data, zaplist);
+    if (rfi.isbusy) rfi.closable = false;
 	
     for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
 	{
         if ((*irfi)[0] == "mask")
         {
-            rfi.mask(rfi, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
+            data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
+            if (rfi.isbusy) rfi.closable = false;
         }
         else if ((*irfi)[0] == "kadaneF")
         {
-            rfi.kadaneF(rfi, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
+            data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
+            if (rfi.isbusy) rfi.closable = false;
         }
         else if ((*irfi)[0] == "kadaneT")
         {
-            rfi.kadaneT(rfi, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
+            data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
+            if (rfi.isbusy) rfi.closable = false;
         }
 		else if ((*irfi)[0] == "zdot")
         {
-			rfi.zdot(rfi);
+			data = rfi.zdot(*data);
+            if (rfi.isbusy) rfi.closable = false;
         }
 		else if ((*irfi)[0] == "zero")
         {
-			rfi.zero(rfi);
+			data = rfi.zero(*data);
+            if (rfi.isbusy) rfi.closable = false;
         }
 	}
-    baseline.close();
 
-    dedisp.run(rfi, rfi.nsamples);
-    rfi.close();
+    if (!databuffer.isbusy) data->closable = true;
+    dedisp.run(*data, data->nsamples);
 
-    databuffer.open();
     dedisp.rundump(outmean, outstd, outnbits, format);
 }
 
@@ -119,10 +120,7 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
 {
     PulsarSearch sp;
 
-    sp.td = vm["td"].as<int>();
-	sp.fd = vm["fd"].as<int>();
-
-    sp.bswidth = vm["baseline"].as<float>();
+    sp.bswidth = vm["baseline"].as<vector<float>>().back();
 
 	vector<string> rfi_opts;
 	if (vm.count("rfi"))

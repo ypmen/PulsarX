@@ -89,7 +89,8 @@ void DedispersionLite::run(DataBuffer<float> &databuffer)
         }
     }
 
-    databuffer.close();
+    databuffer.isbusy = false;
+    if (databuffer.closable) databuffer.close();
 
     vector<float> bufferT(nchans*nsamples, 0.);
 

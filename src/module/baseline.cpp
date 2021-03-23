@@ -28,15 +28,14 @@ void BaseLine::prepare(DataBuffer<float> &databuffer)
     frequencies = databuffer.frequencies;
 }
 
-void BaseLine::run(DataBuffer<float> &databuffer)
+DataBuffer<float> * BaseLine::run(DataBuffer<float> &databuffer)
 {
     if (int(width/tsamp) < 3)
     {
-        buffer = databuffer.buffer;
-        equalized = databuffer.equalized;
-        counter += nsamples;
-        return;
+        return databuffer.get();
     }
+
+    if (closable) open();
 
     vector<double> xe(nchans, 0.);
     vector<double> xs(nchans, 0.);
@@ -121,4 +120,11 @@ void BaseLine::run(DataBuffer<float> &databuffer)
 
     equalized = true;
     counter += nsamples;
+
+    databuffer.isbusy = false;
+    isbusy = true;
+
+    if (databuffer.closable) databuffer.close();
+
+    return this;
 }

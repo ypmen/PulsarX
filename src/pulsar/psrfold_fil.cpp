@@ -37,6 +37,8 @@
 #include "mjd.h"
 #include "utils.h"
 #include "constants.h"
+#include "preprocess.h"
+#include "baseline.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -60,6 +62,7 @@ int main(int argc, const char *argv[])
 			("jump,j", value<vector<double>>()->multitoken()->default_value(vector<double>{0, 0}, "0, 0"), "Time jump at the beginning and end (s)")
 			("td", value<int>()->default_value(1), "Time downsample")
 			("fd", value<int>()->default_value(1), "Frequency downsample")
+			("zapthre", value<float>()->default_value(3), "Threshold in sigma for zapping channels")
 			("dm", value<double>()->default_value(0), "DM (pc/cc)")
             ("f0", value<double>()->default_value(0), "F0 (Hz)")
             ("f1", value<double>()->default_value(0), "F1 (Hz/s)")
@@ -79,6 +82,7 @@ int main(int argc, const char *argv[])
 			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
+			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
 			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
@@ -252,31 +256,48 @@ int main(int argc, const char *argv[])
     double tsamp = fil[0].tsamp;
     int nifs = fil[0].nifs;
 
-	float *buffer = new float [nchans];
+	short *buffer = new short [nchans];
 
 	long int ndump = ceil((1./tsamp)/td)*td;
 	int nblock = ceil(vm["tsubint"].as<double>());
 
-	DataBuffer<float> databuf(ndump, nchans);
+	DataBuffer<short> databuf(ndump, nchans);
+	databuf.closable = true;
 	databuf.tsamp = tsamp;
 	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
 
 	long int nstart = jump[0]/tsamp;
 	long int nend = ntotal-jump[1]/tsamp;
 
+	Preprocess prep;
+	prep.td = vm["td"].as<int>();
+	prep.fd = vm["fd"].as<int>();
+	prep.thresig = vm["zapthre"].as<float>();
+	prep.width = vm["baseline"].as<vector<float>>().front();
+	prep.prepare(databuf);
+
 	Downsample downsample;
 	downsample.td = td;
     downsample.fd = fd;
-    downsample.prepare(databuf);
+    downsample.prepare(prep);
 	downsample.close();
+	downsample.closable = true;
 
 	Equalize equalize;
 	equalize.prepare(downsample);
 	equalize.close();
+	equalize.closable = true;
+
+    BaseLine baseline;
+	baseline.width = vm["baseline"].as<vector<float>>().back();
+	baseline.prepare(equalize);
+	baseline.close();
+	baseline.closable = true;
 
     RFI rfi;
-	rfi.prepare(equalize);
+	rfi.prepare(baseline);
 	rfi.close();
+	rfi.closable = true;
     
     Pulsar::DedispersionLite dedisp;
 	vector<Pulsar::ArchiveLite> folder;
@@ -336,7 +357,7 @@ int main(int argc, const char *argv[])
 					continue;
 				}
 
-				memset(buffer, 0, sizeof(float)*nchans);
+				memset(buffer, 0, sizeof(short)*nchans);
 				long int m = 0;
 				for (long int k=0; k<sumif; k++)
 				{
@@ -346,50 +367,55 @@ int main(int argc, const char *argv[])
 					}
 				}
 
-                memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
-                bcnt1++;
+                memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(short)*1*nchans);
+                databuf.counter++;
+				bcnt1++;
 				ntot++;
 
 				if (ntot%ndump == 0)
 				{
-					downsample.open();
-    				downsample.run(databuf);
-					databuf.close();
+    				DataBuffer<float> *data = prep.run(databuf);
 
-    				equalize.open();
-    				equalize.run(downsample);
-					downsample.close();
+    				data = downsample.run(*data);
 
-					rfi.open();
-					rfi.zap(equalize, zaplist);
-					equalize.close();
+    				data = equalize.run(*data);
+
+					data = baseline.run(*data);
+
+					data = rfi.zap(*data, zaplist);
+					if (rfi.isbusy) rfi.closable = false;
 
 					for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
                     {
                         if ((*irfi)[0] == "mask")
                         {
-                            rfi.mask(rfi, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
-                        }
+                            data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
+							if (rfi.isbusy) rfi.closable = false;
+						}
                         else if ((*irfi)[0] == "kadaneF")
                         {
-                            rfi.kadaneF(rfi, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
-                        }
+                            data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
+							if (rfi.isbusy) rfi.closable = false;
+						}
                         else if ((*irfi)[0] == "kadaneT")
                         {
-                            rfi.kadaneT(rfi, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
-                        }
+                            data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
+							if (rfi.isbusy) rfi.closable = false;
+						}
                         else if ((*irfi)[0] == "zdot")
                         {
-                            rfi.zdot(rfi);
-                        }
+                            data = rfi.zdot(*data);
+							if (rfi.isbusy) rfi.closable = false;
+						}
                         else if ((*irfi)[0] == "zero")
                         {
-                            rfi.zero(rfi);
-                        }
+                            data = rfi.zero(*data);
+							if (rfi.isbusy) rfi.closable = false;
+						}
                     }
 
-                    dedisp.run(rfi);
-					rfi.close();
+					data->closable = true;
+                    dedisp.run(*data);
 
 					for (long int k=0; k<ncand; k++)
 					{
@@ -438,7 +464,6 @@ int main(int argc, const char *argv[])
 		}
 	}
 
-	rfi.close();
 	dedisp.close();
 
 	double fmin = 1e6;

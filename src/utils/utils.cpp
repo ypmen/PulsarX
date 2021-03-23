@@ -1100,6 +1100,11 @@ template void transpose<float>(float *out, float *in, int m, int n);
 template void transpose_pad<float>(float *out, float *in, int m, int n);
 template void transpose_pad<float>(float *out, float *in, int m, int n, int tiley, int tilex);
 template void transpose<complex<float>>(complex<float> *out, complex<float> *in, int m, int n);
+template void transpose_pad<unsigned char>(unsigned char *out, unsigned char *in, int m, int n);
+template void transpose_pad<unsigned char>(unsigned char *out, unsigned char *in, int m, int n, int tiley, int tilex);
+template void transpose_pad<short>(short *out, short *in, int m, int n);
+template void transpose_pad<short>(short *out, short *in, int m, int n, int tiley, int tilex);
+
 template void transpose_pad<complex<float>>(complex<float> *out, complex<float> *in, int m, int n);
 template void transpose_pad<complex<float>>(complex<float> *out, complex<float> *in, int m, int n, int tiley, int tilex);
 

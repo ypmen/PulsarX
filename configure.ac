@@ -12,6 +12,7 @@ AM_INIT_AUTOMAKE([foreign])
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
+CXXFLAGS='-std=c++11 -O3'
 
 LT_INIT
 

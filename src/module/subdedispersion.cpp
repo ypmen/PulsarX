@@ -395,6 +395,9 @@ void SubbandDedispersion::run(DataBuffer<float> &databuffer, long int ns)
         }
     }
 
+    if(!databuffer.isbusy) databuffer.isbusy = false;
+    if (databuffer.closable) databuffer.close();
+
     transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
 
     fill(buffersub.begin(), buffersub.end(), 0);
