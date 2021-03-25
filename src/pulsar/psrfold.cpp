@@ -72,7 +72,8 @@ int main(int argc, const char *argv[])
 			("noarch", "Do not generate archives")
 			("candfile", value<string>(), "Input cand file")
 			("template", value<string>(), "Input fold template file")
-			("nbin,b", value<int>()->default_value(64), "Number of bins per period")
+			("nbin,b", value<int>()->default_value(32), "Number of bins per period")
+			("nbinplan", value<vector<float>>()->multitoken()->default_value(vector<float>{0.1, 128}, "0.1, 128"), "Using nbins of nbin,nbin1,nbin2,... for 0,p1,p2,... (s)")
 			("tsubint,L", value<double>()->default_value(1), "Time length per integration (s)")
 			("nsubband,n", value<int>()->default_value(32), "Number of subband")
 			("srcname", value<string>()->default_value("PSRJ0000+00"), "Souce name")
@@ -733,6 +734,16 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
 	fdr.acc = vm["acc"].as<double>();
     fdr.nbin = vm["nbin"].as<int>();
 
+	std::vector<float> vp0;
+	std::vector<int> vnbin;
+	std::vector<float> nbinplan = vm["nbinplan"].as<std::vector<float>>();
+	for (auto pb=nbinplan.begin(); pb!=nbinplan.end(); ++pb)
+	{
+		vp0.push_back(*pb);
+		vnbin.push_back(*(++pb));
+	}
+	std::vector<size_t> idx = argsort2<float>(vp0);
+
     dedisp.vdm.push_back(vm["dm"].as<double>());
     dedisp.nsubband = vm["nsubband"].as<int>();
 
@@ -756,6 +767,15 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
             fdr.f0 = stod(parameters[3]);
             fdr.f1 = stod(parameters[4]);
 			fdr.snr = stod(parameters[5]);
+
+			for (long int k=0; k<vp0.size(); k++)
+			{
+				if (fdr.f0 <= 1./vp0[idx[k]])
+				{
+					fdr.nbin = vnbin[idx[k]];
+					break;
+				}
+			}
 
             folder.push_back(fdr);
         }
