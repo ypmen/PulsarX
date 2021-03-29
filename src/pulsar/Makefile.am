@@ -9,7 +9,5 @@ dedisperse_all_fil_SOURCES=dedisperse_all_fil.cpp pulsarsearch.cpp
 psrfold_SOURCES=dedispersionlite.cpp archivelite.cpp gridsearch.cpp psrfold.cpp
 psrfold_fil_SOURCES=dedispersionlite.cpp archivelite.cpp gridsearch.cpp psrfold_fil.cpp
 
-if HAVE_PYTHON
 psrfold_SOURCES+=pulsarplot.cpp
 psrfold_fil_SOURCES+=pulsarplot.cpp
-endif

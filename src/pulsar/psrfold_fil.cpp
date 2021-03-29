@@ -22,9 +22,7 @@
 #include "dedisperse.h"
 #include "archivewriter.h"
 
-#ifdef HAVE_PYTHON
-	#include "pulsarplot.h"
-#endif
+#include "pulsarplot.h"
 
 #include "gridsearch.h"
 #include "archivelite.h"
@@ -96,6 +94,7 @@ int main(int argc, const char *argv[])
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
 			("render", "Using new folding algorithm (deprecated, used by default)")
 			("dspsr", "Using dspsr folding algorithm")
+			("plotx", "Using PlotX for plotting")
             ("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("cont", "Input files are contiguous")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
@@ -560,8 +559,11 @@ int main(int argc, const char *argv[])
 		gridsearch[k].df1step = 1./3*abs(gridsearch[k].df1start/folder[k].nbin);
 		gridsearch[k].ndf1 = 2*3*folder[k].nbin;
 
-		gridsearch[k].runFFdot();
-		gridsearch[k].runDM();
+		if (!nosearch)
+		{
+			gridsearch[k].runFFdot();
+			gridsearch[k].runDM();
+		}
 	}
 
 	/** form obsinfo*/
@@ -681,14 +683,12 @@ int main(int argc, const char *argv[])
 		outfile<<fixed<<setprecision(5)<<folder[k].snr<<"\t\t";
 		outfile<<fixed<<setprecision(5)<<gridsearch[k].snr<<endl;
 
-#ifdef HAVE_PYTHON
 		if (!noplot)
 		{
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
 			Pulsar::PulsarPlot psrplot;
-			psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname);
+			psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname, vm.count("plotx"));
 		}
-#endif
 	}
 
 	outfile.close();
