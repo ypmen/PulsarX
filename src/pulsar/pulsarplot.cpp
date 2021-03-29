@@ -403,9 +403,9 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
         std::string fontsize_ticklabel = "0.8";
 
         /** plot */
-        PlotX::Figure fig(10., 1.);
-        fig.set_background_color("white");
-        fig.set_defalut_color("black");
+        PlotX::Figure fig(11.75, 1.);
+        fig.set_background_color("black");
+        fig.set_defalut_color("white");
 
         //profile
         PlotX::Axes ax1(0.08, 0.38, 0.76, 0.96);
@@ -475,7 +475,7 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
         //chi2-f0-f1
         PlotX::Axes ax5(0.48, 0.78, 0.24, 0.52);
         ax5.pcolor(vdf0, vdf1, mxsnr_ffdot, "viridis");
-        ax5.cross(xpos, ypos, 1.);
+        ax5.cross(xpos, ypos, 4.);
         ax5.label(false, false, false, false);
         fig.push(ax5);
 
