@@ -399,8 +399,8 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
     else
     {
 #ifdef HAVE_PLOTX
-        std::string fontsize_label = "0.8";
-        std::string fontsize_ticklabel = "0.8";
+        std::string fontsize_label = "0.7";
+        std::string fontsize_ticklabel = "0.7";
 
         /** plot */
         PlotX::Figure fig(11.75, 1.);

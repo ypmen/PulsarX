@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "dedisperse.h"
+#include "psrfits.h"
 #include "archivelite.h"
 #include "constants.h"
 
@@ -347,4 +348,56 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
     }
 
     return true;
+}
+
+void ArchiveLite::read_archive(const std::string &fname)
+{
+    Psrfits arch;
+    arch.filename = fname;
+    arch.open();
+    arch.primary.load(arch.fptr);
+    arch.load_mode();
+    arch.subint.load(arch.fptr);
+
+    assert(arch.subint.mode == Integration::FOLD);
+    assert(arch.subint.nsubint > 0);
+
+    start_mjd = arch.primary.start_mjd;
+    double period = arch.subint.integrations[0].folding_period;
+    f0 = 1./period;
+    f1 = 0.;
+    acc = 0.;
+    dm = arch.primary.chan_dm;
+    snr = 0;
+
+    nbin = arch.subint.nbin;
+    nchan = arch.subint.nchan;
+    npol = arch.subint.npol;
+    tbin = arch.subint.tbin;
+    frequencies.resize(nchan);
+    std::memcpy(frequencies.data(), arch.subint.integrations[0].frequencies, sizeof(double)*nchan);
+
+    IntegrationLite it;
+    for (long int k=0; k<arch.subint.nsubint; k++)
+    {
+        it.ffold = 1./arch.subint.integrations[k].folding_period;
+        it.tsubint = arch.subint.integrations[k].tsubint;
+        it.offs_sub = arch.subint.integrations[k].offs_sub;
+        int np = arch.subint.integrations[k].npol;
+        int nc = arch.subint.integrations[k].nchan;
+        int nb = arch.subint.integrations[k].nbin;
+        it.resize(np, nc, nb);
+        for (long int ip=0; ip<np; ip++)
+        {
+            for (long int ic=0; ic<nc; ic++)
+            {
+                for (long int ib=0; ib<nb; ib++)
+                {
+                    it.data[ip*nc*nb+ic*nb+ib] = ((short *)arch.subint.integrations[k].data)[ip*nc*nb+ic*nb+ib]*arch.subint.integrations[k].scales[ip*nc+ic]+arch.subint.integrations[k].offsets[ip*nc+ic];
+                }
+            }
+        }
+
+        profiles.push_back(it);
+    }
 }

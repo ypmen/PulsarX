@@ -59,6 +59,7 @@ namespace Pulsar
             npol = np;
             nchan = nc;
             nbin = nb;
+            data.clear();
             data.resize(npol*nchan*nbin, 0.);
         }
     public:
@@ -103,6 +104,7 @@ namespace Pulsar
             }
             outfile.close();
         }
+        void read_archive(const std::string &fname);
     private:
         double get_phase(MJD mjd, MJD &mjdref)
         {
