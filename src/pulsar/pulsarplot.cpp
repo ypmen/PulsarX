@@ -533,7 +533,7 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
         ax8.annotate("Distance YMW16 (pc) = " + s_ymw16_dist, 0.46, 0.14, {{"fontsize", fontsize}});
         ax8.annotate("Pepoch (MJD) = " + obsinfo["Pepoch"], 0.46, 0.03, {{"fontsize", fontsize}});
 
-        ax8.annotate(obsinfo["Filename"], 0.07, 0.97, {{"xycoords","figure fraction"}, {"fontsize", "0.5"}});
+        ax8.annotate(obsinfo["Filename"], 0.07, 0.97, {{"xycoords","figure fraction"}, {"fontsize", "0.45"}});
         fig.push(ax8);
 
         fig.save(figname+"/PNG");
