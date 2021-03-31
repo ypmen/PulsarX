@@ -405,7 +405,7 @@ void PulsarPlot::plot(const DedispersionLite &dedisp, const ArchiveLite &archive
         /** plot */
         PlotX::Figure fig(11.75, 1.);
         fig.set_background_color("black");
-        fig.set_defalut_color("white");
+        fig.set_default_color("white");
 
         //profile
         PlotX::Axes ax1(0.08, 0.38, 0.76, 0.96);
