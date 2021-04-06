@@ -446,7 +446,7 @@ void GridSearch::get_snr_width()
     double tmp_mean = 0.;
     double tmp_var = 0.;
 
-    get_mean_var<std::vector<double>::iterator>(profile.begin(), nbin, tmp_mean, tmp_var);
+    get_mean_var2<std::vector<double>::iterator>(profile.begin(), nbin, tmp_mean, tmp_var);
 
     tmp_var = tmp_var==0. ? 1.:tmp_var;
 
