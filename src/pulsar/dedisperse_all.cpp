@@ -211,7 +211,7 @@ int main(int argc, const char *argv[])
         search[k].rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
 		search[k].fildedisp.tstart = tstarts[idx[0]].to_day();
 		search[k].fildedisp.ibeam = ibeam;
-		search[k].fildedisp.fch1 = databuf.frequencies.front();
+		search[k].fildedisp.fch1 = (databuf.frequencies.front()+databuf.frequencies.back())/2.;
 		search[k].fildedisp.foff = databuf.frequencies.back()-databuf.frequencies.front();
 		search[k].fildedisp.nchans = databuf.frequencies.size();
 		search[k].prepare(prep);
