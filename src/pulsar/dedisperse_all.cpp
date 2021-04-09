@@ -178,7 +178,7 @@ int main(int argc, const char *argv[])
 
 	long int td_lcm = findlcm(&tds[0], tds.size());
 
-	long int ndump = (int)(vm["seglen"].as<float>()/tsamp)/td_lcm*td_lcm;
+	long int ndump = (int)(vm["seglen"].as<float>()/tsamp)/td_lcm/2*td_lcm*2;
 
 	DataBuffer<short> databuf(ndump, nchans);
 	databuf.tsamp = tsamp;
