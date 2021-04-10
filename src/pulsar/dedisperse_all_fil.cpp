@@ -248,7 +248,15 @@ int main(int argc, const char *argv[])
                     ncover++;
                     for (long int k=0; k<nsearch; k++)
 	                {
-                        search[k].dedisp.rootname = rootname + "_" + s_ibeam + '_' + to_string(ncover);
+						if (vm["format"].as<string>() == "presto")
+						{
+							search[k].dedisp.makeinf(search[k].fildedisp);
+						}
+						else if (vm["format"].as<string>() != "sigproc")
+						{
+							search[k].dedisp.modifynblock();
+						}
+                        search[k].dedisp.rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
                         search[k].dedisp.prepare(search[k].rfi);
 						search[k].fildedisp.tstart = (tstarts[idx[0]] + count*tsamp/86400.).to_day();
                         search[k].dedisp.preparedump(search[k].fildedisp, outnbits, vm["format"].as<string>());
