@@ -1,14 +1,14 @@
-Requirements:
-1) To generate figures, python,matplotlib,numpy should be installed.
+# Requirements:
+1) To generate figures, python,matplotlib,numpy or PlotX should be installed.
 2) To calculate GL and GB, sofa library should be installed.
 2) To calculate YMW16 DM and distance, environment variable YMW16_DIR should be set.
 
-Installation:
+# Installation:
 1) ./bootstrap
-2) ./configure  CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L/path_to_sofa" CPPFLAGS="-I/path_to_sofa"
+2) ./configure --prefix=/install\_path LDFLAGS="-L/path_to_sofa" CPPFLAGS="-I/path_to_sofa"
 3) make and make install
 
-Usage:
+# Usage:
 1) use -h to see help
 3) set environment variable YMW16_DIR to $top_src/src/ymw16
 2) --template /path_to_fits_template ($top_src/include/template contains some examples).
@@ -18,5 +18,4 @@ Usage:
    2  200   0  1  0  100
 
 Docker:
-1) docker pull ypmen/pulsarx
-2) docker build -t pulsarx - < Dockerfile
+docker pull ypmen/pulsarx
