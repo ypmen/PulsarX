@@ -8,6 +8,7 @@
 
 #define FAST 1
 #define NSBLK 1024
+#define GROUPSIZE 50
 
 #include "config.h"
 
@@ -26,7 +27,7 @@
 
 #include "gridsearch.h"
 #include "archivelite.h"
-#include "dedispersionlite.h"
+#include "dedispersionliteU.h"
 #include "databuffer.h"
 #include "downsample.h"
 #include "rfi.h"
@@ -44,7 +45,7 @@ using namespace boost::program_options;
 unsigned int num_threads;
 bool dumptim=false;
 
-void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar::ArchiveLite> &folder);
+void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector<Pulsar::ArchiveLite> &folder);
 
 int main(int argc, const char *argv[])
 {
@@ -94,7 +95,9 @@ int main(int argc, const char *argv[])
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
 			("render", "Using new folding algorithm (deprecated, used by default)")
 			("dspsr", "Using dspsr folding algorithm")
+#ifdef HAVE_PLOTX
 			("plotx", "Using PlotX for plotting")
+#endif
             ("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("cont", "Input files are contiguous")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
@@ -299,9 +302,21 @@ int main(int argc, const char *argv[])
 	rfi.close();
 	rfi.closable = true;
     
-    Pulsar::DedispersionLite dedisp;
+    Pulsar::DedispersionLiteU dedisp;
 	vector<Pulsar::ArchiveLite> folder;
-	produce(vm, dedisp, folder);
+
+	std::vector<std::vector<double>> dmsegs;
+	produce(vm, dmsegs, folder);
+	dedisp.nsubband = vm["nsubband"].as<int>();
+	double maxdm = 0;
+	for (auto dmseg=dmsegs.begin(); dmseg!=dmsegs.end(); ++dmseg)
+	{
+		for (auto dm=(*dmseg).begin(); dm!=(*dmseg).end(); ++dm)
+		{
+			if (*dm > maxdm) maxdm = *dm;
+		}
+	}
+	dedisp.maxdm = maxdm;
     dedisp.prepare(rfi);
 
     DataBuffer<float> subdata;
@@ -316,7 +331,6 @@ int main(int argc, const char *argv[])
         folder[k].resize(1, subdata.nchans, folder[k].nbin);
 		folder[k].nblock = nblock;
 		folder[k].prepare(subdata);
-        folder[k].dm = dedisp.vdm[k];
 	}
 
     int sumif = nifs>2? 2:nifs;
@@ -415,12 +429,15 @@ int main(int argc, const char *argv[])
                     }
 
 					data->closable = true;
-                    dedisp.run(*data);
+					dedisp.prerun(*data);
 
 					for (long int k=0; k<ncand; k++)
 					{
-                        dedisp.get_subdata(subdata, k);
-                        if (dedisp.counter >= dedisp.offset+dedisp.ndump)
+                        dedisp.updatedm(dmsegs[k/GROUPSIZE]);
+						dedisp.run();
+                        dedisp.get_subdata(subdata, k%GROUPSIZE);
+                        
+						if (dedisp.counter >= dedisp.offset+dedisp.ndump)
 						{
 							if (vm.count("dspsr"))
 								folder[k].runDspsr(subdata);
@@ -428,6 +445,8 @@ int main(int argc, const char *argv[])
 								folder[k].runTRLSM(subdata);				
 						}
 					}
+
+					dedisp.postrun();
 
                     bcnt1 = 0;
 					databuf.open();
@@ -449,21 +468,30 @@ int main(int argc, const char *argv[])
 	 * @brief flush the end data
 	 * 
 	 */
+	int ngroup = dmsegs.size();
+
 	int nleft = dedisp.offset/ndump;
 	for (long int l=0; l<nleft; l++)
 	{
 		rfi.open();
-		dedisp.run(rfi);
+		dedisp.prerun(rfi);
 		for (long int k=0; k<ncand; k++)
 		{
-			dedisp.get_subdata(subdata, k);
+			if (k%GROUPSIZE == 0)
+			{
+				dedisp.updatedm(dmsegs[k/GROUPSIZE]);
+				dedisp.run();
+			}
+			dedisp.get_subdata(subdata, k%GROUPSIZE);
+
 			if (vm.count("dspsr"))
 				folder[k].runDspsr(subdata);
 			else
-				folder[k].runTRLSM(subdata);				
+				folder[k].runTRLSM(subdata);
 		}
+		dedisp.postrun();
 	}
-
+	
 	dedisp.close();
 
 	double fmin = 1e6;
@@ -705,8 +733,10 @@ int main(int argc, const char *argv[])
     return 0;
 }
 
-void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar::ArchiveLite> &folder)
+void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector<Pulsar::ArchiveLite> &folder)
 {
+	std::vector<double> dmseg;
+
     Pulsar::ArchiveLite fdr;
 
     /** archive */
@@ -725,8 +755,7 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
 	}
 	std::vector<size_t> idx = argsort2<float>(vp0);
 
-    dedisp.vdm.push_back(vm["dm"].as<double>());
-    dedisp.nsubband = vm["nsubband"].as<int>();
+    dmseg.push_back(vm["dm"].as<double>());
 
     if (vm.count("candfile"))
     {
@@ -734,7 +763,8 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
         string line;
         ifstream candfile(filename);
         
-        dedisp.vdm.clear();
+        dmseg.clear();
+		int gcnt = 0;
         while (getline(candfile, line))
         {
 			boost::trim(line);
@@ -743,7 +773,9 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
             vector<string> parameters;
             boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
 
-            dedisp.vdm.push_back(stod(parameters[1]));
+            dmseg.push_back(stod(parameters[1]));
+
+			fdr.dm = stod(parameters[1]);
 			fdr.acc = stod(parameters[2]);
             fdr.f0 = stod(parameters[3]);
             fdr.f1 = stod(parameters[4]);
@@ -758,11 +790,25 @@ void produce(variables_map &vm, Pulsar::DedispersionLite &dedisp, vector<Pulsar:
 				}
 			}
 
+			if (++gcnt == GROUPSIZE)
+			{
+				dmsegs.push_back(dmseg);
+				dmseg.clear();
+				gcnt = 0;
+			}
             folder.push_back(fdr);
         }
+
+		if (gcnt)
+		{
+			dmsegs.push_back(dmseg);
+			dmseg.clear();
+			gcnt = 0;
+		}
     }
     else
     {
+		dmsegs.push_back(dmseg);
         folder.push_back(fdr);
     }
 }

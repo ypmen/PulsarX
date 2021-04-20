@@ -13,6 +13,7 @@
 
 #include "utils.h"
 #include "gridsearch.h"
+#include "dedispersionliteU.h"
 
 namespace Pulsar
 {
@@ -21,7 +22,7 @@ namespace Pulsar
     public:
         PulsarPlot();
         ~PulsarPlot();
-        void plot(const DedispersionLite &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx=false);        
+        void plot(const DedispersionLiteU &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx=false);        
     };
 }
 
