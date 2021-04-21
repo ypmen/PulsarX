@@ -7,7 +7,7 @@
  */
 
 #define FAST 1
-#define GROUPSIZE 50
+#define GROUPSIZE 64
 
 #include "config.h"
 
@@ -758,6 +758,7 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
     Pulsar::ArchiveLite fdr;
 
     /** archive */
+	fdr.dm = vm["dm"].as<double>();
     fdr.f0 = vm["f0"].as<double>();
     fdr.f1 = vm["f1"].as<double>();
 	fdr.acc = vm["acc"].as<double>();
