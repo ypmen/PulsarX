@@ -317,6 +317,7 @@ int main(int argc, const char *argv[])
 		}
 	}
 	dedisp.maxdm = maxdm;
+	dedisp.groupsize = GROUPSIZE;
     dedisp.prepare(rfi);
 
     DataBuffer<float> subdata;

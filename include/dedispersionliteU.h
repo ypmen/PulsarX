@@ -74,6 +74,7 @@ namespace Pulsar
         int nsubband;
         vector<double> vdm;
         double maxdm;
+        int groupsize;
     public:
         long int counter;
         long int offset;

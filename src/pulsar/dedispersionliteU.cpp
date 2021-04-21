@@ -14,6 +14,7 @@ using namespace Pulsar;
 DedispersionLiteU::DedispersionLiteU()
 {
     maxdm = 0.;
+    groupsize = 0;
 
     nsubband = 0;
     counter = 0;
@@ -58,6 +59,19 @@ void DedispersionLiteU::prepare(DataBuffer<float> &databuffer)
 	}
     long int maxdelayn = ceil(dmdelay(maxdm, fmax, fmin)/tsamp);
     nsamples = ceil(1.*maxdelayn/ndump)*ndump + ndump;
+
+	/* memory test */
+	try
+	{
+		float *test = new float [(long int)2*ndump*nchans+(long int)2*nsamples*nchans+(long int)2*groupsize*ndump*nsubband]; 		
+		delete [] test;
+	}
+	catch (std::bad_alloc & exception) 
+	{ 
+		std::cerr<<"Error: out of memory "<<std::fixed<<std::setprecision(1)<<((long int)2*ndump*nchans+(long int)2*nsamples*nchans+(long int)2*groupsize*ndump*nsubband)*4./1024/1024/1024<<" GB required"<<std::endl; 
+		exit(-1);
+	}
+
     buffer.resize(nsamples*nchans, 0.);
 
     offset = nsamples-ndump;
