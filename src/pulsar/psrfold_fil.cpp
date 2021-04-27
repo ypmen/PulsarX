@@ -570,9 +570,9 @@ int main(int argc, const char *argv[])
 		 * 
 		 */
 
-		dm = folder[k].dm;
-		f0 = folder[k].f0;
-		f1 = folder[k].f1;
+		dm = gridsearch[k].dm;
+		f0 = gridsearch[k].f0;
+		f1 = gridsearch[k].f1;
 
 		double ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
 		gridsearch[k].ddmstep = 1./3*abs(ddmstart/folder[k].nbin);
@@ -623,6 +623,10 @@ int main(int argc, const char *argv[])
 	obsinfo["Filename"] = fnames[idx[0]];
 	//observation length
 	obsinfo["Obslen"] = to_string(tint);
+	//observation frequency
+	obsinfo["Fcentre"] = to_string(0.5*(databuf.frequencies.front()+databuf.frequencies.back()));
+	obsinfo["Bandwidth"] = to_string((databuf.frequencies.back()-databuf.frequencies.front())/(databuf.frequencies.size()-1)*databuf.frequencies.size());
+	obsinfo["Nchan"] = to_string(databuf.frequencies.size());
 
 	double gl = 0., gb = 0.;
 #ifdef HAVE_SOFA
@@ -716,7 +720,7 @@ int main(int argc, const char *argv[])
 		{
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
 			Pulsar::PulsarPlot psrplot;
-			psrplot.plot(dedisp, folder[k], gridsearch[k], obsinfo, k+1, rootname, vm.count("plotx"));
+			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, vm.count("plotx"));
 		}
 	}
 

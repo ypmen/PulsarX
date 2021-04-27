@@ -74,11 +74,11 @@ void ArchiveWriter::prepare(Pulsar::ArchiveLite &arch, Pulsar::GridSearch &grid)
     assert(mode == Integration::FOLD);
 
     start_mjd = arch.start_mjd;
-    npol = arch.npol;
+    npol = 1;
     nchan = arch.nchan;
     nbin = arch.nbin;
     tbin = arch.tbin;
-    dm = arch.dm;
+    dm = grid.dm;
     frequencies = arch.frequencies;
 
     fits.primary.start_mjd = start_mjd;
@@ -116,7 +116,7 @@ void ArchiveWriter::run(Pulsar::ArchiveLite &arch, Pulsar::GridSearch &grid)
 
     for (long int k=0; k<grid.nsubint; k++)
     {
-        fold_periods[k] = 1./arch.profiles[k].ffold;
+        fold_periods[k] = 1./(grid.f0+grid.f1*grid.tsuboff[k]);
         tsubints[k] = arch.profiles[k].tsubint;
         offs_subs[k] = arch.profiles[k].offs_sub;
     }

@@ -363,9 +363,13 @@ void ArchiveLite::read_archive(const std::string &fname)
     assert(arch.subint.nsubint > 0);
 
     start_mjd = arch.primary.start_mjd;
-    double period = arch.subint.integrations[0].folding_period;
+    ref_epoch = arch.primary.start_mjd+arch.subint.integrations[arch.subint.nsubint/2].offs_sub;
+    double period = arch.subint.integrations[arch.subint.nsubint/2].folding_period;
     f0 = 1./period;
-    f1 = 0.;
+    if (arch.subint.nsubint)
+        f1 = (1./arch.subint.integrations[arch.subint.nsubint-1].folding_period-1./arch.subint.integrations[0].folding_period)/(arch.subint.integrations[arch.subint.nsubint-1].offs_sub-arch.subint.integrations[0].offs_sub);
+    else
+        f1 = 0.;
     acc = 0.;
     dm = arch.primary.chan_dm;
     snr = 0;
@@ -399,5 +403,39 @@ void ArchiveLite::read_archive(const std::string &fname)
         }
 
         profiles.push_back(it);
+    }
+
+    /* dedispersion */
+    double fmin = 1e6;
+    double fmax = 0.;
+    for (long int j=0; j<nchan; j++)
+    {
+        fmax = frequencies[j]>fmax? frequencies[j]:fmax;
+        fmin = frequencies[j]<fmin? frequencies[j]:fmin;
+    }
+
+    std::vector<float> profile(npol*nchan*nbin, 0.);
+
+    for (auto it=profiles.begin(); it!=profiles.end(); ++it)
+    {
+        for (long int k=0; k<npol; k++)
+        {
+            for (long int j=0; j<nchan; j++)
+            {
+                int delayn = round(Pulsar::DedispersionLite::dmdelay(dm, fmax, frequencies[j])*it->ffold*nbin);
+                delayn = (-delayn)%nbin;
+                if (delayn<0) delayn += nbin;
+
+                for (long int i=0; i<delayn; i++)
+                {
+                    profile[k*nchan*nbin+j*nbin+i] = it->data[k*nchan*nbin+j*nbin+(i-delayn+nbin)];
+                }
+                for (long int i=delayn; i<nbin; i++)
+                {
+                    profile[k*nchan*nbin+j*nbin+i] = it->data[k*nchan*nbin+j*nbin+(i-delayn)];
+                }
+            }
+        }
+        std::swap(it->data, profile);
     }
 }

@@ -31,7 +31,7 @@ PulsarPlot::PulsarPlot(){}
 
 PulsarPlot::~PulsarPlot(){}
 
-void PulsarPlot::plot(const DedispersionLiteU &dedisp, const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx)
+void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx)
 {
     stringstream ss_id;
     ss_id << setw(5) << setfill('0') << id;
@@ -48,17 +48,15 @@ void PulsarPlot::plot(const DedispersionLiteU &dedisp, const ArchiveLite &archiv
     long int nf1 = gridsearch.ndf1;
     long int nf0 = gridsearch.ndf0;
 
-    vector<float> vp, vph, vt, vf, vdm, vsnr_dm, vf0, vdf0, vsnr_f0, vf1, vdf1, vsnr_f1;
+    vector<float> vp, vph, vt, vf, vdm, vsnr_dm, vdf0, vsnr_f0, vdf1, vsnr_f1;
     vp.resize(nbin*2, 0.);
     vph.resize(nbin*2, 0.);
     vt.resize(nsubint);
     vf.resize(nchan);
     vdm.resize(ndm);
     vsnr_dm.resize(ndm);
-    vf0.resize(nf0);
     vdf0.resize(nf0);
     vsnr_f0.resize(nf0);
-    vf1.resize(nf1);
     vdf1.resize(nf1);
     vsnr_f1.resize(nf1);
 
@@ -132,15 +130,13 @@ void PulsarPlot::plot(const DedispersionLiteU &dedisp, const ArchiveLite &archiv
 
     for (long int k0=0; k0<nf0; k0++)
     {
-        vf0[k0] = (gridsearch.f0 + gridsearch.df0start + k0*gridsearch.df0step);
-        vdf0[k0] = vf0[k0]-gridsearch.f0;
+        vdf0[k0] = gridsearch.df0start + k0*gridsearch.df0step;
         vsnr_f0[k0] = 0.;
     }
 
     for (long int k1=0; k1<nf1; k1++)
     {
-        vf1[k1] = (gridsearch.f1 + gridsearch.df1start + k1*gridsearch.df1step);
-        vdf1[k1] = vf1[k1]-gridsearch.f1;
+        vdf1[k1] = gridsearch.df1start + k1*gridsearch.df1step;
         vsnr_f1[k1] = 0.;
     }
 
@@ -213,7 +209,10 @@ void PulsarPlot::plot(const DedispersionLiteU &dedisp, const ArchiveLite &archiv
     s_ymw16_dist = ss_ymw16_dist.str();
 
     //DM smearing
-    double dmsmear_phase = abs(DedispersionLite::dmdelay(dm, dedisp.frequencies[0], dedisp.frequencies.back()))/dedisp.nchans*f0;
+    double fcentre = std::stod(obsinfo["Fcentre"]);
+    double bandwidth = std::stod(obsinfo["Bandwidth"]);
+    int nchans = std::stoi(obsinfo["Nchan"]);
+    double dmsmear_phase = abs(DedispersionLite::dmdelay(dm, fcentre-0.5*bandwidth, fcentre+0.5*bandwidth))/nchans*f0;
 
     if (!plotx)
     {
@@ -409,8 +408,8 @@ void PulsarPlot::plot(const DedispersionLiteU &dedisp, const ArchiveLite &archiv
 
         //profile
         PlotX::Axes ax1(0.08, 0.38, 0.76, 0.96);
-        ax1.plot(vph, vp);
         ax1.axvspan(1.-0.5*dmsmear_phase, 1.+0.5*dmsmear_phase, 0., 1., {{"color", "lightgray"}, {"filled", "true"}});
+        ax1.plot(vph, vp);
         ax1.autoscale(true, "x", true);
         ax1.set_ylabel("Flux");
         ax1.set_fontsize_label(fontsize_label);
