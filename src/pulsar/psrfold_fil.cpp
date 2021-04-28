@@ -18,7 +18,7 @@
 #include <string.h>
 #include <utility>
 #include <boost/program_options.hpp>
-#include <boost/algorithm/string.hpp> 
+#include <boost/algorithm/string.hpp>
 
 #include "dedisperse.h"
 #include "archivewriter.h"
@@ -130,6 +130,20 @@ int main(int argc, const char *argv[])
 	{
 		cerr<<"Error: no input file"<<endl;
 		return -1;
+	}
+	if (vm.count("template") == 0)
+	{
+		cerr<<"Error: no template file"<<endl;
+		return -1;
+	}
+	else
+	{
+		std::ifstream tmp(vm["template"].as<std::string>().c_str());
+		if (!tmp.good())
+		{
+			cerr<<"Error: can not open file "<<vm["template"].as<std::string>()<<endl;
+			return -1;
+		}
 	}
 
 	int scale = vm["scale"].as<int>();
