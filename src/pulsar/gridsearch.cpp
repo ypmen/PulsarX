@@ -190,7 +190,8 @@ void GridSearch::prepare(ArchiveLite &arch)
     if (clfd_q > 0)
         clfd();
     //subints_normalize();
-    normalize();
+    if (f0*arch.profiles[0].tsubint >= 1)
+        normalize();
     get_rms();
 }
 
