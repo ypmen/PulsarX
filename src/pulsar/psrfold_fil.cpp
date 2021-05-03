@@ -448,9 +448,12 @@ int main(int argc, const char *argv[])
 
 					for (long int k=0; k<ncand; k++)
 					{
-                        dedisp.updatedm(dmsegs[k/GROUPSIZE]);
-						dedisp.run();
-                        dedisp.get_subdata(subdata, k%GROUPSIZE);
+                        if (k%GROUPSIZE == 0)
+						{
+							dedisp.updatedm(dmsegs[k/GROUPSIZE]);
+							dedisp.run();
+						}
+						dedisp.get_subdata(subdata, k%GROUPSIZE);
                         
 						if (dedisp.counter >= dedisp.offset+dedisp.ndump)
 						{
