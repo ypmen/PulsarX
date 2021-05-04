@@ -512,8 +512,11 @@ int main(int argc, const char *argv[])
 		dedisp.prerun(rfi);
 		for (long int k=0; k<ncand; k++)
 		{
-			dedisp.updatedm(dmsegs[k/GROUPSIZE]);
-			dedisp.run();
+			if (k%GROUPSIZE == 0)
+			{
+				dedisp.updatedm(dmsegs[k/GROUPSIZE]);
+				dedisp.run();
+			}
 			dedisp.get_subdata(subdata, k%GROUPSIZE);
 
 			if (vm.count("dspsr"))
