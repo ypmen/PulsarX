@@ -504,7 +504,7 @@ void GridSearch::get_error(std::map<std::string, std::string> &obsinfo)
     p1 = -f1/(f0*f0);
     err_p0 = abs(err_f0/(f0*f0));
     err_p1 = abs(err_f1/(f0*f0));
-    acc = f1/f0*CONST_C;
+    acc = -f1/f0*CONST_C;
     err_acc = abs((err_f1*f0-err_f0*f1)/(f0*f0)*CONST_C);
 }
 
