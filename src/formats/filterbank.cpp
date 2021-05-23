@@ -136,6 +136,11 @@ Filterbank::Filterbank(const Filterbank &fil)
 	{
 		switch (nbits)
 		{
+		case 1:
+		{
+			data = new unsigned char [ndata*nifs*nchans];
+			memcpy(data, fil.data, sizeof(unsigned char)*ndata*nifs*nchans); break;
+		}
 		case 8:
 		{
 			data = new unsigned char [ndata*nifs*nchans];
@@ -202,6 +207,11 @@ Filterbank & Filterbank::operator=(const Filterbank &fil)
 		if (data != NULL) delete [] data;
 		switch (nbits)
 		{
+		case 1:
+		{
+			data = new unsigned char [ndata*nifs*nchans];
+			memcpy(data, fil.data, sizeof(unsigned char)*ndata*nifs*nchans); break;
+		}
 		case 8:
 		{
 			data = new unsigned char [ndata*nifs*nchans];
@@ -231,6 +241,7 @@ Filterbank::~Filterbank()
 	{
 		switch (nbits)
 		{
+		case 1: delete [] (unsigned char *)data; break;
 		case 8: delete [] (unsigned char *)data; break;
 		case 32: delete [] (float *)data; break;
 		default: cerr<<"Error: data type not support"<<endl; break;
@@ -257,6 +268,7 @@ void Filterbank::free()
 	{
 		switch (nbits)
 		{
+		case 1: delete [] (unsigned char *)data; break;
 		case 8: delete [] (unsigned char *)data; break;
 		case 32: delete [] (float *)data; break;
 		default: cerr<<"Error: data type not support"<<endl; break;
@@ -505,9 +517,35 @@ bool Filterbank::read_data()
         nsamples = icnt/nifs/nchans;
         ndata = nsamples;
 	}; break;
+	case 1:
+	{
+		long int nchr = nsamples*nifs*nchans;
+        unsigned char * chb = new unsigned char [nchr];
+        long int icnt = fread(chb, 1, nchr/8, fptr);
+        if (icnt*8 > ndata)
+        {
+        	if (data != NULL) delete [] (unsigned char *)data;
+        	data = new unsigned char [icnt*8];
+        }
+        for (long int i=0; i<icnt; i++)
+        {
+			unsigned char tmp = chb[i];
+			for (long int k=0; k<8; k++)
+			{
+                ((unsigned char *)data)[i*8+k] = tmp & 1;
+				tmp >>= 1;
+			}
+		}
+        delete [] chb;
+        if (icnt*8 != nchr)
+        {
+                cerr<<"Warning: Data ends unexpected read to EOF"<<endl;
+        }
+        ndata = icnt*8/nifs/nchans;
+	}; break;
 	default:
 	{
-		cerr<<"Error: data type unsupported"<<endl;
+		cerr<<"Warning: Error: data type unsupported"<<endl;
 		return false;
 	}; break;
 	}
@@ -543,9 +581,35 @@ bool Filterbank::read_data(long int ns)
         delete [] chb;
         if (icnt != nchr)
         {
-                cerr<<"Data ends unexpected read to EOF"<<endl;
+                cerr<<"Warning: Data ends unexpected read to EOF"<<endl;
         }
         ndata = icnt/nifs/nchans;
+	}; break;
+	case 1:
+	{
+		long int nchr = ns*nifs*nchans;
+        unsigned char * chb = new unsigned char [nchr];
+        long int icnt = fread(chb, 1, nchr/8, fptr);
+        if (icnt*8 > ndata)
+        {
+        	if (data != NULL) delete [] (unsigned char *)data;
+        	data = new unsigned char [icnt*8];
+        }
+        for (long int i=0; i<icnt; i++)
+        {
+			unsigned char tmp = chb[i];
+			for (long int k=0; k<8; k++)
+			{
+                ((unsigned char *)data)[i*8+k] = tmp & 1;
+				tmp >>= 1;
+			}
+		}
+        delete [] chb;
+        if (icnt*8 != nchr)
+        {
+                cerr<<"Warning: Data ends unexpected read to EOF"<<endl;
+        }
+        ndata = icnt*8/nifs/nchans;
 	}; break;
 	default:
 	{

@@ -103,12 +103,12 @@ void ArchiveLite::prepare(DataBuffer<float> &databuffer)
 
     if (f1 == 0)
     {
-        f1 = acc/CONST_C*f0;
+        f1 = -acc/CONST_C*f0;
     }
 
     if (acc == 0)
     {
-        acc = f1/f0*CONST_C;
+        acc = -f1/f0*CONST_C;
     }
 
     mxWTW.resize(nbin*nbin, 0.);
