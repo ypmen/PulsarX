@@ -744,7 +744,7 @@ int main(int argc, const char *argv[])
 		outfile<<setprecision(15)<<folder[k].f1<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].f1<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_f1<<"\t\t";
-		outfile<<setprecision(15)<<folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
+		outfile<<setprecision(15)<<-folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].acc<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_acc<<"\t\t";
 		outfile<<fixed<<setprecision(5)<<folder[k].snr<<"\t\t";
