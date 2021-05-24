@@ -22,3 +22,5 @@
 ```
 docker pull ypmen/pulsarx
 ```
+## Acknowledgement
+Thanks for very helpful suggestions and bug reports from Ewan Barr, Colin Clark, Emma Carli, Shalini Sengupta, and Trapum project.
