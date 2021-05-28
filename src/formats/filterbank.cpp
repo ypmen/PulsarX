@@ -545,7 +545,7 @@ bool Filterbank::read_data()
 	}; break;
 	default:
 	{
-		cerr<<"Warning: Error: data type unsupported"<<endl;
+		cerr<<"Error: data type unsupported"<<endl;
 		return false;
 	}; break;
 	}

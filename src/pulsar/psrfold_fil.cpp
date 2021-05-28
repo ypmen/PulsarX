@@ -66,6 +66,7 @@ int main(int argc, const char *argv[])
             ("f0", value<double>()->default_value(0), "F0 (Hz)")
             ("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("acc", value<double>()->default_value(0), "Acceleration (m/s/s)")
+			("pepoch", value<double>(), "F0/F1/acc epoch (MJD)")
 			("scale", value<int>()->default_value(1), "F0,F1,dm search range scale in phase")
 			("nosearch", "Do not search dm,f0,f1")
 			("noplot", "Do not generate figures")
@@ -293,15 +294,8 @@ int main(int argc, const char *argv[])
 	prep.width = vm["baseline"].as<vector<float>>().front();
 	prep.prepare(databuf);
 
-	Downsample downsample;
-	downsample.td = td;
-    downsample.fd = fd;
-    downsample.prepare(prep);
-	downsample.close();
-	downsample.closable = true;
-
 	Equalize equalize;
-	equalize.prepare(downsample);
+	equalize.prepare(prep);
 	equalize.close();
 	equalize.closable = true;
 
@@ -338,11 +332,19 @@ int main(int argc, const char *argv[])
     dedisp.get_subdata(subdata, 0);
 
 	long int ncand = folder.size();
+	if (ncand <= 0)
+	{
+		std::cerr<<"Warning: no candidate to fold"<<std::endl;
+		exit(0);
+	}
 
     for (long int k=0; k<ncand; k++)
 	{
         folder[k].start_mjd = tstarts[idx[0]]+(ceil(1.*dedisp.offset/ndump)*ndump-dedisp.offset)*tsamp*td;
-		folder[k].ref_epoch = tstarts[idx[0]]+(ntotal*tsamp/2.);
+		if (vm.count("pepoch"))
+			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
+		else
+			folder[k].ref_epoch = tstarts[idx[0]]+(ntotal*tsamp/2.);
         folder[k].resize(1, subdata.nchans, folder[k].nbin);
 		folder[k].nblock = nblock;
 		folder[k].prepare(subdata);
@@ -404,8 +406,6 @@ int main(int argc, const char *argv[])
 				if (ntot%ndump == 0)
 				{
     				DataBuffer<float> *data = prep.run(databuf);
-
-    				data = downsample.run(*data);
 
     				data = equalize.run(*data);
 
@@ -657,11 +657,9 @@ int main(int argc, const char *argv[])
 	
 	obsinfo["MaxDM_YMW16"] = to_string(ymw16_maxdm);
 
-	double pepoch_offset = ntotal*tsamp/2.;
-	
 	//pepoch
 	stringstream ss_pepoch;
-    ss_pepoch << setprecision(9) << fixed << (tstarts[idx[0]]+pepoch_offset).to_day();
+    ss_pepoch << setprecision(9) << fixed << folder[0].ref_epoch.to_day();
     string s_pepoch = ss_pepoch.str();
 	obsinfo["Pepoch"] = s_pepoch;
 
