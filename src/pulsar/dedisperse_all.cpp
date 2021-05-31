@@ -299,6 +299,7 @@ int main(int argc, const char *argv[])
 					prep.run(databuf);
 					for (auto sp=search.begin(); sp!=search.end(); ++sp)
 					{
+						prep.isbusy = true;
 						(*sp).run(prep);
 					}
                     bcnt1 = 0;

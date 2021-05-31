@@ -849,3 +849,77 @@ void get_telescope_name(int telescope_id, std::string &s_telescope)
         break;
     }
 }
+
+int get_telescope_id(const std::string &s_telescope)
+{
+	if (s_telescope == "Fake")
+	{
+		return 0;
+	}
+	else if (s_telescope == "Arecibo")
+	{
+		return 1;
+	}
+	else if (s_telescope == "Ooty")
+	{
+		return 2;
+	}
+	else if (s_telescope == "Nancay")
+	{
+		return 3;
+	}
+	else if (s_telescope == "Parkes")
+	{
+		return 4;
+	}
+	else if (s_telescope == "Jodrell")
+	{
+		return 5;
+	}
+	else if (s_telescope == "GBT")
+	{
+		return 6;
+	}
+	else if (s_telescope == "GMRT")
+	{
+		return 7;
+	}
+	else if (s_telescope == "Effelsberg")
+	{
+		return 8;
+	}
+	else if (s_telescope == "ATA")
+	{
+		return 9;
+	}
+	else if (s_telescope == "SRT")
+	{
+		return 10;
+	}
+	else if (s_telescope == "LOFAR")
+	{
+		return 11;
+	}
+	else if (s_telescope == "VLA")
+	{
+		return 12;
+	}
+	else if (s_telescope == "CHIME")
+	{
+		return 20;
+	}
+	else if (s_telescope == "FAST")
+	{
+		return 21;
+	}
+	else if (s_telescope == "MeerKAT")
+	{
+		return 64;
+	}
+	else if (s_telescope == "KAT-7")
+	{
+		return 65;
+	}
+	
+	return -1;
+}
