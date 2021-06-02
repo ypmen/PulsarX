@@ -14,7 +14,7 @@
 
 #include "dedisperse.h"
 #include "databuffer.h"
-#include "preprocess.h"
+#include "preprocesslite.h"
 #include "filmaker.h"
 #include "filterbank.h"
 #include "mjd.h"
@@ -180,7 +180,7 @@ int main(int argc, const char *argv[])
     double tsamp = fil[0].tsamp;
     int nifs = fil[0].nifs;
 
-	short *buffer = new short [nchans];
+	float *buffer = new float [nchans];
 
 	vector<int> tds;
 	for (auto fm=filmakers.begin(); fm!=filmakers.end(); ++fm)
@@ -192,16 +192,15 @@ int main(int argc, const char *argv[])
 
 	long int ndump = (int)(vm["seglen"].as<float>()/tsamp)/td_lcm/2*td_lcm*2;
 
-	DataBuffer<short> databuf(ndump, nchans);
+	DataBuffer<float> databuf(ndump, nchans);
 	databuf.closable = true;
 	databuf.tsamp = tsamp;
 	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
 
-	Preprocess prep;
+	PreprocessLite prep;
 	prep.td = td;
 	prep.fd = fd;
 	prep.thresig = vm["zapthre"].as<float>();
-	prep.width = vm["baseline"].as<vector<float>>().front();
 	prep.prepare(databuf);
 
 	long int noutfil = filmakers.size();
@@ -259,7 +258,7 @@ int main(int argc, const char *argv[])
 					continue;
 				}
 
-				memset(buffer, 0, sizeof(short)*nchans);
+				memset(buffer, 0, sizeof(float)*nchans);
 				long int m = 0;
 				for (long int k=0; k<sumif; k++)
 				{
@@ -269,7 +268,7 @@ int main(int argc, const char *argv[])
 					}
 				}
 
-                memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(short)*1*nchans);
+                memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
                 databuf.counter++;
 				bcnt1++;
 				ntot++;
