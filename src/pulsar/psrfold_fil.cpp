@@ -7,7 +7,7 @@
  */
 
 #define FAST 1
-#define NSBLK 1024
+#define NSBLK 65536
 #define GROUPSIZE 64
 
 #include "config.h"
@@ -36,7 +36,7 @@
 #include "mjd.h"
 #include "utils.h"
 #include "constants.h"
-#include "preprocess.h"
+#include "preprocesslite.h"
 #include "baseline.h"
 
 using namespace std;
@@ -274,12 +274,12 @@ int main(int argc, const char *argv[])
     double tsamp = fil[0].tsamp;
     int nifs = fil[0].nifs;
 
-	short *buffer = new short [nchans];
+	float *buffer = new float [nchans];
 
 	long int ndump = ceil((1./tsamp)/td)*td;
 	int nblock = ceil(vm["tsubint"].as<double>());
 
-	DataBuffer<short> databuf(ndump, nchans);
+	DataBuffer<float> databuf(ndump, nchans);
 	databuf.closable = true;
 	databuf.tsamp = tsamp;
 	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
@@ -287,11 +287,10 @@ int main(int argc, const char *argv[])
 	long int nstart = jump[0]/tsamp;
 	long int nend = ntotal-jump[1]/tsamp;
 
-	Preprocess prep;
+	PreprocessLite prep;
 	prep.td = vm["td"].as<int>();
 	prep.fd = vm["fd"].as<int>();
 	prep.thresig = vm["zapthre"].as<float>();
-	prep.width = vm["baseline"].as<vector<float>>().front();
 	prep.prepare(databuf);
 
 	Equalize equalize;
@@ -388,7 +387,7 @@ int main(int argc, const char *argv[])
 					continue;
 				}
 
-				memset(buffer, 0, sizeof(short)*nchans);
+				memset(buffer, 0, sizeof(float)*nchans);
 				long int m = 0;
 				for (long int k=0; k<sumif; k++)
 				{
@@ -398,7 +397,7 @@ int main(int argc, const char *argv[])
 					}
 				}
 
-                memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(short)*1*nchans);
+                memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
                 databuf.counter++;
 				bcnt1++;
 				ntot++;
@@ -522,7 +521,7 @@ int main(int argc, const char *argv[])
 
 	double tint = ntotal*tsamp;
 
-	vector<Pulsar::GridSearch> gridsearch(ncand);
+	vector<Pulsar::GridSearch> gridsearch;
 	for (long int k=0; k<ncand; k++)
 	{
 		Pulsar::GridSearch gs;

@@ -65,14 +65,23 @@ DataBuffer<float> * PreprocessLite::run(DataBuffer<float> &databuffer)
 
         chmean[j] = chmean1[j];
         chstd[j] = chmean2[j]-tmp;
-        chstd[j] = chstd[j] == 0. ? 1.:chstd[j];
-        chskewness[j] = chmean3[j]-3.*chmean2[j]*chmean1[j]+2.*tmp*chmean1[j];
-        chkurtosis[j] = chmean4[j]-4.*chmean3[j]*chmean1[j]+6.*chmean2[j]*tmp-3.*tmp*tmp;
+        
+        if (chstd[j] != 0)
+        {
+            chskewness[j] = chmean3[j]-3.*chmean2[j]*chmean1[j]+2.*tmp*chmean1[j];
+            chkurtosis[j] = chmean4[j]-4.*chmean3[j]*chmean1[j]+6.*chmean2[j]*tmp-3.*tmp*tmp;
 
-        chkurtosis[j] /= chstd[j]*chstd[j];
-        chkurtosis[j] -= 3.;
+            chkurtosis[j] /= chstd[j]*chstd[j];
+            chkurtosis[j] -= 3.;
 
-        chskewness[j] /= chstd[j]*std::sqrt(chstd[j]);
+            chskewness[j] /= chstd[j]*std::sqrt(chstd[j]);
+        }
+        else
+        {
+            chstd[j] = 1.;
+            chkurtosis[j] = std::numeric_limits<float>::max();
+            chskewness[j] = std::numeric_limits<float>::max();
+        }
 
         chstd[j] = std::sqrt(chstd[j]);
     }

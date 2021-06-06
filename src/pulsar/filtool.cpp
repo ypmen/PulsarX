@@ -23,7 +23,7 @@ using namespace boost::program_options;
 
 unsigned int num_threads;
 
-#define NSBLK 1024
+#define NSBLK 65536
 #define FAST 1
 
 int main(int argc, const char *argv[])
@@ -40,11 +40,11 @@ int main(int argc, const char *argv[])
 			("td", value<int>()->default_value(1), "Time downsample for preprocessing")
 			("fd", value<int>()->default_value(1), "Frequency downsample for preprocessing")
             ("nbits", value<int>()->default_value(8), "Nbits of output filterbank")
-            ("mean", value<float>()->default_value(10), "Mean value of output filterbank")
-			("std", value<float>()->default_value(3), "Standard deviation of output filterbank")
+            ("mean", value<float>()->default_value(128), "Mean value of output filterbank")
+			("std", value<float>()->default_value(6), "Standard deviation of output filterbank")
 			("filplan", value<std::string>(), "Input filterbank plan file")
             ("seglen,l", value<float>()->default_value(1), "Time length per segment (s)")
-			("zapthre", value<float>()->default_value(4), "Threshold in IQR for zapping channels")
+			("zapthre", value<float>()->default_value(3), "Threshold in IQR for zapping channels")
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
@@ -298,6 +298,12 @@ int main(int argc, const char *argv[])
 		fil[n].close();
 	}
 	databuf.close();
+
+	if (verbose)
+	{
+		cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
+		cerr<<"("<<100.*count/ntotal<<"%)"<<endl;
+	}
 
     delete [] buffer;
     delete [] fil;
