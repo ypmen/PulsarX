@@ -12,6 +12,7 @@ src/pulsar/dedisperse_all_fil
 src/pulsar/psrfold
 src/pulsar/psrfold_fil
 src/pulsar/filtool
+src/pulsar/dmffdot
 src/ymw16/ymw16
 src/ymw16/ymw16_ne
 .vscode

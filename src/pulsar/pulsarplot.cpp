@@ -33,11 +33,19 @@ PulsarPlot::~PulsarPlot(){}
 
 void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx)
 {
-    stringstream ss_id;
-    ss_id << setw(5) << setfill('0') << id;
-    string s_id = ss_id.str();
+    string basename;
+    if (obsinfo.find("Basename") == obsinfo.end())
+    {
+        stringstream ss_id;
+        ss_id << setw(5) << setfill('0') << id;
+        string s_id = ss_id.str();
 
-    string basename = rootname + "_" + obsinfo["Date"] + "_" + obsinfo["Beam"] + "_" + s_id;
+        basename = rootname + "_" + obsinfo["Date"] + "_" + obsinfo["Beam"] + "_" + s_id;
+    }
+    else
+    {
+        basename = obsinfo["Basename"];
+    }
     string figname = basename + ".png";
 
     long int nsubint = gridsearch.nsubint;
