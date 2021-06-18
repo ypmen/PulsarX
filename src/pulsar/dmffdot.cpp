@@ -36,9 +36,11 @@ int main(int argc, char *argv[])
 			("verbose,v", "Print debug information")
 			("threads,t", value<unsigned int>()->default_value(1), "Number of threads")
 			("scale", value<int>()->default_value(1), "F0,F1,dm search range scale in phase")
+			("scales", value<std::vector<int>>()->multitoken(), "F0,F1,dm search range scales in phase for each archive")
 			("nosearch", "Do not search dm,f0,f1")
 			("noplot", "Do not generate figures")
-			("candfile", value<std::vector<std::string>>()->zero_tokens(), "Input candfile and generate a new one")
+			("candfile", value<std::vector<std::string>>()->multitoken()->zero_tokens(), "Input candfile and generate a new one")
+			("correct", "Correct archive to the original fold based on candfile")
 			("update", "Update archive")
 			("template", value<std::string>(), "Input fold template file")
 			("srcname", value<std::string>()->default_value("PSRJ0000+00"), "Souce name")
@@ -48,7 +50,6 @@ int main(int argc, char *argv[])
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
 			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
-			("rfi,z", value<vector<std::string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [zap fl fh]")
 #ifdef HAVE_PLOTX
 			("plotx", "Using PlotX for plotting")
 #endif
@@ -76,6 +77,14 @@ int main(int argc, char *argv[])
 	{
 		BOOST_LOG_TRIVIAL(error)<<"Error: no input file";
 		return -1;
+	}
+	if (vm.count("correct"))
+	{
+		if (vm["candfile"].as<std::vector<std::string>>().size() == 0)
+		{
+			BOOST_LOG_TRIVIAL(error)<<"Error: no cand file";
+			return -1;
+		}
 	}
 	if (vm.count("update"))
 	{
@@ -185,6 +194,8 @@ int main(int argc, char *argv[])
 	<<"Telescope: "<<obsinfo["Telescope"]<<std::endl
 	<<"Beam: "<<obsinfo["Beam"];
 
+	std::vector<std::vector<double>> vdmfa_dmffdot;
+
 	std::ofstream outfile;
 	if (vm.count("candfile"))
 	{
@@ -199,16 +210,31 @@ int main(int argc, char *argv[])
 			while (getline(infile, line))
 			{
 				boost::trim(line);
-				if(line.rfind("#", 0) == 0)
+				if (line.rfind("#", 0) == 0)
 				{
 					header.push_back(line);
+				}
+
+				if (vm.count("correct") && isdigit(line[0]))
+				{
+					std::vector<std::string> parameters;
+            		boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
+
+					std::vector<double> dmfa_dmffdot(6);
+					dmfa_dmffdot[0] = std::stod(parameters[1]);
+					dmfa_dmffdot[1] = std::stod(parameters[5]);
+					dmfa_dmffdot[2] = std::stod(parameters[11]);
+					dmfa_dmffdot[3] = std::stod(parameters[2]);
+					dmfa_dmffdot[4] = std::stod(parameters[6]);
+					dmfa_dmffdot[5] = std::stod(parameters[9]);
+					vdmfa_dmffdot.push_back(dmfa_dmffdot);
 				}
 			}
 
 			infile.close();
 
 			BOOST_LOG_TRIVIAL(info)<<"write header of ouput candfile...";
-			outfile.open(vm["candfile"].as<std::string>());
+			outfile.open(vm["candfile"].as<std::vector<std::string>>()[0]);
 			for (auto line=header.begin(); line!=header.end(); ++line)
 			{
 				outfile<<*line<<std::endl;
@@ -241,11 +267,20 @@ int main(int argc, char *argv[])
 
 	long int narch = fnames.size();
 
+	std::vector<int> scales;
+	if (vm.count("scales"))
+	{
+		scales = vm["scales"].as<std::vector<int>>();
+		for (long int k=0; k<narch-scales.size(); k++) scales.push_back(scales.back());
+	}
+
 	BOOST_LOG_TRIVIAL(info)<<"read "<<narch<<" archives...";
 
     /* read archive */
 	for (long int k=0; k<narch; k++)
 	{
+		if (!scales.empty()) scale = scales[k];
+
 		std::string fname = fnames[k];
 
 		BOOST_LOG_TRIVIAL(info)<<"read "<<fname;
@@ -285,6 +320,39 @@ int main(int argc, char *argv[])
 		gridsearch.clfd_q = vm["clfd"].as<double>();
 
 		gridsearch.prepare(arch);
+
+		if (vm.count("correct"))
+		{
+			double dm_new = vdmfa_dmffdot[k][3];
+			double f0_new = vdmfa_dmffdot[k][4];
+			double f1_new = vdmfa_dmffdot[k][5];
+			double acc_new = fdot2acc(f1_new, f0_new);
+
+			if (std::abs(dm-dm_new) > 0.001)
+			{
+				BOOST_LOG_TRIVIAL(error)<<"order in candfile and input archives are not consist";
+				return -1;
+			}
+
+			double dm_old = vdmfa_dmffdot[k][0];
+			double f0_old = vdmfa_dmffdot[k][1];
+			double acc_old = vdmfa_dmffdot[k][2];
+			double f1_old = acc2fdot(acc_old, f0_old);
+
+			BOOST_LOG_TRIVIAL(info)<<"correct DM/F0/acc to input values "<<std::endl
+			<<"from DM (pc/cc)="<<dm_new<<", f0 (Hz)="<<f0_new<<", f1 (Hz/s)="<<f1_new<<" ,acc (m/s/s)="<<acc_new<<std::endl
+			<<"to   DM (pc/cc)="<<dm_old<<", f0 (Hz)="<<f0_old<<", f1 (Hz/s)="<<f1_old<<" ,acc (m/s/s)="<<acc_old;
+
+			gridsearch.bestddm = dm_old-dm;
+			gridsearch.bestdf0 = f0_old-f0;
+			gridsearch.bestdf1 = f1_old-f1;
+
+			gridsearch.dmsearch = true;
+			gridsearch.ffdotsearch = true;
+			gridsearch.bestprofiles();
+			gridsearch.dmsearch = false;
+			gridsearch.ffdotsearch = false;
+		}
 
 		BOOST_LOG_TRIVIAL(info)<<"optimization...";
 
@@ -395,17 +463,29 @@ int main(int argc, char *argv[])
 		if (vm.count("candfile"))
 		{
 			outfile<<k+1<<"\t\t";
-			outfile<<fixed<<setprecision(8)<<arch.dm<<"\t\t";
+			if (vm.count("correct"))
+				outfile<<fixed<<setprecision(8)<<vdmfa_dmffdot[k][0]<<"\t\t";
+			else
+				outfile<<fixed<<setprecision(8)<<arch.dm<<"\t\t";
 			outfile<<fixed<<setprecision(8)<<gridsearch.dm<<"\t\t";
 			outfile<<setprecision(15)<<gridsearch.err_dm<<"\t\t";
 			outfile<<fixed<<setprecision(1)<<ymw16_dist<<"\t\t";
-			outfile<<setprecision(15)<<arch.f0<<"\t\t";
+			if (vm.count("correct"))
+				outfile<<setprecision(15)<<vdmfa_dmffdot[k][1]<<"\t\t";
+			else
+				outfile<<setprecision(15)<<arch.f0<<"\t\t";
 			outfile<<setprecision(15)<<gridsearch.f0<<"\t\t";
 			outfile<<setprecision(15)<<gridsearch.err_f0<<"\t\t";
-			outfile<<setprecision(15)<<arch.f1<<"\t\t";
+			if (vm.count("correct"))
+				outfile<<setprecision(15)<<acc2fdot(vdmfa_dmffdot[k][2], vdmfa_dmffdot[k][1])<<"\t\t";
+			else
+				outfile<<setprecision(15)<<arch.f1<<"\t\t";
 			outfile<<setprecision(15)<<gridsearch.f1<<"\t\t";
 			outfile<<setprecision(15)<<gridsearch.err_f1<<"\t\t";
-			outfile<<setprecision(15)<<-arch.f1/arch.f0*CONST_C<<"\t\t";
+			if (vm.count("correct"))
+				outfile<<setprecision(15)<<vdmfa_dmffdot[k][2]<<"\t\t";
+			else
+				outfile<<setprecision(15)<<fdot2acc(arch.f1, arch.f0)<<"\t\t";
 			outfile<<setprecision(15)<<gridsearch.acc<<"\t\t";
 			outfile<<setprecision(15)<<gridsearch.err_acc<<"\t\t";
 			outfile<<fixed<<setprecision(5)<<arch.snr<<"\t\t";
