@@ -328,16 +328,16 @@ int main(int argc, char *argv[])
 			double f1_new = vdmfa_dmffdot[k][5];
 			double acc_new = fdot2acc(f1_new, f0_new);
 
-			if (std::abs(dm-dm_new) > 0.001)
-			{
-				BOOST_LOG_TRIVIAL(error)<<"order in candfile and input archives are not consist";
-				return -1;
-			}
-
 			double dm_old = vdmfa_dmffdot[k][0];
 			double f0_old = vdmfa_dmffdot[k][1];
 			double acc_old = vdmfa_dmffdot[k][2];
 			double f1_old = acc2fdot(acc_old, f0_old);
+
+			if (std::abs(dm-dm_new) > 0.001 && std::abs(dm-dm_old) > 0.001)
+			{
+				BOOST_LOG_TRIVIAL(error)<<"order in candfile and input archives are not consist";
+				return -1;
+			}
 
 			BOOST_LOG_TRIVIAL(info)<<"correct DM/F0/acc to input values "<<std::endl
 			<<"from DM (pc/cc)="<<dm_new<<", f0 (Hz)="<<f0_new<<", f1 (Hz/s)="<<f1_new<<" ,acc (m/s/s)="<<acc_new<<std::endl
