@@ -415,8 +415,12 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         fig.set_default_color("white");
 
         //profile
+        float smear_left = 1.-0.5*dmsmear_phase;
+        float smear_right = 1.+0.5*dmsmear_phase;
+        if (smear_left < 0.) smear_left = 0;
+        if (smear_right > 2.) smear_right = 2.;
         PlotX::Axes ax1(0.08, 0.38, 0.76, 0.96);
-        ax1.axvspan(1.-0.5*dmsmear_phase, 1.+0.5*dmsmear_phase, 0., 1., {{"color", "lightgray"}, {"filled", "true"}});
+        ax1.axvspan(smear_left, smear_right, 0., 1., {{"color", "lightgray"}, {"filled", "true"}});
         ax1.plot(vph, vp);
         ax1.autoscale(true, "x", true);
         ax1.set_ylabel("Flux");

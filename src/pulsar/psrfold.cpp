@@ -19,6 +19,7 @@
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "logging.h"
 #include "dedisperse.h"
 #include "archivewriter.h"
 
@@ -48,6 +49,8 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 
 int main(int argc, const char *argv[])
 {
+	init_logging();
+
     /* options */
 	int verbose = 0;
 	bool outbest = false;
@@ -68,6 +71,9 @@ int main(int argc, const char *argv[])
 			("pepoch", value<double>(), "F0/F1/acc epoch (MJD)")
 			("scale", value<int>()->default_value(1), "F0,F1,dm search range scale in phase")
 			("nosearch", "Do not search dm,f0,f1")
+			("nodmsearch", "Do not search dm")
+			("nof0search", "Do not search f0")
+			("nof1search", "Do not search f1")
 			("noplot", "Do not generate figures")
 			("noarch", "Do not generate archives")
 			("candfile", value<string>(), "Input cand file")
@@ -128,12 +134,12 @@ int main(int argc, const char *argv[])
 	}
 	if (vm.count("input") == 0)
 	{
-		cerr<<"Error: no input file"<<endl;
+		BOOST_LOG_TRIVIAL(error)<<"Error: no input file"<<endl;
 		return -1;
 	}
 	if (vm.count("template") == 0)
 	{
-		cerr<<"Error: no template file"<<endl;
+		BOOST_LOG_TRIVIAL(error)<<"Error: no template file"<<endl;
 		return -1;
 	}
 	else
@@ -141,13 +147,23 @@ int main(int argc, const char *argv[])
 		std::ifstream tmp(vm["template"].as<std::string>().c_str());
 		if (!tmp.good())
 		{
-			cerr<<"Error: can not open file "<<vm["template"].as<std::string>()<<endl;
+			BOOST_LOG_TRIVIAL(error)<<"Error: can not open file "<<vm["template"].as<std::string>()<<endl;
 			return -1;
 		}
 	}
 
 	int scale = vm["scale"].as<int>();
 	bool nosearch = vm.count("nosearch");
+	bool nodmsearch = vm.count("nodmsearch");
+	bool nof0search = vm.count("nof0search");
+	bool nof1search = vm.count("nof1search");
+	if (nodmsearch && nof0search && nof1search) nosearch = true;
+	if (nosearch)
+	{
+		nodmsearch = true;
+		nof0search = true;
+		nof1search = true;
+	}
 	bool noplot = vm.count("noplot");
 	bool noarch = vm.count("noarch");
 	bool contiguous = vm.count("cont");
@@ -188,11 +204,11 @@ int main(int argc, const char *argv[])
 		{
 			if (contiguous)
 			{
-				cerr<<"Warning: time not contiguous"<<endl;
+				BOOST_LOG_TRIVIAL(warning)<<"time not contiguous"<<endl;
 			}
 			else
 			{
-				cerr<<"Error: time not contiguous"<<endl;
+				BOOST_LOG_TRIVIAL(error)<<"time not contiguous"<<endl;
 				exit(-1);
 			}
 		}
@@ -205,7 +221,7 @@ int main(int argc, const char *argv[])
 
 	if (psf[0].mode != Integration::SEARCH)
 	{
-		cerr<<"Error: mode is not SEARCH"<<endl;
+		BOOST_LOG_TRIVIAL(error)<<"mode is not SEARCH"<<endl;
 		exit(-1);
 	}
 
@@ -355,7 +371,7 @@ int main(int argc, const char *argv[])
 	long int ncand = folder.size();
 	if (ncand <= 0)
 	{
-		std::cerr<<"Warning: no candidate to fold"<<std::endl;
+		BOOST_LOG_TRIVIAL(warning)<<"no candidate to fold"<<std::endl;
 		exit(0);
 	}
 
@@ -372,6 +388,8 @@ int main(int argc, const char *argv[])
 	}
 
     psf[0].close();
+
+	BOOST_LOG_TRIVIAL(info)<<"start folding...";
 
     int sumif = nifs>2? 2:nifs;
 	
@@ -426,11 +444,19 @@ int main(int argc, const char *argv[])
 
 				if (ntot%ndump == 0)
 				{
+					BOOST_LOG_TRIVIAL(debug)<<"preprocess...";
+
 					DataBuffer<float> *data = prep.run(databuf);
+
+					BOOST_LOG_TRIVIAL(debug)<<"normalize...";
 
     				data = equalize.run(*data);
 
+					BOOST_LOG_TRIVIAL(debug)<<"remove baseline...";
+
 					data = baseline.run(*data);
+
+					BOOST_LOG_TRIVIAL(debug)<<"remove rfi...";
 
 					data = rfi.zap(*data, zaplist);
 					if (rfi.isbusy) rfi.closable = false;
@@ -471,6 +497,8 @@ int main(int argc, const char *argv[])
 					{
 						if (k%GROUPSIZE == 0)
 						{
+							BOOST_LOG_TRIVIAL(debug)<<"dedisperse group "<<k/GROUPSIZE<<"...";
+
 							dedisp.updatedm(dmsegs[k/GROUPSIZE]);
 							dedisp.run();
 						}
@@ -478,6 +506,8 @@ int main(int argc, const char *argv[])
                         
 						if (dedisp.counter >= dedisp.offset+dedisp.ndump)
 						{
+							BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
+
 							if (vm.count("dspsr"))
 								folder[k].runDspsr(subdata);
 							else
@@ -554,15 +584,44 @@ int main(int argc, const char *argv[])
 		double f0 = folder[k].f0;
 		double f1 = folder[k].f1;
 
-		gridsearch[k].ddmstart = -scale*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-		gridsearch[k].ddmstep = 1./scale*abs(gridsearch[k].ddmstart/folder[k].nbin);
-		gridsearch[k].nddm = 2*abs(scale)*folder[k].nbin;
-		gridsearch[k].df0start = -scale*1./tint;
-		gridsearch[k].df0step = 1./scale*abs(gridsearch[k].df0start/folder[k].nbin);
-		gridsearch[k].ndf0 = 2*abs(scale)*folder[k].nbin;
-		gridsearch[k].df1start = -scale*2./(tint*tint);
-		gridsearch[k].df1step = 1./scale*abs(gridsearch[k].df1start/folder[k].nbin);
-		gridsearch[k].ndf1 = 2*abs(scale)*folder[k].nbin;
+		if (!nodmsearch)
+		{
+			gridsearch[k].ddmstart = -scale*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
+			gridsearch[k].ddmstep = 1./scale*abs(gridsearch[k].ddmstart/folder[k].nbin);
+			gridsearch[k].nddm = 2*abs(scale)*folder[k].nbin;
+		}
+		else
+		{
+			gridsearch[k].ddmstart = 0.;
+			gridsearch[k].ddmstep = 0.;
+			gridsearch[k].nddm = 1;
+		}
+
+		if (!nof0search)
+		{
+			gridsearch[k].df0start = -scale*1./tint;
+			gridsearch[k].df0step = 1./scale*abs(gridsearch[k].df0start/folder[k].nbin);
+			gridsearch[k].ndf0 = 2*abs(scale)*folder[k].nbin;
+		}
+		else
+		{
+			gridsearch[k].df0start = 0.;
+			gridsearch[k].df0step = 0.;
+			gridsearch[k].ndf0 = 1;
+		}
+		
+		if (!nof1search)
+		{
+			gridsearch[k].df1start = -scale*2./(tint*tint);
+			gridsearch[k].df1step = 1./scale*abs(gridsearch[k].df1start/folder[k].nbin);
+			gridsearch[k].ndf1 = 2*abs(scale)*folder[k].nbin;
+		}
+		else
+		{
+			gridsearch[k].df1start = 0.;
+			gridsearch[k].df1step = 0.;
+			gridsearch[k].ndf1 = 1;
+		}
 
 		gridsearch[k].clfd_q = vm["clfd"].as<double>();
 
@@ -571,6 +630,12 @@ int main(int argc, const char *argv[])
 		
 		if (!nosearch)
 		{
+			BOOST_LOG_TRIVIAL(info)<<"cand "<<k<<": initial dm(pc/cc)="<<gridsearch[k].dm<<", f0(Hz)="<<gridsearch[k].f0<<", f1(Hz/s)="<<gridsearch[k].f1;
+			BOOST_LOG_TRIVIAL(info)<<"search scale in phase is "<<scale<<std::endl
+			<<"dm search range: delta dm start="<<gridsearch[k].ddmstart<<", dm step="<<gridsearch[k].ddmstep<<", number of dm="<<gridsearch[k].nddm<<std::endl
+			<<"f0 search range: delta f0 start="<<gridsearch[k].df0start<<", f0 step="<<gridsearch[k].df0step<<", number of f0="<<gridsearch[k].ndf0<<std::endl
+			<<"f1 search range: delta f1 start="<<gridsearch[k].df1start<<", f1 step="<<gridsearch[k].df1step<<", number of f1="<<gridsearch[k].ndf1<<std::endl;
+
 			double dm0 = gridsearch[k].dm;
 			double f00 = gridsearch[k].f0;
 			double f10 = gridsearch[k].f1;
@@ -584,17 +649,23 @@ int main(int argc, const char *argv[])
 				f00 = gridsearch[k].f0;
 				f10 = gridsearch[k].f1;
 
-				gridsearch[k].runFFdot();
-				gridsearch[k].bestprofiles();
-				gridsearch[k].runDM();
-				gridsearch[k].bestprofiles();
+				if (!nof0search || !nof1search)
+				{
+					gridsearch[k].runFFdot();
+					gridsearch[k].bestprofiles();
+				}
+				if (!nodmsearch)
+				{
+					gridsearch[k].runDM();
+					gridsearch[k].bestprofiles();
+				}
 
 				dm1 = gridsearch[k].dm;
 				f01 = gridsearch[k].f0;
 				f11 = gridsearch[k].f1;
 
 				cont++;
-				//cout<<gridsearch[k].dm<<" "<<gridsearch[k].f0<<" "<<gridsearch[k].f1<<endl;
+				BOOST_LOG_TRIVIAL(debug)<<"iteration "<<cont<<": dm(pc/cc)="<<gridsearch[k].dm<<", f0(Hz)="<<gridsearch[k].f0<<", f1(Hz/s)="<<gridsearch[k].f1;
 			}
 		}
 
@@ -607,24 +678,55 @@ int main(int argc, const char *argv[])
 		f0 = gridsearch[k].f0;
 		f1 = gridsearch[k].f1;
 
-		double ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-		gridsearch[k].ddmstep = 1./3*abs(ddmstart/folder[k].nbin);
-		int nddm = 2*3*folder[k].nbin;
+		if (!nodmsearch)
+		{
+			double ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
+			gridsearch[k].ddmstep = 1./3*abs(ddmstart/folder[k].nbin);
+			int nddm = 2*3*folder[k].nbin;
 
-		gridsearch[k].ddmstart = std::max(-3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin), -dm);
-		gridsearch[k].nddm = (ddmstart+gridsearch[k].ddmstep*nddm-gridsearch[k].ddmstart)/gridsearch[k].ddmstep;
+			gridsearch[k].ddmstart = std::max(-3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin), -dm);
+			gridsearch[k].nddm = (ddmstart+gridsearch[k].ddmstep*nddm-gridsearch[k].ddmstart)/gridsearch[k].ddmstep;
+		}
+		else
+		{
+			gridsearch[k].ddmstart = 0.;
+			gridsearch[k].ddmstep = 0.;
+			gridsearch[k].nddm = 1;
+		}
 
-		gridsearch[k].df0start = -3*1./tint;
-		gridsearch[k].df0step = 1./3*abs(gridsearch[k].df0start/folder[k].nbin);
-		gridsearch[k].ndf0 = 2*3*folder[k].nbin;
-		gridsearch[k].df1start = -3*2./(tint*tint);
-		gridsearch[k].df1step = 1./3*abs(gridsearch[k].df1start/folder[k].nbin);
-		gridsearch[k].ndf1 = 2*3*folder[k].nbin;
+		if (!nof0search)
+		{
+			gridsearch[k].df0start = -3*1./tint;
+			gridsearch[k].df0step = 1./3*abs(gridsearch[k].df0start/folder[k].nbin);
+			gridsearch[k].ndf0 = 2*3*folder[k].nbin;
+		}
+		else
+		{
+			gridsearch[k].df0start = 0.;
+			gridsearch[k].df0step = 0.;
+			gridsearch[k].ndf0 = 1;
+		}
+
+		if (!nof1search)
+		{
+			gridsearch[k].df1start = -3*2./(tint*tint);
+			gridsearch[k].df1step = 1./3*abs(gridsearch[k].df1start/folder[k].nbin);
+			gridsearch[k].ndf1 = 2*3*folder[k].nbin;
+		}
+		else
+		{
+			gridsearch[k].df1start = 0.;
+			gridsearch[k].df1step = 0.;
+			gridsearch[k].ndf1 = 1.;
+		}
 
 		if (!nosearch)
 		{
-			gridsearch[k].runFFdot();
-			gridsearch[k].runDM();
+			if (!nof0search || !nof1search)
+				gridsearch[k].runFFdot();
+			
+			if (!nodmsearch)
+				gridsearch[k].runDM();
 		}
 	}
 
@@ -679,6 +781,8 @@ int main(int argc, const char *argv[])
     string s_pepoch = ss_pepoch.str();
 	obsinfo["Pepoch"] = s_pepoch;
 
+	BOOST_LOG_TRIVIAL(info)<<"write information to cand file...";
+
 	std::ofstream outfile;
 	outfile.open(rootname + "_" + obsinfo["Date"] + "_" + s_ibeam + ".cands");
 	
@@ -703,6 +807,8 @@ int main(int argc, const char *argv[])
 
 		if (!noarch)
 		{
+			BOOST_LOG_TRIVIAL(info)<<"generate archive for cand "<<k<<"...";
+
 			ArchiveWriter writer;
 			writer.template_file = vm["template"].as<string>();
 			writer.mode = Integration::FOLD;
@@ -749,6 +855,8 @@ int main(int argc, const char *argv[])
 
 		if (!noplot)
 		{
+			BOOST_LOG_TRIVIAL(info)<<"generate png for cand "<<k<<"...";
+
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
 			Pulsar::PulsarPlot psrplot;
 			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, vm.count("plotx"));
@@ -765,6 +873,8 @@ int main(int argc, const char *argv[])
 
 	delete [] buffer;
 	delete [] psf;
+
+	BOOST_LOG_TRIVIAL(info)<<"done!";
 
     return 0;
 }
