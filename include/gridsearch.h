@@ -64,6 +64,7 @@ namespace Pulsar
         void subints_normalize();
         void normalize();
         void clfd();
+        void zap();
     public:
         double df0start;
         double df0step;
@@ -75,6 +76,7 @@ namespace Pulsar
         double ddmstep;
         int nddm;
         double clfd_q;
+        std::vector<std::pair<double, double>> zaplist;
     public:
         double f0;
         double f1;

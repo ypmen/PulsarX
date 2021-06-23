@@ -38,6 +38,9 @@ int main(int argc, char *argv[])
 			("scale", value<int>()->default_value(1), "F0,F1,dm search range scale in phase")
 			("scales", value<std::vector<int>>()->multitoken(), "F0,F1,dm search range scales in phase for each archive")
 			("nosearch", "Do not search dm,f0,f1")
+			("nodmsearch", "Do not search dm")
+			("nof0search", "Do not search f0")
+			("nof1search", "Do not search f1")
 			("noplot", "Do not generate figures")
 			("candfile", value<std::vector<std::string>>()->multitoken()->zero_tokens(), "Input candfile and generate a new one")
 			("correct", "Correct archive to the original fold based on candfile")
@@ -49,6 +52,7 @@ int main(int argc, char *argv[])
 			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
+			("zap", value<std::vector<double>>()->multitoken()->zero_tokens()->composing(), "Zap channels, e.g. --zap 1000 1100 1200 1300")
 			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
 #ifdef HAVE_PLOTX
 			("plotx", "Using PlotX for plotting")
@@ -97,6 +101,16 @@ int main(int argc, char *argv[])
 
 	int scale = vm["scale"].as<int>();
 	bool nosearch = vm.count("nosearch");
+	bool nodmsearch = vm.count("nodmsearch");
+	bool nof0search = vm.count("nof0search");
+	bool nof1search = vm.count("nof1search");
+	if (nodmsearch && nof0search && nof1search) nosearch = true;
+	if (nosearch)
+	{
+		nodmsearch = true;
+		nof0search = true;
+		nof1search = true;
+	}
 	bool noplot = vm.count("noplot");
 	bool noarch = vm.count("noarch");
     string rootname = vm["rootname"].as<std::string>();
@@ -153,6 +167,18 @@ int main(int argc, char *argv[])
 	}
 
     psf.close();
+
+	/** rfi */
+	std::vector<std::pair<double, double>> zaplist;
+    if (vm.count("zap"))
+	{
+        std::vector<double> zap_opts = vm["zap"].as<std::vector<double>>();
+        for (auto opt=zap_opts.begin(); opt!=zap_opts.end(); ++opt)
+        {
+            zaplist.push_back(pair<double, double>(*(opt+0), *(opt+1)));
+            advance(opt, 1);
+        }
+	}
 
 	/** form obsinfo*/
 	std::map<std::string, std::string> obsinfo;
@@ -307,17 +333,47 @@ int main(int argc, char *argv[])
 
 		/* optimize */
 		Pulsar::GridSearch gridsearch;
-		gridsearch.ddmstart = -scale*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-		gridsearch.ddmstep = 1./scale*abs(gridsearch.ddmstart/arch.nbin);
-		gridsearch.nddm = 2*abs(scale)*arch.nbin;
-		gridsearch.df0start = -scale*1./tint;
-		gridsearch.df0step = 1./scale*abs(gridsearch.df0start/arch.nbin);
-		gridsearch.ndf0 = 2*abs(scale)*arch.nbin;
-		gridsearch.df1start = -scale*2./(tint*tint);
-		gridsearch.df1step = 1./scale*abs(gridsearch.df1start/arch.nbin);
-		gridsearch.ndf1 = 2*abs(scale)*arch.nbin;
+		if (!nodmsearch)
+		{
+			gridsearch.ddmstart = -scale*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
+			gridsearch.ddmstep = 1./scale*abs(gridsearch.ddmstart/arch.nbin);
+			gridsearch.nddm = 2*abs(scale)*arch.nbin;
+		}
+		else
+		{
+			gridsearch.ddmstart = 0.;
+			gridsearch.ddmstep = 0.;
+			gridsearch.nddm = 1;
+		}
+
+		if (!nof0search)
+		{
+			gridsearch.df0start = -scale*1./tint;
+			gridsearch.df0step = 1./scale*abs(gridsearch.df0start/arch.nbin);
+			gridsearch.ndf0 = 2*abs(scale)*arch.nbin;
+		}
+		else
+		{
+			gridsearch.df0start = 0.;
+			gridsearch.df0step = 0.;
+			gridsearch.ndf0 = 1;
+		}
+		
+		if (!nof1search)
+		{
+			gridsearch.df1start = -scale*2./(tint*tint);
+			gridsearch.df1step = 1./scale*abs(gridsearch.df1start/arch.nbin);
+			gridsearch.ndf1 = 2*abs(scale)*arch.nbin;
+		}
+		else
+		{
+			gridsearch.df1start = 0.;
+			gridsearch.df1step = 0.;
+			gridsearch.ndf1 = 1;
+		}
 
 		gridsearch.clfd_q = vm["clfd"].as<double>();
+		gridsearch.zaplist = zaplist;
 
 		gridsearch.prepare(arch);
 
@@ -358,6 +414,12 @@ int main(int argc, char *argv[])
 
 		if (!nosearch)
 		{
+			BOOST_LOG_TRIVIAL(info)<<"cand "<<k<<": initial dm(pc/cc)="<<gridsearch.dm<<", f0(Hz)="<<gridsearch.f0<<", f1(Hz/s)="<<gridsearch.f1;
+			BOOST_LOG_TRIVIAL(info)<<"search scale in phase is "<<scale<<std::endl
+			<<"dm search range: delta dm start="<<gridsearch.ddmstart<<", dm step="<<gridsearch.ddmstep<<", number of dm="<<gridsearch.nddm<<std::endl
+			<<"f0 search range: delta f0 start="<<gridsearch.df0start<<", f0 step="<<gridsearch.df0step<<", number of f0="<<gridsearch.ndf0<<std::endl
+			<<"f1 search range: delta f1 start="<<gridsearch.df1start<<", f1 step="<<gridsearch.df1step<<", number of f1="<<gridsearch.ndf1<<std::endl;
+
 			double dm0 = gridsearch.dm;
 			double f00 = gridsearch.f0;
 			double f10 = gridsearch.f1;
@@ -365,24 +427,29 @@ int main(int argc, char *argv[])
 			double f01 = gridsearch.f0 + 2*gridsearch.df0step;
 			double f11 = gridsearch.f1 + 2*gridsearch.df1step;
 			int cont = 0;
-			BOOST_LOG_TRIVIAL(debug)<<gridsearch.dm<<" "<<gridsearch.f0<<" "<<gridsearch.f1;
 			while ((abs(dm0-dm1)>gridsearch.ddmstep or abs(f00-f01)>gridsearch.df0step or abs(f10-f11)>gridsearch.df1step) and cont<8)
 			{
 				dm0 = gridsearch.dm;
 				f00 = gridsearch.f0;
 				f10 = gridsearch.f1;
 
-				gridsearch.runFFdot();
-				gridsearch.bestprofiles();
-				gridsearch.runDM();
-				gridsearch.bestprofiles();
+				if (!nof0search || !nof1search)
+				{
+					gridsearch.runFFdot();
+					gridsearch.bestprofiles();
+				}
+				if (!nodmsearch)
+				{
+					gridsearch.runDM();
+					gridsearch.bestprofiles();
+				}
 
 				dm1 = gridsearch.dm;
 				f01 = gridsearch.f0;
 				f11 = gridsearch.f1;
 
 				cont++;
-				BOOST_LOG_TRIVIAL(debug)<<gridsearch.dm<<" "<<gridsearch.f0<<" "<<gridsearch.f1;
+				BOOST_LOG_TRIVIAL(debug)<<"iteration "<<cont<<": dm(pc/cc)="<<gridsearch.dm<<", f0(Hz)="<<gridsearch.f0<<", f1(Hz/s)="<<gridsearch.f1;
 			}
 		}
 
@@ -395,24 +462,55 @@ int main(int argc, char *argv[])
 		f0 = gridsearch.f0;
 		f1 = gridsearch.f1;
 
-		double ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-		gridsearch.ddmstep = 1./3*abs(ddmstart/arch.nbin);
-		int nddm = 2*3*arch.nbin;
+		if (!nodmsearch)
+		{
+			double ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
+			gridsearch.ddmstep = 1./3*abs(ddmstart/arch.nbin);
+			int nddm = 2*3*arch.nbin;
 
-		gridsearch.ddmstart = std::max(-3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin), -dm);
-		gridsearch.nddm = (ddmstart+gridsearch.ddmstep*nddm-gridsearch.ddmstart)/gridsearch.ddmstep;
+			gridsearch.ddmstart = std::max(-3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin), -dm);
+			gridsearch.nddm = (ddmstart+gridsearch.ddmstep*nddm-gridsearch.ddmstart)/gridsearch.ddmstep;
+		}
+		else
+		{
+			gridsearch.ddmstart = 0.;
+			gridsearch.ddmstep = 0.;
+			gridsearch.nddm = 1;
+		}
 
-		gridsearch.df0start = -3*1./tint;
-		gridsearch.df0step = 1./3*abs(gridsearch.df0start/arch.nbin);
-		gridsearch.ndf0 = 2*3*arch.nbin;
-		gridsearch.df1start = -3*2./(tint*tint);
-		gridsearch.df1step = 1./3*abs(gridsearch.df1start/arch.nbin);
-		gridsearch.ndf1 = 2*3*arch.nbin;
+		if (!nof0search)
+		{
+			gridsearch.df0start = -3*1./tint;
+			gridsearch.df0step = 1./3*abs(gridsearch.df0start/arch.nbin);
+			gridsearch.ndf0 = 2*3*arch.nbin;
+		}
+		else
+		{
+			gridsearch.df0start = 0.;
+			gridsearch.df0step = 0.;
+			gridsearch.ndf0 = 1;
+		}
+
+		if (!nof1search)
+		{
+			gridsearch.df1start = -3*2./(tint*tint);
+			gridsearch.df1step = 1./3*abs(gridsearch.df1start/arch.nbin);
+			gridsearch.ndf1 = 2*3*arch.nbin;
+		}
+		else
+		{
+			gridsearch.df1start = 0.;
+			gridsearch.df1step = 0.;
+			gridsearch.ndf1 = 1.;
+		}
 
 		if (!nosearch)
 		{
-			gridsearch.runFFdot();
-			gridsearch.runDM();
+			if (!nof0search || !nof1search)
+				gridsearch.runFFdot();
+			
+			if (!nodmsearch)
+				gridsearch.runDM();
 		}
 
 		//start mjd

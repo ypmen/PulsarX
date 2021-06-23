@@ -189,6 +189,10 @@ void GridSearch::prepare(ArchiveLite &arch)
 
     if (clfd_q > 0)
         clfd();
+    
+    if (!zaplist.empty())
+        zap();
+    
     //subints_normalize();
     if (f0*arch.profiles[0].tsubint >= 1)
         normalize();
@@ -733,6 +737,38 @@ void GridSearch::clfd()
                 {
                     profiles[k*nchan*nbin+j*nbin+i] = 0.;
                 }
+            }
+        }
+    }
+}
+
+void GridSearch::zap()
+{
+    if (zaplist.empty()) return;
+
+    std::vector<float> weights(nchan, 1.);
+
+    for (long int j=0; j<nchan; j++)
+    {
+        for (auto k=zaplist.begin(); k!=zaplist.end(); ++k)
+        {
+            if (frequencies[j]>=(*k).first and frequencies[j]<=(*k).second)
+            {
+                weights[j] = 0.;
+            }
+        }
+    }
+
+    for (long int k=0; k<nsubint; k++)
+    {
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(num_threads)
+#endif
+        for (long int j=0; j<nchan; j++)
+        {
+            for (long int i=0; i<nbin; i++)
+            {
+                profiles[k*nchan*nbin+j*nbin+i] *= weights[j];
             }
         }
     }
