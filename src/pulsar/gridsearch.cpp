@@ -478,11 +478,14 @@ void GridSearch::get_snr_width()
             if (boxsum > max)
             {
                 max = boxsum;
-                width = w;
             }
         }
 
-        snr = (max/sqrt(w))>snr ? (max/sqrt(w)):snr;
+        if ((max/sqrt(w))>snr)
+        {
+            snr = (max/sqrt(w));
+            width = w;
+        }
     }
 
     width /= f0*nbin;

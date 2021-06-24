@@ -136,21 +136,25 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
             vsnr_dm[k] = 0.;
     }
 
+    int if1 = nf1/2;
+    int if0 = nf0/2;
+    double maxsnr = -1.;
     for (long int k0=0; k0<nf0; k0++)
     {
         vdf0[k0] = gridsearch.df0start + k0*gridsearch.df0step;
+        if (std::abs(vdf0[k0])<std::abs(0.5*gridsearch.df0step))
+            if0 = k0;
         vsnr_f0[k0] = 0.;
     }
 
     for (long int k1=0; k1<nf1; k1++)
     {
         vdf1[k1] = gridsearch.df1start + k1*gridsearch.df1step;
+        if (std::abs(vdf1[k1])<std::abs(0.5*gridsearch.df1step))
+            if1 = k1;
         vsnr_f1[k1] = 0.;
     }
 
-    int if1 = -1;
-    int if0 = -1;
-    double maxsnr = -1.;
     for (long int k1=0; k1<nf1; k1++)
     {
         for (long int k0=0; k0<nf0; k0++)
@@ -163,14 +167,16 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
             //vsnr_f0[k0] += mxsnr_ffdot[k1*nf0+k0];
             //vsnr_f1[k1] += mxsnr_ffdot[k1*nf0+k0];
 
-            if (mxsnr_ffdot[k1*nf0+k0] > maxsnr)
-            {
-                maxsnr = mxsnr_ffdot[k1*nf0+k0];
-                if1 = k1;
-                if0 = k0;
-            }
+            // if (mxsnr_ffdot[k1*nf0+k0] > maxsnr)
+            // {
+            //     maxsnr = mxsnr_ffdot[k1*nf0+k0];
+            //     if1 = k1;
+            //     if0 = k0;
+            // }
         }
     }
+
+    maxsnr = mxsnr_ffdot[if1*nf0+if0];
 
     for (long int k0=0; k0<nf0; k0++)
     {

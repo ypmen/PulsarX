@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	}
 	if (vm.count("correct"))
 	{
-		if (vm["candfile"].as<std::vector<std::string>>().size() == 0)
+		if (vm.count("candfile") == 0)
 		{
 			BOOST_LOG_TRIVIAL(error)<<"Error: no cand file";
 			return -1;
