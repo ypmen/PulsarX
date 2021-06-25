@@ -463,6 +463,7 @@ void GridSearch::get_snr_width()
 
     snr = 0.;
     width = 0.;
+    pulsespan.resize(2, 0);
     for (long int w=1; w<=nbin/2; w++)
     {
         double boxsum = 0.;
@@ -470,6 +471,7 @@ void GridSearch::get_snr_width()
         {
             boxsum += profile[i];
         }
+        int istart = 0, iend=0;
         double max = boxsum;
         for (long int i=0; i<nbin; i++)
         {
@@ -478,6 +480,8 @@ void GridSearch::get_snr_width()
             if (boxsum > max)
             {
                 max = boxsum;
+                istart = i+1;
+                iend = ((i+1+w)%nbin);
             }
         }
 
@@ -485,6 +489,8 @@ void GridSearch::get_snr_width()
         {
             snr = (max/sqrt(w));
             width = w;
+            pulsespan[0] = istart;
+            pulsespan[1] = iend;
         }
     }
 

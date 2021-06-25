@@ -87,6 +87,17 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
     double err_p1 = gridsearch.err_p1;
     double acc = gridsearch.acc;
     double err_acc = gridsearch.err_acc;
+    std::vector<double> pulsespan(2, 0.);
+    if (gridsearch.pulsespan.back() > gridsearch.pulsespan.front())
+    {
+        pulsespan[0] = gridsearch.pulsespan.front()*1./nbin;
+        pulsespan[1] = gridsearch.pulsespan.back()*1./nbin;
+    }
+    else
+    {
+        pulsespan[0] = gridsearch.pulsespan.front()*1./nbin;
+        pulsespan[1] = (gridsearch.pulsespan.back()+nbin)*1./nbin;
+    }
 
     for (long int i=0; i<2*nbin; i++)
     {
@@ -427,6 +438,10 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         if (smear_right > 2.) smear_right = 2.;
         PlotX::Axes ax1(0.08, 0.38, 0.76, 0.96);
         ax1.axvspan(smear_left, smear_right, 0., 1., {{"color", "lightgray"}, {"filled", "true"}});
+        ax1.axhline(-0.5, 0., 1., {{"color", "red"},{"linestyle", "--"}});
+        ax1.axhline(0.5, 0., 1., {{"color", "red"},{"linestyle", "--"}});
+        ax1.axvline(pulsespan[0], 0., 1., {{"color", "red"},{"linestyle", "--"}});
+        ax1.axvline(pulsespan[1], 0., 1., {{"color", "red"},{"linestyle", "--"}});
         ax1.plot(vph, vp);
         ax1.autoscale(true, "x", true);
         ax1.set_ylabel("Flux");

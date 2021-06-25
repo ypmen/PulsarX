@@ -6,8 +6,8 @@
  * @desc [description]
  */
 
-#ifndef GRIDSEARCH
-#define GRIDSEARCH
+#ifndef GRIDSEARCH_H
+#define GRIDSEARCH_H
 
 #include <vector>
 #include <map>
@@ -105,6 +105,7 @@ namespace Pulsar
     public:
         double snr;
         double width;
+        std::vector<int> pulsespan;
         double p0;
         double p1;
         double acc;
@@ -117,4 +118,4 @@ namespace Pulsar
     };
 }
 
-#endif /* GRIDSEARCH */
+#endif /* GRIDSEARCH_H */
