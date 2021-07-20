@@ -62,6 +62,7 @@ int main(int argc, const char *argv[])
 			("verbose,v", "Print debug information")
 			("threads,t", value<unsigned int>()->default_value(1), "Number of threads")
 			("jump,j", value<vector<double>>()->multitoken()->default_value(vector<double>{0, 0}, "0, 0"), "Time jump at the beginning and end (s)")
+			("frac", value<vector<double>>()->multitoken()->default_value(vector<double>{0, 1}, "0, 1"), "Reading data between start and end fraction")
 			("td", value<int>()->default_value(1), "Time downsample")
 			("fd", value<int>()->default_value(1), "Frequency downsample")
 			("zapthre", value<float>()->default_value(4), "Threshold in IQR for zapping channels")
@@ -302,6 +303,14 @@ int main(int argc, const char *argv[])
 
 	long int nstart = jump[0]/tsamp;
 	long int nend = ntotal-jump[1]/tsamp;
+
+	double startfrac = vm["frac"].as<vector<double>>()[0];
+	double endfrac = vm["frac"].as<vector<double>>()[1];
+	if (startfrac != 0 or endfrac != 1)
+	{
+		nstart = startfrac*ntotal;
+		nend = endfrac*ntotal;
+	}
 
 	PreprocessLite prep;
 	prep.td = vm["td"].as<int>();
