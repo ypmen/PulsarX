@@ -37,6 +37,9 @@ ArchiveLite::ArchiveLite()
     npol = 0;
     tbin = 0.;
     iblock = 0;
+
+    fref = 1000.;
+    use_t2pred = false;
 }
 
 ArchiveLite::ArchiveLite(const ArchiveLite &arch)
@@ -58,6 +61,9 @@ ArchiveLite::ArchiveLite(const ArchiveLite &arch)
     sub_mjd = arch.sub_mjd;
     sub_int = arch.sub_int;
     iblock = arch.iblock;
+
+    fref = arch.fref;
+    use_t2pred = arch.use_t2pred;
 }
 
 ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
@@ -80,6 +86,9 @@ ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
     sub_int = arch.sub_int;
     iblock = arch.iblock;
 
+    fref = arch.fref;
+    use_t2pred = arch.use_t2pred;
+
     return *this;
 }
 
@@ -98,6 +107,13 @@ void ArchiveLite::resize(int np, int nc, int nb)
 void ArchiveLite::prepare(DataBuffer<float> &databuffer)
 {
     frequencies = databuffer.frequencies;
+
+    if (use_t2pred)
+    {
+        fref = 0.5*(*min_element(frequencies.begin(), frequencies.end())+*max_element(frequencies.begin(), frequencies.end()));
+        f0 = 1./pred.get_pfold(ref_epoch.to_day(), fref);
+        f1 = pred.get_fdfold(ref_epoch.to_day(), fref);
+    }
 
     sub_mjd = start_mjd + 0.5*databuffer.tsamp;
 

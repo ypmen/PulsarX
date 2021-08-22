@@ -6,13 +6,14 @@
  * @desc [description]
  */
 
-#ifndef ARCHIVELITE
-#define ARCHIVELITE
+#ifndef ARCHIVELITE_H
+#define ARCHIVELITE_H
 
 #include <fstream>
 #include <vector>
 
 #include "dedispersionlite.h"
+#include "predictor.h"
 #include "mjd.h"
 
 using namespace std;
@@ -108,16 +109,31 @@ namespace Pulsar
     private:
         double get_phase(MJD mjd, MJD &mjdref)
         {
-            long double t = (mjd-mjdref).to_second();
-            double phi = f0*t + 0.5*f1*t*t;
-            phi -= floor(phi);
-            return phi;
+            if (!use_t2pred)
+            {
+                long double t = (mjd-mjdref).to_second();
+                double phi = f0*t + 0.5*f1*t*t;
+                phi -= floor(phi);
+                return phi;
+            }
+            else
+            {
+                return pred.get_fphase(mjd.to_day(), fref);
+            }
         }
         double get_ffold(MJD mjd, MJD &mjdref)
         {
-            long double t = (mjd-mjdref).to_second();
-            double f = f0 + f1*t;
-            return f;
+            if (!use_t2pred)
+            {
+                long double t = (mjd-mjdref).to_second();
+                double f = f0 + f1*t;
+                return f;
+            }
+            else
+            {
+                double pfold = pred.get_pfold(mjd.to_day(), fref);
+                return 1./pfold;
+            }
         }
         MJD get_epoch(MJD &start_time, MJD &end_time, MJD &ref_epoch)
         {
@@ -147,6 +163,8 @@ namespace Pulsar
         double dm;
         double snr;
         long int nblock;
+        bool use_t2pred;
+        Predictors pred;
     public:
         int nbin;
         int nchan;
@@ -157,6 +175,7 @@ namespace Pulsar
         MJD sub_mjd;
         IntegrationLite sub_int;
     private:
+        double fref;
         int iblock;
         vector<float> mxWTW;
         vector<float> vWTd_T;
@@ -166,4 +185,4 @@ namespace Pulsar
     };
 }
 
-#endif /* ARCHIVELITE */
+#endif /* ARCHIVELITE_H */

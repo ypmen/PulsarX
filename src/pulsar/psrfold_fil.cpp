@@ -78,6 +78,7 @@ int main(int argc, const char *argv[])
 			("nof1search", "Do not search f1")
 			("noplot", "Do not generate figures")
 			("noarch", "Do not generate archives")
+			("parfile", value<vector<string>>(), "Input pulsar par files")
 			("candfile", value<string>(), "Input cand file")
 			("template", value<string>(), "Input fold template file")
 			("nbin,b", value<int>()->default_value(32), "Number of bins per period")
@@ -339,6 +340,65 @@ int main(int argc, const char *argv[])
 
 	std::vector<std::vector<double>> dmsegs;
 	produce(vm, dmsegs, folder);
+
+	/** generate tempo2 predictor file */
+	if (vm.count("parfile"))
+    {
+		BOOST_LOG_TRIVIAL(info)<<"generate tempo2 predictor file";
+
+		std::vector<std::string> parfiles = vm["parfile"].as<std::vector<std::string>>();
+        
+        /**
+         * @brief read DM from parfile
+         * 
+         */
+		for (long int k=0; k<folder.size(); k++)
+		{
+			string filename = parfiles[k];
+
+			double mjd_start = (tstarts[idx[0]].to_day())-0.01;
+			double mjd_end = (tends[idx.back()].to_day())+1;
+			double fmin = databuf.frequencies[0];
+			double fmax = databuf.frequencies[0];
+			for (long int j=0; j<nchans; j++)
+			{
+				fmin = fmin<databuf.frequencies[j] ? fmin:databuf.frequencies[j];
+				fmax = fmax>databuf.frequencies[j] ? fmax:databuf.frequencies[j];
+			}
+			double chanwidth = abs(databuf.frequencies[1]-databuf.frequencies[0]);
+			fmin -= 0.5*chanwidth;
+			fmax += 0.5*chanwidth;
+
+			string cmd = "tempo2 -npsr 1 -f " + filename + " -pred ";
+			cmd += "'";
+			if (s_telescope.empty())
+				cmd += "fake";
+			else
+				cmd += s_telescope;
+			cmd += " ";
+			cmd += to_string(mjd_start);
+			cmd += " ";
+			cmd += to_string(mjd_end);
+			cmd += " ";
+			cmd += to_string(fmin);
+			cmd += " ";
+			cmd += to_string(fmax);
+			cmd += " ";
+			cmd += "12 2";
+			cmd += " ";
+			cmd += "3600";
+			cmd += "'";
+			cmd += " > /tmp/stdout.txt 2> /tmp/stderr.txt";
+			BOOST_LOG_TRIVIAL(info)<<cmd;
+			system(cmd.c_str());
+
+			folder[k].use_t2pred = true;
+			folder[k].pred.read_t2pred("t2pred.dat");
+
+			system("rm pred.tim t2pred.dat");
+		}
+    }
+
 	dedisp.nsubband = vm["nsubband"].as<int>();
 	double maxdm = 0;
 	for (auto dmseg=dmsegs.begin(); dmseg!=dmsegs.end(); ++dmseg)
@@ -945,6 +1005,43 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 			gcnt = 0;
 		}
     }
+	else if (vm.count("parfile"))
+    {
+		dmseg.clear();
+		int gcnt = 0;
+		std::vector<std::string> parfiles = vm["parfile"].as<std::vector<std::string>>();
+        for (long int k=0; k<parfiles.size(); k++)
+		{
+			string filename = parfiles[k];
+			string line;
+			ifstream parfile(filename);
+			int id = 0;
+			while (getline(parfile, line))
+			{
+				vector<string> items;
+				boost::split(items, line, boost::is_any_of("\t "), boost::token_compress_on);
+				if (items[0] == "DM")
+				{
+					fdr.dm = stod(items[1]);
+					break;
+				}
+			}
+			dmseg.push_back(fdr.dm);
+			if (++gcnt == GROUPSIZE)
+			{
+				dmsegs.push_back(dmseg);
+				dmseg.clear();
+				gcnt = 0;
+			}
+			folder.push_back(fdr);
+		}
+		if (gcnt)
+		{
+			dmsegs.push_back(dmseg);
+			dmseg.clear();
+			gcnt = 0;
+		}
+	}
     else
     {
 		dmsegs.push_back(dmseg);
