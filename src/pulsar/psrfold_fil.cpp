@@ -85,6 +85,7 @@ int main(int argc, const char *argv[])
 			("nbinplan", value<vector<float>>()->multitoken()->default_value(vector<float>{0.1, 128}, "0.1, 128"), "Using nbins of nbin,nbin1,nbin2,... for 0,p1,p2,... (s)")
 			("tsubint,L", value<double>()->default_value(10), "Time length per integration (s)")
 			("nsubband,n", value<int>()->default_value(32), "Number of subband")
+			("blocksize", value<int>()->default_value(2), "Size of data block")
 			("srcname", value<string>()->default_value("PSRJ0000+00"), "Souce name")
 			("telescope", value<string>()->default_value("Fake"), "Telescope name")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
@@ -294,8 +295,9 @@ int main(int argc, const char *argv[])
 
 	float *buffer = new float [nchans];
 
-	long int ndump = ceil((1./tsamp)/td)*td;
-	int nblock = ceil(vm["tsubint"].as<double>());
+	int blocksize = vm["blocksize"].as<int>();
+	long int ndump = ceil((blocksize/tsamp)/td)*td;
+	int nblock = ceil(vm["tsubint"].as<double>())/blocksize;
 
 	DataBuffer<float> databuf(ndump, nchans);
 	databuf.closable = true;
@@ -1016,6 +1018,7 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 			string line;
 			ifstream parfile(filename);
 			int id = 0;
+			double f0 = 0.;
 			while (getline(parfile, line))
 			{
 				vector<string> items;
@@ -1023,10 +1026,23 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 				if (items[0] == "DM")
 				{
 					fdr.dm = stod(items[1]);
-					break;
+				}
+				else if (items[0] == "F0")
+				{
+					f0 = stod(items[1]);
 				}
 			}
 			dmseg.push_back(fdr.dm);
+
+			for (long int k=0; k<vp0.size(); k++)
+			{
+				if (f0 <= 1./vp0[idx[k]])
+				{
+					fdr.nbin = vnbin[idx[k]];
+					break;
+				}
+			}
+
 			if (++gcnt == GROUPSIZE)
 			{
 				dmsegs.push_back(dmseg);
