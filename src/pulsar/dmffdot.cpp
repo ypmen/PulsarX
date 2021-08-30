@@ -315,6 +315,7 @@ int main(int argc, char *argv[])
 
 		arch.read_archive(fname);
 
+		double dm_bak = arch.dm;
 		arch.dm = vdmfa_dmffdot[k][3];
 
 		double tint = 0.;
@@ -391,7 +392,7 @@ int main(int argc, char *argv[])
 			double acc_old = vdmfa_dmffdot[k][2];
 			double f1_old = acc2fdot(acc_old, f0_old);
 
-			if (std::abs(dm-dm_new) > 0.001 && std::abs(dm-dm_old) > 0.001)
+			if (std::abs(dm_bak-dm_new) > 0.001 && std::abs(dm_bak-dm_old) > 0.001)
 			{
 				BOOST_LOG_TRIVIAL(error)<<"order in candfile and input archives are not consist";
 				return -1;
