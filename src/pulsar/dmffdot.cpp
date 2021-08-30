@@ -315,6 +315,8 @@ int main(int argc, char *argv[])
 
 		arch.read_archive(fname);
 
+		arch.dm = vdmfa_dmffdot[k][3];
+
 		double tint = 0.;
 		for (auto it=arch.profiles.begin(); it!=arch.profiles.end(); ++it)
 		{
