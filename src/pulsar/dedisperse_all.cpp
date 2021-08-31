@@ -18,7 +18,7 @@
 #include "dedisperse.h"
 #include "psrfits.h"
 #include "utils.h"
-#include "preprocess.h"
+#include "preprocesslite.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -53,7 +53,7 @@ int main(int argc, const char *argv[])
 			("nbits", value<int>()->default_value(8), "Data type of dedispersed time series")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
 			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
-			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.1}, "0.0, 0.1"), "The scale of baseline remove (s)")
+			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.0}, "0.0, 0.1"), "The scale of baseline remove (s)")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
 			("bandlimitKT", value<double>()->default_value(10), "Band limit of RFI kadaneT (MHz)")
@@ -165,7 +165,7 @@ int main(int argc, const char *argv[])
     double tsamp = psf[0].subint.tbin;
     int nifs = it.npol;
 
-	short *buffer = new short [nchans];
+	float *buffer = new float [nchans];
 
 	vector<PulsarSearch> search;
 	plan(vm, search);
@@ -180,15 +180,15 @@ int main(int argc, const char *argv[])
 
 	long int ndump = (int)(vm["seglen"].as<float>()/tsamp)/td_lcm/2*td_lcm*2;
 
-	DataBuffer<short> databuf(ndump, nchans);
+	DataBuffer<float> databuf(ndump, nchans);
+	databuf.closable = true;
 	databuf.tsamp = tsamp;
 	memcpy(&databuf.frequencies[0], it.frequencies, sizeof(double)*nchans);
 
-	Preprocess prep;
+	PreprocessLite prep;
 	prep.td = vm["td"].as<int>();
 	prep.fd = vm["fd"].as<int>();
 	prep.thresig = vm["zapthre"].as<float>();
-	prep.width = vm["baseline"].as<vector<float>>().front();
 	prep.prepare(databuf);
 
 	long int nseg = jump[0]/tsamp;
@@ -279,7 +279,7 @@ int main(int argc, const char *argv[])
 	                }
                 }
 
-				memset(buffer, 0, sizeof(short)*nchans);
+				memset(buffer, 0, sizeof(float)*nchans);
 				long int m = 0;
 				for (long int k=0; k<sumif; k++)
 				{
@@ -289,7 +289,7 @@ int main(int argc, const char *argv[])
 					}
 				}
 
-				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(short)*1*nchans);
+				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
                 databuf.counter++;
 				bcnt1++;
                 ntot++;
@@ -303,6 +303,7 @@ int main(int argc, const char *argv[])
 						(*sp).run(prep);
 					}
                     bcnt1 = 0;
+					databuf.open();
 				}
 
 				pcur += it.npol*it.nchan;
