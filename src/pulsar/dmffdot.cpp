@@ -222,6 +222,8 @@ int main(int argc, char *argv[])
 
 	std::vector<std::vector<double>> vdmfa_dmffdot;
 
+	MJD ref_epoch;
+
 	std::ofstream outfile;
 	if (vm.count("candfile"))
 	{
@@ -239,9 +241,15 @@ int main(int argc, char *argv[])
 				if (line.rfind("#", 0) == 0)
 				{
 					header.push_back(line);
+					if (line.rfind("#Pepoch", 0) == 0)
+					{
+						std::vector<std::string> items;
+						boost::split(items, line, boost::is_any_of(" "), boost::token_compress_on);
+						ref_epoch.format(std::stold(items[1]));
+					}
 				}
 
-				if (vm.count("correct") && isdigit(line[0]))
+				if (isdigit(line[0]))
 				{
 					std::vector<std::string> parameters;
             		boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
@@ -316,7 +324,19 @@ int main(int argc, char *argv[])
 		arch.read_archive(fname);
 
 		double dm_bak = arch.dm;
-		arch.dm = vdmfa_dmffdot[k][3];
+		if (vm.count("candfile"))
+		{
+			BOOST_LOG_TRIVIAL(info)<<"update dm,f0,f1,ref_epoch using candfile"<<std::endl
+			<<"dm = "<<vdmfa_dmffdot[k][3]<<std::endl
+			<<"f0 = "<<vdmfa_dmffdot[k][4]<<std::endl
+			<<"f1 = "<<vdmfa_dmffdot[k][5]<<std::endl
+			<<"ref_epoch = "<<std::fixed<<std::setprecision(10)<<ref_epoch.to_day();
+
+			arch.dm = vdmfa_dmffdot[k][3];
+			arch.f0 = vdmfa_dmffdot[k][4];
+			arch.f1 = vdmfa_dmffdot[k][5];
+			arch.ref_epoch = ref_epoch;
+		}
 
 		double tint = 0.;
 		for (auto it=arch.profiles.begin(); it!=arch.profiles.end(); ++it)
