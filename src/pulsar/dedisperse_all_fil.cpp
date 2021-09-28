@@ -211,7 +211,7 @@ int main(int argc, const char *argv[])
 	for (long int idxn=0; idxn<nfil; idxn++)
 	{
 		long int n = idx[idxn];
-		long int nsegments = ceil(1.*fil[0].nsamples/NSBLK);
+		long int nsegments = ceil(1.*fil[n].nsamples/NSBLK);
         long int ns_filn = 0;
 
 		for (long int s=0; s<nsegments; s++)
