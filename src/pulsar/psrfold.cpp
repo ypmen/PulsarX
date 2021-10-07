@@ -102,6 +102,7 @@ int main(int argc, const char *argv[])
 			("threKadaneF", value<float>()->default_value(7), "S/N threshold of KadaneF")
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
+			("fill", value<string>()->default_value("rand"), "Fill the zapped samples by [mean, rand]")
             ("render", "Using new folding algorithm (deprecated, used by default)")
 			("dspsr", "Using dspsr folding algorithm")
 #ifdef HAVE_PLOTX
@@ -341,6 +342,7 @@ int main(int argc, const char *argv[])
 	prep.td = vm["td"].as<int>();
 	prep.fd = vm["fd"].as<int>();
 	prep.thresig = vm["zapthre"].as<float>();
+	prep.filltype = vm["fill"].as<string>();
 	prep.prepare(databuf);
 
 	Equalize equalize;
@@ -355,6 +357,7 @@ int main(int argc, const char *argv[])
 	baseline.closable = true;
 
     RFI rfi;
+	rfi.filltype = vm["fill"].as<string>();
 	rfi.prepare(baseline);
 	rfi.close();
 	rfi.closable = true;

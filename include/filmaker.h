@@ -55,6 +55,7 @@ public:
     float threKadaneT;
     float threKadaneF;
     float threMask;
+    string filltype;
 
     //filterbankwriter
     std::string source_name;

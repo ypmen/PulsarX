@@ -609,35 +609,47 @@ void GridSearch::clfd()
      * @brief apply to time-phase image
      * 
      */
-    vector<float> tfstd(nsubint*nchan, 0.);
-    vector<float> tfstd_sort(nsubint*nchan, 0.);
+    vector<float> tfskewness(nsubint*nchan, 0.);
+    vector<float> tfskewness_sort(nsubint*nchan, 0.);
+    vector<float> tfkurtosis(nsubint*nchan, 0.);
+    vector<float> tfkurtosis_sort(nsubint*nchan, 0.);
     for (long int k=0; k<nsubint; k++)
     {
         for (long int j=0; j<nchan; j++)
         {        
-            double tmp_mean = 0.;
-            double tmp_var = 0.;
+            double tmp_skewness = 0.;
+            double tmp_kurtosis = 0.;
 
-            get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+            get_skewness_kurtosis<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_skewness, tmp_kurtosis);
 
-            tfstd_sort[k*nchan+j] = tfstd[k*nchan+j] = sqrt(tmp_var);
+            tfskewness_sort[k*nchan+j] = tfskewness[k*nchan+j] = tmp_skewness;
+            tfkurtosis_sort[k*nchan+j] = tfkurtosis[k*nchan+j] = tmp_kurtosis;
         }
     }
 
-    std::nth_element(tfstd_sort.begin(), tfstd_sort.begin()+nsubint*nchan/4, tfstd_sort.end(), std::less<float>());
-    float Q1 = tfstd_sort[nsubint*nchan/4];
-    std::nth_element(tfstd_sort.begin(), tfstd_sort.begin()+nsubint*nchan/4, tfstd_sort.end(), std::greater<float>());
-    float Q3 = tfstd_sort[nsubint*nchan/4];
+    std::nth_element(tfskewness_sort.begin(), tfskewness_sort.begin()+nsubint*nchan/4, tfskewness_sort.end(), std::less<float>());
+    float Q1_skewness = tfskewness_sort[nsubint*nchan/4];
+    std::nth_element(tfskewness_sort.begin(), tfskewness_sort.begin()+nsubint*nchan/4, tfskewness_sort.end(), std::greater<float>());
+    float Q3_skewness = tfskewness_sort[nsubint*nchan/4];
 
-    float R = Q3-Q1;
-    float vmin = Q1-clfd_q*R;
-    float vmax = Q3+clfd_q*R;
+    float R_skewness = Q3_skewness-Q1_skewness;
+    float vmin_skewness = Q1_skewness-clfd_q*R_skewness;
+    float vmax_skewness = Q3_skewness+clfd_q*R_skewness;
+
+    std::nth_element(tfkurtosis_sort.begin(), tfkurtosis_sort.begin()+nsubint*nchan/4, tfkurtosis_sort.end(), std::less<float>());
+    float Q1_kurtosis = tfkurtosis_sort[nsubint*nchan/4];
+    std::nth_element(tfkurtosis_sort.begin(), tfkurtosis_sort.begin()+nsubint*nchan/4, tfkurtosis_sort.end(), std::greater<float>());
+    float Q3_kurtosis = tfkurtosis_sort[nsubint*nchan/4];
+
+    float R_kurtosis = Q3_kurtosis-Q1_kurtosis;
+    float vmin_kurtosis = Q1_kurtosis-clfd_q*R_kurtosis;
+    float vmax_kurtosis = Q3_kurtosis+clfd_q*R_kurtosis;
 
     for (long int k=0; k<nsubint; k++)
     {
         for (long int j=0; j<nchan; j++)
         {
-            if (tfstd[k*nchan+j]<vmin or tfstd[k*nchan+j]>vmax)
+            if (tfskewness[k*nchan+j]<vmin_skewness or tfskewness[k*nchan+j]>vmax_skewness or tfkurtosis[k*nchan+j]<vmin_kurtosis or tfkurtosis[k*nchan+j]>vmax_kurtosis)
             {
                 for (long int i=0; i<nbin; i++)
                 {
@@ -652,8 +664,10 @@ void GridSearch::clfd()
      * 
      */
 
-    vector<float> tstd(nsubint, 0.);
-    vector<float> tstd_sort(nsubint, 0.);
+    vector<float> tskewness(nsubint, 0.);
+    vector<float> tskewness_sort(nsubint, 0.);
+    vector<float> tkurtosis(nsubint, 0.);
+    vector<float> tkurtosis_sort(nsubint, 0.);
 
     for (long int k=0; k<nsubint; k++)
     {
@@ -666,26 +680,36 @@ void GridSearch::clfd()
             }
         }
        
-        double tmp_mean = 0.;
-        double tmp_var = 0.;
+        double tmp_skewness = 0.;
+        double tmp_kurtosis = 0.;
 
-        get_mean_var<std::vector<float>::iterator>(tmppro.begin(), nbin, tmp_mean, tmp_var);
+        get_skewness_kurtosis<std::vector<float>::iterator>(tmppro.begin(), nbin, tmp_skewness, tmp_kurtosis);
 
-        tstd_sort[k] = tstd[k] = sqrt(tmp_var);
+        tskewness_sort[k] = tskewness[k] = tmp_skewness;
+        tkurtosis_sort[k] = tkurtosis[k] = tmp_kurtosis;
     }
 
-    std::nth_element(tstd_sort.begin(), tstd_sort.begin()+nsubint/4, tstd_sort.end(), std::less<float>());
-    Q1 = tstd_sort[nsubint/4];
-    std::nth_element(tstd_sort.begin(), tstd_sort.begin()+nsubint/4, tstd_sort.end(), std::greater<float>());
-    Q3 = tstd_sort[nsubint/4];
+    std::nth_element(tskewness_sort.begin(), tskewness_sort.begin()+nsubint/4, tskewness_sort.end(), std::less<float>());
+    Q1_skewness = tskewness_sort[nsubint/4];
+    std::nth_element(tskewness_sort.begin(), tskewness_sort.begin()+nsubint/4, tskewness_sort.end(), std::greater<float>());
+    Q3_skewness = tskewness_sort[nsubint/4];
 
-    R = Q3-Q1;
-    vmin = Q1-clfd_q*R;
-    vmax = Q3+clfd_q*R;
+    R_skewness = Q3_skewness-Q1_skewness;
+    vmin_skewness = Q1_skewness-clfd_q*R_skewness;
+    vmax_skewness = Q3_skewness+clfd_q*R_skewness;
+
+    std::nth_element(tkurtosis_sort.begin(), tkurtosis_sort.begin()+nsubint/4, tkurtosis_sort.end(), std::less<float>());
+    Q1_kurtosis = tkurtosis_sort[nsubint/4];
+    std::nth_element(tkurtosis_sort.begin(), tkurtosis_sort.begin()+nsubint/4, tkurtosis_sort.end(), std::greater<float>());
+    Q3_kurtosis = tkurtosis_sort[nsubint/4];
+
+    R_kurtosis = Q3_kurtosis-Q1_kurtosis;
+    vmin_kurtosis = Q1_kurtosis-clfd_q*R_kurtosis;
+    vmax_kurtosis = Q3_kurtosis+clfd_q*R_kurtosis;
 
     for (long int k=0; k<nsubint; k++)
     {
-        if (tstd[k]<vmin or tstd[k]>vmax)
+        if (tskewness[k]<vmin_skewness or tskewness[k]>vmax_skewness or tkurtosis[k]<vmin_kurtosis or tkurtosis[k]>vmax_kurtosis)
         {
             for (long int j=0; j<nchan; j++)
             {
@@ -702,8 +726,10 @@ void GridSearch::clfd()
      * 
      */
 
-    vector<float> fstd(nchan, 0.);
-    vector<float> fstd_sort(nchan, 0.);
+    vector<float> fskewness(nchan, 0.);
+    vector<float> fskewness_sort(nchan, 0.);
+    vector<float> fkurtosis(nchan, 0.);
+    vector<float> fkurtosis_sort(nchan, 0.);
 
     vector<float> fph(nchan*nbin, 0.);
     for (long int k=0; k<nsubint; k++)
@@ -719,28 +745,38 @@ void GridSearch::clfd()
 
     for (long int j=0; j<nchan; j++)
     {
-        double tmp_mean = 0.;
-        double tmp_var = 0.;
+        double tmp_skewness = 0.;
+        double tmp_kurtosis = 0.;
 
-        get_mean_var<std::vector<float>::iterator>(fph.begin()+j*nbin, nbin, tmp_mean, tmp_var);
+        get_skewness_kurtosis<std::vector<float>::iterator>(fph.begin()+j*nbin, nbin, tmp_skewness, tmp_kurtosis);
 
-        fstd_sort[j] = fstd[j] = sqrt(tmp_var);
+        fskewness_sort[j] = fskewness[j] = tmp_skewness;
+        fkurtosis_sort[j] = fkurtosis[j] = tmp_kurtosis;
     }
 
-    std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nchan/4, fstd_sort.end(), std::less<float>());
-    Q1 = fstd_sort[nchan/4];
-    std::nth_element(fstd_sort.begin(), fstd_sort.begin()+nchan/4, fstd_sort.end(), std::greater<float>());
-    Q3 = fstd_sort[nchan/4];
+    std::nth_element(fskewness_sort.begin(), fskewness_sort.begin()+nchan/4, fskewness_sort.end(), std::less<float>());
+    Q1_skewness = fskewness_sort[nchan/4];
+    std::nth_element(fskewness_sort.begin(), fskewness_sort.begin()+nchan/4, fskewness_sort.end(), std::greater<float>());
+    Q3_skewness = fskewness_sort[nchan/4];
 
-    R = Q3-Q1;
-    vmin = Q1-clfd_q*R;
-    vmax = Q3+clfd_q*R;
+    R_skewness = Q3_skewness-Q1_skewness;
+    vmin_skewness = Q1_skewness-clfd_q*R_skewness;
+    vmax_skewness = Q3_skewness+clfd_q*R_skewness;
+
+    std::nth_element(fkurtosis_sort.begin(), fkurtosis_sort.begin()+nchan/4, fkurtosis_sort.end(), std::less<float>());
+    Q1_kurtosis = fkurtosis_sort[nchan/4];
+    std::nth_element(fkurtosis_sort.begin(), fkurtosis_sort.begin()+nchan/4, fkurtosis_sort.end(), std::greater<float>());
+    Q3_kurtosis = fkurtosis_sort[nchan/4];
+
+    R_kurtosis = Q3_kurtosis-Q1_kurtosis;
+    vmin_kurtosis = Q1_kurtosis-clfd_q*R_kurtosis;
+    vmax_kurtosis = Q3_kurtosis+clfd_q*R_kurtosis;
 
     for (long int k=0; k<nsubint; k++)
     {
         for (long int j=0; j<nchan; j++)
         {
-            if (fstd[j]<vmin or fstd[j]>vmax)
+            if (fskewness[j]<vmin_skewness or fskewness[j]>vmax_skewness or fkurtosis[j]<vmin_kurtosis or fkurtosis[j]>vmax_kurtosis)
             {
                 for (long int i=0; i<nbin; i++)
                 {

@@ -61,6 +61,7 @@ int main(int argc, const char *argv[])
 			("threKadaneF", value<float>()->default_value(7), "S/N threshold of KadaneF")
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("threMask", value<float>()->default_value(3), "S/N threshold of Mask")
+			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
             ("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("format", value<string>()->default_value("pulsarx"), "Output format of dedispersed data [pulsarx(default),sigproc,presto]")
 			("cont", "Input files are contiguous")
@@ -189,6 +190,7 @@ int main(int argc, const char *argv[])
 	prep.td = vm["td"].as<int>();
 	prep.fd = vm["fd"].as<int>();
 	prep.thresig = vm["zapthre"].as<float>();
+	prep.filltype = vm["fill"].as<string>();
 	prep.prepare(databuf);
 
 	long int nseg = jump[0]/tsamp;
@@ -214,6 +216,7 @@ int main(int argc, const char *argv[])
 		search[k].fildedisp.fch1 = (databuf.frequencies.front()+databuf.frequencies.back())/2.;
 		search[k].fildedisp.foff = databuf.frequencies.back()-databuf.frequencies.front();
 		search[k].fildedisp.nchans = databuf.frequencies.size();
+		search[k].filltype = vm["fill"].as<string>();
 		search[k].prepare(prep);
 	}
 

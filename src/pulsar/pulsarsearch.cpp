@@ -24,6 +24,7 @@ PulsarSearch::PulsarSearch()
     threKadaneT = 7;
     threKadaneF = 10;
     widthlimit = 10e-3;
+    filltype = "mean";
     dms = 0;
     ddm = 1;
     ndm = 1000;
@@ -55,6 +56,7 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
     baseline.close();
     baseline.closable = true;
 
+    rfi.filltype = filltype;
     rfi.prepare(baseline);
     rfi.close();
     rfi.closable = true;

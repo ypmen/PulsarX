@@ -28,6 +28,7 @@ FilMaker::FilMaker()
     threKadaneT = 7;
     threKadaneF = 10;
     widthlimit = 10e-3;
+    filltype = "mean";
 
     telescope_id = -1;
     src_raj = 0.;
@@ -59,6 +60,7 @@ void FilMaker::prepare(DataBuffer<float> &databuffer)
     baseline.close();
     baseline.closable = true;
 
+    rfi.filltype = filltype;
     rfi.prepare(baseline);
     rfi.close();
     rfi.closable = true;

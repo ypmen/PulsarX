@@ -57,6 +57,7 @@ int main(int argc, const char *argv[])
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
             ("threKadaneF", value<float>()->default_value(7), "S/N threshold of KadaneF")
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
+			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
 			("source_name,s", value<std::string>()->default_value("J0000-00"), "Source name")
 			("rootname,o", value<std::string>()->default_value("J0000-00"), "Output rootname")
 			("cont", "Input files are contiguous")
@@ -201,6 +202,7 @@ int main(int argc, const char *argv[])
 	prep.td = td;
 	prep.fd = fd;
 	prep.thresig = vm["zapthre"].as<float>();
+	prep.filltype = vm["fill"].as<string>();
 	prep.prepare(databuf);
 
 	long int noutfil = filmakers.size();
@@ -213,6 +215,7 @@ int main(int argc, const char *argv[])
 		filmakers[k].src_raj = src_raj;
 		filmakers[k].src_dej = src_dej;
 		filmakers[k].telescope_id = telescope_id;
+		filmakers[k].filltype = vm["fill"].as<string>();
 		filmakers[k].prepare(prep);
 	}
 
