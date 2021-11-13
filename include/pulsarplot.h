@@ -6,8 +6,8 @@
  * @desc [description]
  */
 
-#ifndef PULSARPLOT
-#define PULSARPLOT
+#ifndef PULSARPLOT_H
+#define PULSARPLOT_H
 
 #include <map>
 
@@ -23,7 +23,11 @@ namespace Pulsar
         PulsarPlot();
         ~PulsarPlot();
         void plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx=false);        
+    public:
+        static void get_dm_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vddm, const std::vector<double> &frequencies, double f0, double boxphw, int nbin);
+        static void get_f0_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vdf0, const std::vector<double> &tsuboff, double f0, double boxphw, int nbin);
+        static void get_f1_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vdf1, const std::vector<double> &tsuboff, double f0, double boxphw, int nbin);
     };
 }
 
-#endif /* PULSARPLOT */
+#endif /* PULSARPLOT_H */

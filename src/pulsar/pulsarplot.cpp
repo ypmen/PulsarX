@@ -9,11 +9,15 @@
 #include <fstream>
 #include <string.h>
 #include <sstream>
+#include <cmath>
 
 #include "config.h"
 
 #include "constants.h"
 #include "pulsarplot.h"
+#ifdef __AVX2__
+#include "avx_mathfun.h"
+#endif
 
 #ifdef HAVE_PYTHON
     #include "matplotlibcpp.h"
@@ -138,13 +142,24 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         }
     }
 
+    std::vector<float> vddm(ndm, 0.);
     for (long int k=0; k<ndm; k++)
     {
+        vddm[k] = gridsearch.ddmstart + k*gridsearch.ddmstep;
         vdm[k] = gridsearch.dm + gridsearch.ddmstart + k*gridsearch.ddmstep;
         if (gridsearch.dmsearch)
             vsnr_dm[k] = gridsearch.vsnr_dm[k];
         else
             vsnr_dm[k] = 0.;
+    }
+
+    std::vector<float> vchisq_dm(ndm, 0.);
+    get_dm_chisq_curve(vchisq_dm, vddm, gridsearch.frequencies, f0, width*f0, nbin);
+    float a=0., b=0.;
+    get_bestfit(a, b, vsnr_dm, vchisq_dm);
+    for (long int k=0; k<ndm; k++)
+    {
+        vchisq_dm[k] = a*vchisq_dm[k]+b;
     }
 
     int if1 = nf1/2;
@@ -195,10 +210,26 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         vsnr_f0[k0] = mxsnr_ffdot[if1*nf0+k0];
     }
 
+    std::vector<float> vchisq_f0(nf0, 0.);
+    get_f0_chisq_curve(vchisq_f0, vdf0, gridsearch.tsuboff, f0, width*f0, nbin);
+    get_bestfit(a, b, vsnr_f0, vchisq_f0);
+    for (long int k=0; k<nf0; k++)
+    {
+        vchisq_f0[k] = a*vchisq_f0[k]+b;
+    }
+
     for (long int k1=0; k1<nf1; k1++)
     {
         //vsnr_f1[k1] /= nf0;
         vsnr_f1[k1] = mxsnr_ffdot[k1*nf0+if0];
+    }
+
+    std::vector<float> vchisq_f1(nf1, 0.);
+    get_f1_chisq_curve(vchisq_f1, vdf1, gridsearch.tsuboff, f0, width*f0, nbin);
+    get_bestfit(a, b, vsnr_f1, vchisq_f1);
+    for (long int k=0; k<nf1; k++)
+    {
+        vchisq_f1[k] = a*vchisq_f1[k]+b;
     }
 
     /**
@@ -336,6 +367,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         //chi2-f0
         plt::subplot2grid(nrows, ncols, 4, 4, 2, 4);
         plt::plot(vdf0, vsnr_f0);
+        plt::plot(vdf0, vchisq_f0);
         plt::axvline(xpos, 0, 1, {{"color", "red"}});
         plt::annotate("P0 (s) = "+s_p0, 0.25, 1.1, {{"xycoords","axes fraction"}, {"annotation_clip", ""}, {"fontsize", "11"}});
         plt::xlabel("F0 - " + to_string(gridsearch.f0) + " (Hz)");
@@ -361,6 +393,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         ss_f1<<fixed<<setprecision(5)<<scientific<<f1;
         plt::subplot2grid(nrows, ncols, 6, 8, 4, 4);
         plt::plot(vsnr_f1, vdf1);
+        plt::plot(vchisq_f1, vdf1);
         plt::axhline(ypos, 0, 1, {{"color", "red"}});
         plt::annotate("P1 (s/s) = "+s_p1, -0.5, 1.1, {{"xycoords","axes fraction"}, {"annotation_clip", ""}, {"fontsize", "11"}});
         plt::xlabel("$\\chi^2$");
@@ -374,6 +407,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         //chi2-dm
         plt::subplot2grid(nrows, ncols, 10, 4, 2, 4);
         plt::plot(vdm, vsnr_dm);
+        plt::plot(vdm, vchisq_dm);
         plt::axvline(dmpos, 0, 1, {{"color", "red"}});
         plt::annotate("DM (pc/cc) = "+s_dm, 0.25, 1.1, {{"xycoords","axes fraction"}, {"annotation_clip", ""}, {"fontsize", "11"}});
         plt::xlabel("DM (pc/cc)");
@@ -495,6 +529,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         //chi2-f0
         PlotX::Axes ax4(0.48, 0.78, 0.6, 0.72);
         ax4.plot(vdf0, vsnr_f0);
+        ax4.plot(vdf0, vchisq_f0, {{"color", "yellow"}});
         ax4.axvline(xpos, 0, 1, {{"color", "red"}});
         ax4.annotate("P0 (s) = "+s_p0, 0.1, 1.1, {{"xycoords","axes fraction"}, {"fontsize", "0.7"}});
         ax4.set_xlabel("F0 - " + to_string(gridsearch.f0) + " (Hz)");
@@ -517,6 +552,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 
         PlotX::Axes ax6(0.86, 0.98, 0.24, 0.52);
         ax6.plot(vsnr_f1, vdf1);
+        ax6.plot(vchisq_f1, vdf1, {{"color", "yellow"}});
         ax6.axhline(ypos, 0, 1, {{"color", "red"}});
         ax6.annotate("P1 (s/s) = "+s_p1, -0.8, 1.1, {{"xycoords","axes fraction"}, {"fontsize", "0.7"}});
         ax6.set_xlabel("\\gx\\u2");
@@ -530,6 +566,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
         //chi2-dm
         PlotX::Axes ax7(0.48, 0.78, 0.08, 0.2);
         ax7.plot(vdm, vsnr_dm);
+        ax7.plot(vdm, vchisq_dm, {{"color", "yellow"}});
         ax7.axvline(dmpos, 0, 1, {{"color", "red"}});
         ax7.annotate("DM (pc/cc) = "+s_dm, 0.1, 1.1, {{"xycoords","axes fraction"}, {"fontsize", "0.7"}});
         ax7.set_xlabel("DM (pc/cc)");
@@ -570,5 +607,219 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 
         fig.save(figname+"/PNG");
 #endif
+    }
+}
+
+void PulsarPlot::get_dm_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vddm, const std::vector<double> &frequencies, double f0, double boxphw, int nbin)
+{
+    int ndm = vddm.size();
+    int nchan = frequencies.size();
+    double fc = 0.5*(*std::min_element(frequencies.begin(), frequencies.end())+*std::max_element(frequencies.begin(), frequencies.end()));
+
+    vchisq.resize(ndm, 0.);
+    for (long int k=0; k<ndm; k++)
+    {
+        float ddm = vddm[k];
+#ifndef __AVX2__
+        std::vector<float> mprofile(nbin, 0.);
+#else
+        vector<float, boost::alignment::aligned_allocator<float, 32>> mprofile(nbin, 0.);
+#endif
+        for (long int j=0; j<nchan; j++)
+        {
+            float delay = f0*4.148741601e3*ddm*(1./(frequencies[j]*frequencies[j])-1./(fc*fc));
+
+#ifndef __AVX2__
+            for (long int i=0; i<nbin; i++)
+            {
+                float phi = i*1./nbin+delay;
+                phi -= std::floor(phi);
+                phi -= 0.5;
+                phi /= 0.5*boxphw;
+                mprofile[i] += std::exp(-phi*phi);
+            }
+#else
+            if (nbin % 8 == 0)
+            {
+                __m256 avx_delay = _mm256_set_ps(delay,delay,delay,delay,delay,delay,delay,delay);
+                __m256 avx_0 = _mm256_set_ps(0,0,0,0,0,0,0,0);
+                __m256 avx_nbin = _mm256_set_ps(nbin,nbin,nbin,nbin,nbin,nbin,nbin,nbin);
+                __m256 avx_1_2 = _mm256_set_ps(0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5);
+                __m256 avx_boxphw = _mm256_set_ps(boxphw,boxphw,boxphw,boxphw,boxphw,boxphw,boxphw,boxphw);
+                avx_boxphw = _mm256_mul_ps(avx_boxphw, avx_1_2);
+                for (long int i=0; i<nbin; i+=8)
+                {
+                    __m256 avx_phi = _mm256_set_ps(i,i+1,i+2,i+3,i+4,i+5,i+6,i+7);
+                    avx_phi = _mm256_div_ps(avx_phi, avx_nbin);
+                    avx_phi = _mm256_add_ps(avx_phi, avx_delay);
+                    avx_phi = _mm256_sub_ps(avx_phi, _mm256_floor_ps(avx_phi));
+                    avx_phi = _mm256_sub_ps(avx_phi, avx_1_2);
+                    avx_phi = _mm256_div_ps(avx_phi, avx_boxphw);
+                    __m256 avx_x = exp256_ps(_mm256_sub_ps(avx_0, _mm256_mul_ps(avx_phi, avx_phi)));
+                    __m256 avx_pro = _mm256_load_ps(mprofile.data()+i);
+                    avx_pro = _mm256_add_ps(avx_pro, avx_x);
+                    _mm256_store_ps(mprofile.data()+i, avx_pro);
+                }
+            }
+            else
+            {
+                for (long int i=0; i<nbin; i++)
+                {
+                    float phi = i*1./nbin+delay;
+                    phi -= std::floor(phi);
+                    phi -= 0.5;
+                    phi /= 0.5*boxphw;
+                    mprofile[i] += std::exp(-phi*phi);
+                }
+            }
+#endif
+        }
+
+        for (long int i=0; i<nbin; i++)
+        {
+            vchisq[k] += mprofile[i]*mprofile[i];
+        }
+    }
+}
+
+void PulsarPlot::get_f0_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vdf0, const std::vector<double> &tsuboff, double f0, double boxphw, int nbin)
+{
+    int nf0 = vdf0.size();
+    int nsubint = tsuboff.size();
+
+    vchisq.resize(nf0, 0.);
+    for (long int k=0; k<nf0; k++)
+    {
+        float df0 = vdf0[k];
+#ifndef __AVX2__
+        std::vector<float> mprofile(nbin, 0.);
+#else
+        vector<float, boost::alignment::aligned_allocator<float, 32>> mprofile(nbin, 0.);
+#endif
+        for (long int j=0; j<nsubint; j++)
+        {
+            float delay = df0*tsuboff[j];
+
+#ifndef __AVX2__
+            for (long int i=0; i<nbin; i++)
+            {
+                float phi = i*1./nbin+delay;
+                phi -= std::floor(phi);
+                phi -= 0.5;
+                phi /= 0.5*boxphw;
+                mprofile[i] += std::exp(-phi*phi);
+            }
+#else
+            if (nbin % 8 == 0)
+            {
+                __m256 avx_delay = _mm256_set_ps(delay,delay,delay,delay,delay,delay,delay,delay);
+                __m256 avx_0 = _mm256_set_ps(0,0,0,0,0,0,0,0);
+                __m256 avx_nbin = _mm256_set_ps(nbin,nbin,nbin,nbin,nbin,nbin,nbin,nbin);
+                __m256 avx_1_2 = _mm256_set_ps(0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5);
+                __m256 avx_boxphw = _mm256_set_ps(boxphw,boxphw,boxphw,boxphw,boxphw,boxphw,boxphw,boxphw);
+                avx_boxphw = _mm256_mul_ps(avx_boxphw, avx_1_2);
+                for (long int i=0; i<nbin; i+=8)
+                {
+                    __m256 avx_phi = _mm256_set_ps(i,i+1,i+2,i+3,i+4,i+5,i+6,i+7);
+                    avx_phi = _mm256_div_ps(avx_phi, avx_nbin);
+                    avx_phi = _mm256_add_ps(avx_phi, avx_delay);
+                    avx_phi = _mm256_sub_ps(avx_phi, _mm256_floor_ps(avx_phi));
+                    avx_phi = _mm256_sub_ps(avx_phi, avx_1_2);
+                    avx_phi = _mm256_div_ps(avx_phi, avx_boxphw);
+                    __m256 avx_x = exp256_ps(_mm256_sub_ps(avx_0, _mm256_mul_ps(avx_phi, avx_phi)));
+                    __m256 avx_pro = _mm256_load_ps(mprofile.data()+i);
+                    avx_pro = _mm256_add_ps(avx_pro, avx_x);
+                    _mm256_store_ps(mprofile.data()+i, avx_pro);
+                }
+            }
+            else
+            {
+                for (long int i=0; i<nbin; i++)
+                {
+                    float phi = i*1./nbin+delay;
+                    phi -= std::floor(phi);
+                    phi -= 0.5;
+                    phi /= 0.5*boxphw;
+                    mprofile[i] += std::exp(-phi*phi);
+                }
+            }
+#endif
+        }
+
+        for (long int i=0; i<nbin; i++)
+        {
+            vchisq[k] += mprofile[i]*mprofile[i];
+        }
+    }
+}
+
+void PulsarPlot::get_f1_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vdf1, const std::vector<double> &tsuboff, double f0, double boxphw, int nbin)
+{
+    int nf1 = vdf1.size();
+    int nsubint = tsuboff.size();
+
+    vchisq.resize(nf1, 0.);
+    for (long int k=0; k<nf1; k++)
+    {
+        float df1 = vdf1[k];
+#ifndef __AVX2__
+        std::vector<float> mprofile(nbin, 0.);
+#else
+        vector<float, boost::alignment::aligned_allocator<float, 32>> mprofile(nbin, 0.);
+#endif
+        for (long int j=0; j<nsubint; j++)
+        {
+            float delay = 0.5*df1*tsuboff[j]*tsuboff[j];
+
+#ifndef __AVX2__
+            for (long int i=0; i<nbin; i++)
+            {
+                float phi = i*1./nbin+delay;
+                phi -= std::floor(phi);
+                phi -= 0.5;
+                phi /= 0.5*boxphw;
+                mprofile[i] += std::exp(-phi*phi);
+            }
+#else
+            if (nbin % 8 == 0)
+            {
+                __m256 avx_delay = _mm256_set_ps(delay,delay,delay,delay,delay,delay,delay,delay);
+                __m256 avx_0 = _mm256_set_ps(0,0,0,0,0,0,0,0);
+                __m256 avx_nbin = _mm256_set_ps(nbin,nbin,nbin,nbin,nbin,nbin,nbin,nbin);
+                __m256 avx_1_2 = _mm256_set_ps(0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5);
+                __m256 avx_boxphw = _mm256_set_ps(boxphw,boxphw,boxphw,boxphw,boxphw,boxphw,boxphw,boxphw);
+                avx_boxphw = _mm256_mul_ps(avx_boxphw, avx_1_2);
+                for (long int i=0; i<nbin; i+=8)
+                {
+                    __m256 avx_phi = _mm256_set_ps(i,i+1,i+2,i+3,i+4,i+5,i+6,i+7);
+                    avx_phi = _mm256_div_ps(avx_phi, avx_nbin);
+                    avx_phi = _mm256_add_ps(avx_phi, avx_delay);
+                    avx_phi = _mm256_sub_ps(avx_phi, _mm256_floor_ps(avx_phi));
+                    avx_phi = _mm256_sub_ps(avx_phi, avx_1_2);
+                    avx_phi = _mm256_div_ps(avx_phi, avx_boxphw);
+                    __m256 avx_x = exp256_ps(_mm256_sub_ps(avx_0, _mm256_mul_ps(avx_phi, avx_phi)));
+                    __m256 avx_pro = _mm256_load_ps(mprofile.data()+i);
+                    avx_pro = _mm256_add_ps(avx_pro, avx_x);
+                    _mm256_store_ps(mprofile.data()+i, avx_pro);
+                }
+            }
+            else
+            {
+                for (long int i=0; i<nbin; i++)
+                {
+                    float phi = i*1./nbin+delay;
+                    phi -= std::floor(phi);
+                    phi -= 0.5;
+                    phi /= 0.5*boxphw;
+                    mprofile[i] += std::exp(-phi*phi);
+                }
+            }
+#endif
+        }
+
+        for (long int i=0; i<nbin; i++)
+        {
+            vchisq[k] += mprofile[i]*mprofile[i];
+        }
     }
 }
