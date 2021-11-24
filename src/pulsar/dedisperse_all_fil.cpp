@@ -7,7 +7,7 @@
  */
 
 #define FAST 1
-#define NSBLK 1024
+#define NSBLK 8192
 
 #include <iostream>
 #include <iomanip>
@@ -21,6 +21,7 @@
 #include "utils.h"
 #include "mjd.h"
 #include "preprocesslite.h"
+#include "logging.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -33,6 +34,8 @@ bool dumptim=true;
 
 int main(int argc, const char *argv[])
 {
+	init_logging();
+	
     /* options */
 	int verbose = 0;
 
@@ -55,7 +58,7 @@ int main(int argc, const char *argv[])
 			("nbits", value<int>()->default_value(8), "Data type of dedispersed time series")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
 			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
-			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.0}, "0.0, 0.1"), "The scale of baseline remove (s)")
+			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
 			("bandlimitKT", value<double>()->default_value(10), "Band limit of RFI kadaneT (MHz)")
@@ -91,7 +94,7 @@ int main(int argc, const char *argv[])
 	}
 	if (vm.count("input") == 0)
 	{
-		cerr<<"Error: no input file"<<endl;
+		BOOST_LOG_TRIVIAL(error)<<"Error: no input file"<<endl;
 		return -1;
 	}
 
@@ -129,11 +132,11 @@ int main(int argc, const char *argv[])
 		{
 			if (contiguous)
 			{
-				cerr<<"Warning: time not contiguous"<<endl;
+				BOOST_LOG_TRIVIAL(warning)<<"Warning: time not contiguous"<<endl;
 			}
 			else
 			{
-				cerr<<"Error: time not contiguous"<<endl;
+				BOOST_LOG_TRIVIAL(error)<<"Error: time not contiguous"<<endl;
 				exit(-1);
 			}
 		}
@@ -290,10 +293,10 @@ int main(int argc, const char *argv[])
 						(*sp).run(prep);
 					}
                     bcnt1 = 0;
+					databuf.open();
 				}
 
 				pcur += nifs*nchans;
-				databuf.open();
 			}
 		}
         next:

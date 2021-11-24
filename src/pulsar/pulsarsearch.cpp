@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "pulsarsearch.h"
+#include "logging.h"
 
 using namespace std;
 
@@ -60,6 +61,23 @@ void PulsarSearch::prepare(DataBuffer<float> &databuffer)
     rfi.prepare(baseline);
     rfi.close();
     rfi.closable = true;
+
+    std::string rfi_flags;
+    for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
+    {
+        for (auto r = irfi->begin(); r!=irfi->end(); ++r)
+        rfi_flags += *r + " ";
+    }
+    std::vector<std::pair<std::string, std::string>> meta = {
+        {"nsamples", std::to_string(rfi.nsamples)},
+        {"nchans", std::to_string(rfi.nchans)},
+        {"tsamp", std::to_string(rfi.tsamp)},
+        {"rfi_flags", rfi_flags},
+        {"kadaneF_snr_thre", std::to_string(threKadaneF)},
+        {"kadaneF_width_thre", std::to_string(widthlimit)},
+        {"filltype", filltype}
+    };
+    format_logging("RFI Mitigation Info", meta);
 
     if (format == "presto") outnbits = 32;
 
@@ -171,6 +189,11 @@ void plan(variables_map &vm, vector<PulsarSearch> &search)
         string filename = vm["ddplan"].as<string>();
         string line;
         ifstream ddplan(filename);
+        if (ddplan.fail())
+        {
+            BOOST_LOG_TRIVIAL(error)<<filename<<" not exist";
+            exit(-1);
+        }
         int id = 0;
         while (getline(ddplan, line))
         {

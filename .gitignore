@@ -16,6 +16,7 @@ src/pulsar/dmffdot
 src/ymw16/ymw16
 src/ymw16/ymw16_ne
 .vscode
+.VSCodeCounter
 
 # http://www.gnu.org/software/automake
 
