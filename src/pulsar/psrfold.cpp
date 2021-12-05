@@ -468,7 +468,7 @@ int main(int argc, const char *argv[])
 
     for (long int k=0; k<ncand; k++)
 	{
-		folder[k].start_mjd = tstarts[idx[0]]+(ceil(1.*dedisp.offset/ndump)*ndump-dedisp.offset)*tsamp*td;
+		folder[k].start_mjd = tstarts[idx[0]]+(ceil(1.*dedisp.offset/dedisp.ndump)*dedisp.ndump-dedisp.offset)*dedisp.tsamp*td;
 		if (vm.count("pepoch"))
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else
@@ -625,7 +625,7 @@ int main(int argc, const char *argv[])
 	 */
 	int ngroup = dmsegs.size();
 
-	int nleft = dedisp.offset/ndump;
+	int nleft = dedisp.offset/dedisp.ndump;
 	for (long int l=0; l<nleft; l++)
 	{
 		rfi.open();
