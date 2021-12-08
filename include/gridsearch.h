@@ -64,6 +64,7 @@ namespace Pulsar
         void subints_normalize();
         void normalize();
         void clfd();
+        void clfd2();
         void zap();
     public:
         double df0start;

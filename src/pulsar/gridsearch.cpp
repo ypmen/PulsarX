@@ -186,9 +186,6 @@ void GridSearch::prepare(ArchiveLite &arch)
             }
         }
     }
-
-    if (clfd_q > 0)
-        clfd();
     
     if (!zaplist.empty())
         zap();
@@ -196,6 +193,10 @@ void GridSearch::prepare(ArchiveLite &arch)
     //subints_normalize();
     if (f0*arch.profiles[0].tsubint >= 1)
         normalize();
+
+    if (clfd_q > 0)
+        clfd2();
+
     get_rms();
 }
 
@@ -777,6 +778,83 @@ void GridSearch::clfd()
         for (long int j=0; j<nchan; j++)
         {
             if (fskewness[j]<vmin_skewness or fskewness[j]>vmax_skewness or fkurtosis[j]<vmin_kurtosis or fkurtosis[j]>vmax_kurtosis)
+            {
+                for (long int i=0; i<nbin; i++)
+                {
+                    profiles[k*nchan*nbin+j*nbin+i] = 0.;
+                }
+            }
+        }
+    }
+}
+
+void GridSearch::clfd2()
+{
+    /**
+     * @brief apply to frequency
+     * 
+     */
+
+    vector<float> fvar(nchan, 0.);
+    vector<float> fvar_sort(nchan, 0.);
+    vector<float> fmean(nchan, 0.);
+    vector<float> fmean_sort(nchan, 0.);
+
+    vector<float> fph(nchan*nbin, 0.);
+    for (long int k=0; k<nsubint; k++)
+    {
+        for (long int j=0; j<nchan; j++)
+        {
+            for (long int i=0; i<nbin; i++)
+            {
+                fph[j*nbin+i] += profiles[k*nchan*nbin+j*nbin+i];
+            }
+        }
+    }
+
+    for (long int j=0; j<nchan; j++)
+    {
+        double tmp_var = 0.;
+        double tmp_mean = 0.;
+
+        for (long int i=0; i<nbin; i++)
+        {
+            tmp_mean += fph[j*nbin+i];
+            tmp_var += fph[j*nbin+i]*fph[j*nbin+i];
+        }
+
+        tmp_mean /= nbin;
+        tmp_var /= nbin;
+        
+        tmp_var -= tmp_mean*tmp_mean;
+
+        fvar_sort[j] = fvar[j] = tmp_var;
+        fmean_sort[j] = fmean[j] = tmp_mean;
+    }
+
+    std::nth_element(fvar_sort.begin(), fvar_sort.begin()+nchan/4, fvar_sort.end(), std::less<float>());
+    float Q1_var = fvar_sort[nchan/4];
+    std::nth_element(fvar_sort.begin(), fvar_sort.begin()+nchan/4, fvar_sort.end(), std::greater<float>());
+    float Q3_var = fvar_sort[nchan/4];
+
+    float R_var = Q3_var-Q1_var;
+    float vmin_var = Q1_var-clfd_q*R_var;
+    float vmax_var = Q3_var+clfd_q*R_var;
+
+    std::nth_element(fmean_sort.begin(), fmean_sort.begin()+nchan/4, fmean_sort.end(), std::less<float>());
+    float Q1_mean = fmean_sort[nchan/4];
+    std::nth_element(fmean_sort.begin(), fmean_sort.begin()+nchan/4, fmean_sort.end(), std::greater<float>());
+    float Q3_mean = fmean_sort[nchan/4];
+
+    float R_mean = Q3_mean-Q1_mean;
+    float vmin_mean = Q1_mean-clfd_q*R_mean;
+    float vmax_mean = Q3_mean+clfd_q*R_mean;
+
+    for (long int k=0; k<nsubint; k++)
+    {
+        for (long int j=0; j<nchan; j++)
+        {
+            if (fvar[j]<vmin_var or fvar[j]>vmax_var or fmean[j]<vmin_mean or fmean[j]>vmax_mean)
             {
                 for (long int i=0; i<nbin; i++)
                 {
