@@ -92,6 +92,7 @@ int main(int argc, const char *argv[])
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
 			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
+			("bandcorr", value<double>()->default_value(10), "CLFD correlation bandwidth threshold to differentiate RFI and real signal (MHz)")
 			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
@@ -715,6 +716,7 @@ int main(int argc, const char *argv[])
 		}
 
 		gridsearch[k].clfd_q = vm["clfd"].as<double>();
+		gridsearch[k].bandcorr = vm["bandcorr"].as<double>();
 
 		gridsearch[k].prepare(folder[k]);
 		folder[k].close();
