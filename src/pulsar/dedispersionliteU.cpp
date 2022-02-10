@@ -36,7 +36,8 @@ void DedispersionLiteU::prepare(DataBuffer<float> &databuffer)
     nchans = databuffer.nchans;
     frequencies = databuffer.frequencies;
     
-    int nch = ceil(nchans/nsubband);
+    int nch = ceil(nchans*1./nsubband);
+    nsubband = ceil(nchans*1./nch);
     frequencies_sub.resize(nsubband, 0.);
 
     vector<int> fcnt(nsubband, 0);
@@ -63,7 +64,7 @@ void DedispersionLiteU::prepare(DataBuffer<float> &databuffer)
 	/* memory test */
 	try
 	{
-		float *test = new float [(long int)2*ndump*nchans+(long int)2*nsamples*nchans+(long int)2*groupsize*ndump*nsubband]; 		
+        float *test = new float [(long int)2*ndump*nchans+(long int)2*nsamples*nchans+(long int)2*groupsize*ndump*nsubband];
 		delete [] test;
 	}
 	catch (std::bad_alloc & exception) 
@@ -127,7 +128,7 @@ void DedispersionLiteU::prerun(DataBuffer<float> &databuffer)
 void DedispersionLiteU::run()
 {
     int ndm = vdm.size();
-    int nch = ceil(nchans/nsubband);
+    int nch = ceil(nchans*1./nsubband);
 
     vector<float> buffersubT(nsubband*vdm.size()*ndump, 0.);
 

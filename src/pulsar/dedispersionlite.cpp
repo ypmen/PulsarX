@@ -34,7 +34,8 @@ void DedispersionLite::prepare(DataBuffer<float> &databuffer)
     nchans = databuffer.nchans;
     frequencies = databuffer.frequencies;
     
-    int nch = ceil(nchans/nsubband);
+    int nch = ceil(nchans*1./nsubband);
+    nsubband = ceil(nchans*1./nch);
     frequencies_sub.resize(nsubband, 0.);
 
     buffertim.resize(vdm.size()*ndump, 0.);
@@ -97,7 +98,7 @@ void DedispersionLite::run(DataBuffer<float> &databuffer)
     transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
 
     int ndm = vdm.size();
-    int nch = ceil(nchans/nsubband);
+    int nch = ceil(nchans*1./nsubband);
 
     vector<float> buffersubT(nsubband*vdm.size()*ndump, 0.);
 
