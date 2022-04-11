@@ -480,6 +480,7 @@ int main(int argc, const char *argv[])
 			}
 
             fil[n].read_data(NSBLK);
+			assert(fil[n].ndata != 0);
 #ifdef FAST
 			unsigned char *pcur = (unsigned char *)(fil[n].data);
 #endif
