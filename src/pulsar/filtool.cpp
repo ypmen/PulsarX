@@ -18,6 +18,7 @@
 #include "filmaker.h"
 #include "filterbank.h"
 #include "mjd.h"
+#include "logging.h"
 
 using namespace boost::program_options;
 
@@ -28,6 +29,8 @@ unsigned int num_threads;
 
 int main(int argc, const char *argv[])
 {
+	init_logging();
+
     /* options */
 	int verbose = 0;
 
