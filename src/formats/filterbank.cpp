@@ -545,6 +545,58 @@ bool Filterbank::read_data()
         }
         ndata = icnt*8/nifs/nchans;
 	}; break;
+	case 2:
+	{
+		long int nchr = nsamples*nifs*nchans;
+        unsigned char * chb = new unsigned char [nchr];
+        long int icnt = fread(chb, 1, nchr/4, fptr);
+        if (icnt*4 > ndata)
+        {
+        	if (data != NULL) delete [] (unsigned char *)data;
+        	data = new unsigned char [icnt*4];
+        }
+        for (long int i=0; i<icnt; i++)
+        {
+			unsigned char tmp = chb[i];
+			for (long int k=0; k<4; k++)
+			{
+                ((unsigned char *)data)[i*4+k] = (tmp & 0b11);
+				tmp >>= 2;
+			}
+		}
+        delete [] chb;
+        if (icnt*4 != nchr)
+        {
+                //cerr<<"Warning: Data ends unexpected read to EOF"<<endl;
+        }
+        ndata = icnt*4/nifs/nchans;
+	}; break;
+	case 4:
+	{
+		long int nchr = nsamples*nifs*nchans;
+        unsigned char * chb = new unsigned char [nchr];
+        long int icnt = fread(chb, 1, nchr/2, fptr);
+        if (icnt*2 > ndata)
+        {
+        	if (data != NULL) delete [] (unsigned char *)data;
+        	data = new unsigned char [icnt*2];
+        }
+        for (long int i=0; i<icnt; i++)
+        {
+			unsigned char tmp = chb[i];
+			for (long int k=0; k<2; k++)
+			{
+                ((unsigned char *)data)[i*2+k] = (tmp & 0b1111);
+				tmp >>= 4;
+			}
+		}
+        delete [] chb;
+        if (icnt*2 != nchr)
+        {
+                //cerr<<"Warning: Data ends unexpected read to EOF"<<endl;
+        }
+        ndata = icnt*2/nifs/nchans;
+	}; break;
 	default:
 	{
 		cerr<<"Error: data type unsupported"<<endl;
@@ -612,6 +664,58 @@ bool Filterbank::read_data(long int ns)
                 //cerr<<"Warning: Data ends unexpected read to EOF"<<endl;
         }
         ndata = icnt*8/nifs/nchans;
+	}; break;
+	case 2:
+	{
+		long int nchr = ns*nifs*nchans;
+        unsigned char * chb = new unsigned char [nchr];
+        long int icnt = fread(chb, 1, nchr/4, fptr);
+        if (icnt*4 > ndata)
+        {
+        	if (data != NULL) delete [] (unsigned char *)data;
+        	data = new unsigned char [icnt*4];
+        }
+        for (long int i=0; i<icnt; i++)
+        {
+			unsigned char tmp = chb[i];
+			for (long int k=0; k<4; k++)
+			{
+                ((unsigned char *)data)[i*4+k] = (tmp & 0b11);
+				tmp >>= 2;
+			}
+		}
+        delete [] chb;
+        if (icnt*4 != nchr)
+        {
+                //cerr<<"Warning: Data ends unexpected read to EOF"<<endl;
+        }
+        ndata = icnt*4/nifs/nchans;
+	}; break;
+	case 4:
+	{
+		long int nchr = ns*nifs*nchans;
+        unsigned char * chb = new unsigned char [nchr];
+        long int icnt = fread(chb, 1, nchr/2, fptr);
+        if (icnt*2 > ndata)
+        {
+        	if (data != NULL) delete [] (unsigned char *)data;
+        	data = new unsigned char [icnt*2];
+        }
+        for (long int i=0; i<icnt; i++)
+        {
+			unsigned char tmp = chb[i];
+			for (long int k=0; k<2; k++)
+			{
+                ((unsigned char *)data)[i*2+k] = (tmp & 0b1111);
+				tmp >>= 4;
+			}
+		}
+        delete [] chb;
+        if (icnt*2 != nchr)
+        {
+                //cerr<<"Warning: Data ends unexpected read to EOF"<<endl;
+        }
+        ndata = icnt*2/nifs/nchans;
 	}; break;
 	default:
 	{
