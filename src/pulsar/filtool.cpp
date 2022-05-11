@@ -31,7 +31,7 @@ int main(int argc, const char *argv[])
 {
 	init_logging();
 
-    /* options */
+	/* options */
 	int verbose = 0;
 
 	options_description desc{"Options"};
@@ -42,11 +42,11 @@ int main(int argc, const char *argv[])
 			("jump,j", value<std::vector<double>>()->multitoken()->default_value(std::vector<double>{0, 0}, "0, 0"), "Time jump at the beginning and end (s)")
 			("td", value<int>()->default_value(1), "Time downsample for preprocessing")
 			("fd", value<int>()->default_value(1), "Frequency downsample for preprocessing")
-            ("nbits", value<int>()->default_value(8), "Nbits of output filterbank")
-            ("mean", value<float>()->default_value(128), "Mean value of output filterbank")
+			("nbits", value<int>()->default_value(8), "Nbits of output filterbank")
+			("mean", value<float>()->default_value(128), "Mean value of output filterbank")
 			("std", value<float>()->default_value(6), "Standard deviation of output filterbank")
 			("filplan", value<std::string>(), "Input filterbank plan file")
-            ("seglen,l", value<float>()->default_value(2), "Time length per segment (s)")
+			("seglen,l", value<float>()->default_value(2), "Time length per segment (s)")
 			("zapthre", value<float>()->default_value(4), "Threshold in IQR for zapping channels")
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
@@ -54,11 +54,11 @@ int main(int argc, const char *argv[])
 			("telescope", value<std::string>()->default_value("Fake"), "Telescope name")
 			("baseline", value<std::vector<float>>()->multitoken()->default_value(std::vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
 			("rfi,z", value<std::vector<std::string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
-            ("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
+			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
 			("bandlimitKT", value<double>()->default_value(10), "Band limit of RFI kadaneT (MHz)")
 			("widthlimit", value<double>()->default_value(50e-3), "Width limit of RFI kadaneF (s)")
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
-            ("threKadaneF", value<float>()->default_value(7), "S/N threshold of KadaneF")
+			("threKadaneF", value<float>()->default_value(7), "S/N threshold of KadaneF")
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
 			("source_name,s", value<std::string>()->default_value("J0000-00"), "Source name")
@@ -66,18 +66,18 @@ int main(int argc, const char *argv[])
 			("cont", "Input files are contiguous")
 			("input,f", value<std::vector<std::string>>()->multitoken()->composing(), "Input files");
 
-    positional_options_description pos_desc;
-    pos_desc.add("input", -1);
+	positional_options_description pos_desc;
+	pos_desc.add("input", -1);
 	command_line_parser parser{argc, argv};
 	parser.options(desc).style(command_line_style::default_style | command_line_style::allow_short);
 	parser.options(desc).positional(pos_desc);
 	parsed_options parsed_options = parser.run();
 
-    variables_map vm;
+	variables_map vm;
 	store(parsed_options, vm);
 	notify(vm);
 
-    if (vm.count("help"))
+	if (vm.count("help"))
 	{
 		std::cout << desc << '\n';
 		return 0;
@@ -93,19 +93,19 @@ int main(int argc, const char *argv[])
 	}
 
 	bool contiguous = vm.count("cont");
-    num_threads = vm["threads"].as<unsigned int>();
-    std::vector<double> jump = vm["jump"].as<std::vector<double>>();
-    std::vector<std::string> fnames = vm["input"].as<std::vector<std::string>>();
-    std::string source_name = vm["source_name"].as<std::string>();
-    std::string rootname = vm["rootname"].as<std::string>();
+	num_threads = vm["threads"].as<unsigned int>();
+	std::vector<double> jump = vm["jump"].as<std::vector<double>>();
+	std::vector<std::string> fnames = vm["input"].as<std::vector<std::string>>();
+	std::string source_name = vm["source_name"].as<std::string>();
+	std::string rootname = vm["rootname"].as<std::string>();
 	std::string s_telescope = vm["telescope"].as<std::string>();
 	int telescope_id = get_telescope_id(s_telescope);
 	int ibeam = vm["ibeam"].as<int>();
 	double src_raj = vm["ra"].as<double>();
 	double src_dej = vm["dec"].as<double>();
 
-    // sort fils and get nsamples
-    long int nfil = fnames.size();
+	// sort fils and get nsamples
+	long int nfil = fnames.size();
 	Filterbank *fil = new Filterbank [nfil];
 	for (long int i=0; i<nfil; i++)
 	{
@@ -117,11 +117,11 @@ int main(int argc, const char *argv[])
 	long int ntotal = 0;
 	for (long int i=0; i<nfil; i++)
 	{
-        fil[i].read_header();
-        ntotal += fil[i].nsamples;
-        MJD tstart(fil[i].tstart);
-        tstarts.push_back(tstart);
-        tends.push_back(tstart+fil[i].nsamples*fil[i].tsamp);
+		fil[i].read_header();
+		ntotal += fil[i].nsamples;
+		MJD tstart(fil[i].tstart);
+		tstarts.push_back(tstart);
+		tends.push_back(tstart+fil[i].nsamples*fil[i].tsamp);
 	}
 	vector<size_t> idx = argsort(tstarts);
 	for (long int i=0; i<nfil-1; i++)
@@ -140,8 +140,8 @@ int main(int argc, const char *argv[])
 		}
 	}
 
-    // update header
-    if (vm["source_name"].defaulted())
+	// update header
+	if (vm["source_name"].defaulted())
 	{
 		if (strcmp(fil[0].source_name, "") != 0)
 			source_name = fil[0].source_name;
@@ -176,13 +176,13 @@ int main(int argc, const char *argv[])
 	std::vector<FilMaker> filmakers;
 	plan(vm, filmakers);
 
-    /** pre-downsample */
+	/** pre-downsample */
 	int td = vm["td"].as<int>();
-    int fd = vm["fd"].as<int>();
+	int fd = vm["fd"].as<int>();
 
 	long int nchans = fil[0].nchans;
-    double tsamp = fil[0].tsamp;
-    int nifs = fil[0].nifs;
+	double tsamp = fil[0].tsamp;
+	int nifs = fil[0].nifs;
 
 	float *buffer = new float [nchans];
 
@@ -213,7 +213,7 @@ int main(int argc, const char *argv[])
 	{
 		filmakers[k].filwriter.fil = fil[idx[0]];
 		filmakers[k].ibeam = ibeam;
-        filmakers[k].rootname = rootname;
+		filmakers[k].rootname = rootname;
 		filmakers[k].source_name = source_name;
 		filmakers[k].src_raj = src_raj;
 		filmakers[k].src_dej = src_dej;
@@ -222,21 +222,21 @@ int main(int argc, const char *argv[])
 		filmakers[k].prepare(prep);
 	}
 
-    // handle input data
-    long int nstart = jump[0]/tsamp;
+	// handle input data
+	long int nstart = jump[0]/tsamp;
 	long int nend = ntotal-jump[1]/tsamp;
 
-    int sumif = nifs>2? 2:nifs;
+	int sumif = nifs>2? 2:nifs;
 	
 	long int ntot = 0;
 	long int ntot2 = 0;
 	long int count = 0;
-    long int bcnt1 = 0;
+	long int bcnt1 = 0;
 	for (long int idxn=0; idxn<nfil; idxn++)
 	{
 		long int n = idx[idxn];
-        long int nseg = ceil(1.*fil[n].nsamples/NSBLK);
-        long int ns_filn = 0;
+		long int nseg = ceil(1.*fil[n].nsamples/NSBLK);
+		long int ns_filn = 0;
 
 		for (long int s=0; s<nseg; s++)
 		{
@@ -246,7 +246,7 @@ int main(int argc, const char *argv[])
 				std::cerr<<"("<<100.*count/ntotal<<"%)";
 			}
 
-            fil[n].read_data(NSBLK);
+			fil[n].read_data(NSBLK);
 			assert(fil[n].ndata != 0);
 #ifdef FAST
 			unsigned char *pcur = (unsigned char *)(fil[n].data);
@@ -275,14 +275,14 @@ int main(int argc, const char *argv[])
 					}
 				}
 
-                memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
-                databuf.counter++;
+				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
+				databuf.counter++;
 				bcnt1++;
 				ntot++;
 
 				if (ntot%ndump == 0)
 				{
-    				DataBuffer<float> *data = prep.run(databuf);
+					DataBuffer<float> *data = prep.run(databuf);
 
 					for (long int ioutfil=0; ioutfil<noutfil; ioutfil++)
 					{
@@ -290,18 +290,18 @@ int main(int argc, const char *argv[])
 						filmakers[ioutfil].run(*data);
 					}
 
-                    bcnt1 = 0;
+					bcnt1 = 0;
 					databuf.open();
 				}
 
 				if (++ns_filn == fil[n].nsamples)
-                {
-                    goto next;
-                }
+				{
+					goto next;
+				}
 				pcur += nifs*nchans;
 			}
 		}
-        next:
+		next:
 		fil[n].close();
 	}
 	databuf.close();
@@ -312,8 +312,8 @@ int main(int argc, const char *argv[])
 		cerr<<"("<<100.*count/ntotal<<"%)"<<endl;
 	}
 
-    delete [] buffer;
-    delete [] fil;
+	delete [] buffer;
+	delete [] fil;
 
-    return 0;
+	return 0;
 }

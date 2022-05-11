@@ -34,7 +34,7 @@ int main(int argc, const char *argv[])
 {
 	init_logging();
 
-    /* options */
+	/* options */
 	int verbose = 0;
 
 	options_description desc{"Options"};
@@ -65,13 +65,13 @@ int main(int argc, const char *argv[])
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("threMask", value<float>()->default_value(3), "S/N threshold of Mask")
 			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
-            ("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
+			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("format", value<string>()->default_value("pulsarx"), "Output format of dedispersed data [pulsarx(default),sigproc,presto]")
 			("cont", "Input files are contiguous")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
 
-    positional_options_description pos_desc;
-    pos_desc.add("input", -1);
+	positional_options_description pos_desc;
+	pos_desc.add("input", -1);
 	command_line_parser parser{argc, argv};
 	parser.options(desc).style(command_line_style::default_style | command_line_style::allow_short);
 	parser.options(desc).positional(pos_desc);
@@ -97,8 +97,8 @@ int main(int argc, const char *argv[])
 	}
 
 	bool contiguous = vm.count("cont");
-    string rootname = vm["rootname"].as<string>();
-    num_threads = vm["threads"].as<unsigned int>();
+	string rootname = vm["rootname"].as<string>();
+	num_threads = vm["threads"].as<unsigned int>();
 	vector<double> jump = vm["jump"].as<vector<double>>();
 	vector<string> fnames = vm["input"].as<vector<string>>();
 	float outmean = vm["mean"].as<float>();
@@ -166,8 +166,8 @@ int main(int argc, const char *argv[])
 	psf[0].subint.load_integration(psf[0].fptr, 0, it);
 
 	long int nchans = it.nchan;
-    double tsamp = psf[0].subint.tbin;
-    int nifs = it.npol;
+	double tsamp = psf[0].subint.tbin;
+	int nifs = it.npol;
 
 	float *buffer = new float [nchans];
 
@@ -199,21 +199,21 @@ int main(int argc, const char *argv[])
 	long int nseg = jump[0]/tsamp;
 	long int njmp = jump[1]/tsamp;
 
-    long int ncover = 0;
+	long int ncover = 0;
 
-    stringstream ss_ibeam;
+	stringstream ss_ibeam;
 	if (vm.count("incoherent"))
-    	ss_ibeam << "ifbf" << setw(5) << setfill('0') << ibeam;
+		ss_ibeam << "ifbf" << setw(5) << setfill('0') << ibeam;
 	else
 		ss_ibeam << "cfbf" << setw(5) << setfill('0') << ibeam;
 	string s_ibeam = ss_ibeam.str();
 
-    ncover++;
+	ncover++;
 	long int nsearch = search.size();
 	for (long int k=0; k<nsearch; k++)
 	{
 		search[k].ibeam = ibeam;
-        search[k].rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
+		search[k].rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
 		search[k].fildedisp.tstart = tstarts[idx[0]].to_day();
 		search[k].fildedisp.ibeam = ibeam;
 		search[k].fildedisp.fch1 = (databuf.frequencies.front()+databuf.frequencies.back())/2.;
@@ -227,11 +227,11 @@ int main(int argc, const char *argv[])
 
 	int sumif = nifs>2? 2:nifs;
 	
-    long int jmpcont = 0;
+	long int jmpcont = 0;
 	long int ntot = 0;
 	long int ntot2 = 0;
-    long int count = 0;
-    long int bcnt1 = 0;
+	long int count = 0;
+	long int bcnt1 = 0;
 	for (long int idxn=0; idxn<npsf; idxn++)
 	{
 		long int n = idx[idxn];
@@ -255,21 +255,21 @@ int main(int argc, const char *argv[])
 #endif
 			for (long int i=0; i<it.nsblk; i++)
 			{
-                count++;
-                if (ntot == nseg)
-                {
-                    if (jmpcont++ < njmp)
-                    {
-                        pcur += it.npol*it.nchan;
-                        continue;
-                    }
-                   
-                    ntot = 0;
-                    jmpcont = 0;
+				count++;
+				if (ntot == nseg)
+				{
+					if (jmpcont++ < njmp)
+					{
+						pcur += it.npol*it.nchan;
+						continue;
+					}
+				   
+					ntot = 0;
+					jmpcont = 0;
 
-                    ncover++;
-                    for (long int k=0; k<nsearch; k++)
-	                {
+					ncover++;
+					for (long int k=0; k<nsearch; k++)
+					{
 						if (vm["format"].as<string>() == "presto")
 						{
 							search[k].dedisp.makeinf(search[k].fildedisp);
@@ -278,12 +278,12 @@ int main(int argc, const char *argv[])
 						{
 							search[k].dedisp.modifynblock();
 						}
-                        search[k].dedisp.rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
-                        search[k].dedisp.prepare(search[k].rfi);
-                        search[k].fildedisp.tstart = (tstarts[idx[0]] + count*tsamp/86400.).to_day();
+						search[k].dedisp.rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
+						search[k].dedisp.prepare(search[k].rfi);
+						search[k].fildedisp.tstart = (tstarts[idx[0]] + count*tsamp/86400.).to_day();
 						search[k].dedisp.preparedump(search[k].fildedisp, outnbits, vm["format"].as<string>());
-	                }
-                }
+					}
+				}
 
 				memset(buffer, 0, sizeof(float)*nchans);
 				long int m = 0;
@@ -296,9 +296,9 @@ int main(int argc, const char *argv[])
 				}
 
 				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
-                databuf.counter++;
+				databuf.counter++;
 				bcnt1++;
-                ntot++;
+				ntot++;
 
 				if (ntot%ndump == 0)
 				{
@@ -308,7 +308,7 @@ int main(int argc, const char *argv[])
 						prep.isbusy = true;
 						(*sp).run(prep);
 					}
-                    bcnt1 = 0;
+					bcnt1 = 0;
 					databuf.open();
 				}
 
@@ -342,5 +342,5 @@ int main(int argc, const char *argv[])
 	delete [] buffer;
 	delete [] psf;
 
-    return 0;
+	return 0;
 }

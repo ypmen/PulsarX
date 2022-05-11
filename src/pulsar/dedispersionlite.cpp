@@ -13,121 +13,121 @@ using namespace Pulsar;
 
 DedispersionLite::DedispersionLite()
 {
-    nsubband = 0;
-    counter = 0;
-    offset = 0;
-    nchans = 0;
-    tsamp = 0.;
-    ndump = 0;
-    nsamples = 0;
+	nsubband = 0;
+	counter = 0;
+	offset = 0;
+	nchans = 0;
+	tsamp = 0.;
+	ndump = 0;
+	nsamples = 0;
 }
 
 DedispersionLite::~DedispersionLite(){}
 
 void DedispersionLite::prepare(DataBuffer<float> &databuffer)
 {
-    assert(nsubband>0);
-    assert(!vdm.empty());
+	assert(nsubband>0);
+	assert(!vdm.empty());
 
-    ndump = databuffer.nsamples;
-    tsamp = databuffer.tsamp;
-    nchans = databuffer.nchans;
-    frequencies = databuffer.frequencies;
-    
-    int nch = ceil(nchans*1./nsubband);
-    nsubband = ceil(nchans*1./nch);
-    frequencies_sub.resize(nsubband, 0.);
+	ndump = databuffer.nsamples;
+	tsamp = databuffer.tsamp;
+	nchans = databuffer.nchans;
+	frequencies = databuffer.frequencies;
+	
+	int nch = ceil(nchans*1./nsubband);
+	nsubband = ceil(nchans*1./nch);
+	frequencies_sub.resize(nsubband, 0.);
 
-    buffertim.resize(vdm.size()*ndump, 0.);
-    buffersub.resize(vdm.size()*ndump*nsubband, 0.);
+	buffertim.resize(vdm.size()*ndump, 0.);
+	buffersub.resize(vdm.size()*ndump*nsubband, 0.);
 
-    vector<int> fcnt(nsubband, 0);
-    for (long int j=0; j<nchans; j++)
-    {
-        frequencies_sub[j/nch] += frequencies[j];
-        fcnt[j/nch] += 1;
-    }
-    for (long int j=0; j<nsubband; j++)
-    {
-        frequencies_sub[j] /= fcnt[j];
-    }
-    
-    double fmin = 1e6;
+	vector<int> fcnt(nsubband, 0);
+	for (long int j=0; j<nchans; j++)
+	{
+		frequencies_sub[j/nch] += frequencies[j];
+		fcnt[j/nch] += 1;
+	}
+	for (long int j=0; j<nsubband; j++)
+	{
+		frequencies_sub[j] /= fcnt[j];
+	}
+	
+	double fmin = 1e6;
 	double fmax = 0.;
 	for (long int j=0; j<nchans; j++)
 	{
 		fmax = frequencies[j]>fmax? frequencies[j]:fmax;
 		fmin = frequencies[j]<fmin? frequencies[j]:fmin;
 	}
-    long int maxdelayn = ceil(dmdelay(*max_element(vdm.begin(), vdm.end()), fmax, fmin)/tsamp);
-    nsamples = ceil(1.*maxdelayn/ndump)*ndump + ndump;
-    buffer.resize(nsamples*nchans, 0.);
+	long int maxdelayn = ceil(dmdelay(*max_element(vdm.begin(), vdm.end()), fmax, fmin)/tsamp);
+	nsamples = ceil(1.*maxdelayn/ndump)*ndump + ndump;
+	buffer.resize(nsamples*nchans, 0.);
 
-    delayn.resize(vdm.size()*nchans, 0);
-    int ndm = vdm.size();
-    for (long int j=0; j<nchans; j++)
-    {
-        for (long int k=0; k<ndm; k++)
-        {
-            delayn[j*ndm+k] = round(dmdelay(vdm[k], fmax, frequencies[j])/tsamp);
-        }
-    }
+	delayn.resize(vdm.size()*nchans, 0);
+	int ndm = vdm.size();
+	for (long int j=0; j<nchans; j++)
+	{
+		for (long int k=0; k<ndm; k++)
+		{
+			delayn[j*ndm+k] = round(dmdelay(vdm[k], fmax, frequencies[j])/tsamp);
+		}
+	}
 
-    offset = nsamples-ndump;
+	offset = nsamples-ndump;
 }
 
 void DedispersionLite::run(DataBuffer<float> &databuffer)
 {
-    assert(databuffer.nsamples == ndump);
+	assert(databuffer.nsamples == ndump);
 
-    int nspace = nsamples-ndump;
+	int nspace = nsamples-ndump;
 
-    for (long int i=0; i<ndump; i++)
-    {
-        for (long int j=0; j<nchans; j++)
-        {
-            buffer[(i+nspace)*nchans+j] = databuffer.buffer[i*nchans+j];
-        }
-    }
+	for (long int i=0; i<ndump; i++)
+	{
+		for (long int j=0; j<nchans; j++)
+		{
+			buffer[(i+nspace)*nchans+j] = databuffer.buffer[i*nchans+j];
+		}
+	}
 
-    databuffer.isbusy = false;
-    if (databuffer.closable) databuffer.close();
+	databuffer.isbusy = false;
+	if (databuffer.closable) databuffer.close();
 
-    vector<float> bufferT(nchans*nsamples, 0.);
+	vector<float> bufferT(nchans*nsamples, 0.);
 
-    transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
+	transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
 
-    int ndm = vdm.size();
-    int nch = ceil(nchans*1./nsubband);
+	int ndm = vdm.size();
+	int nch = ceil(nchans*1./nsubband);
 
-    vector<float> buffersubT(nsubband*vdm.size()*ndump, 0.);
+	vector<float> buffersubT(nsubband*vdm.size()*ndump, 0.);
 
-    fill(buffertim.begin(), buffertim.end(), 0.);
+	fill(buffertim.begin(), buffertim.end(), 0.);
 
-    for (long int j=0; j<nchans; j++)
-    {
+	for (long int j=0; j<nchans; j++)
+	{
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(num_threads)
 #endif
-        for (long int k=0; k<ndm; k++)
-        {
-            for (long int i=0; i<ndump; i++)
-            {
-                buffersubT[(j/nch)*ndm*ndump+k*ndump+i] += bufferT[j*nsamples+i+delayn[j*ndm+k]];
-                buffertim[k*ndump+i] += bufferT[j*nsamples+i+delayn[j*ndm+k]];
-            }
-        }
-    }
-    
-    transpose_pad<float>(&buffersub[0], &buffersubT[0], nsubband, ndm*ndump);
+		for (long int k=0; k<ndm; k++)
+		{
+			for (long int i=0; i<ndump; i++)
+			{
+				buffersubT[(j/nch)*ndm*ndump+k*ndump+i] += bufferT[j*nsamples+i+delayn[j*ndm+k]];
+				buffertim[k*ndump+i] += bufferT[j*nsamples+i+delayn[j*ndm+k]];
+			}
+		}
+	}
+	
+	transpose_pad<float>(&buffersub[0], &buffersubT[0], nsubband, ndm*ndump);
 
-    for (long int i=0; i<nspace; i++)
-    {
-        for (long int j=0; j<nchans; j++)
-        {
-            buffer[i*nchans+j] = buffer[(i+ndump)*nchans+j];
-        }
-    }
+	for (long int i=0; i<nspace; i++)
+	{
+		for (long int j=0; j<nchans; j++)
+		{
+			buffer[i*nchans+j] = buffer[(i+ndump)*nchans+j];
+		}
+	}
 
-    counter += ndump;
+	counter += ndump;
 }

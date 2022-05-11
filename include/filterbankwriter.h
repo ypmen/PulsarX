@@ -17,18 +17,18 @@
 class FilterbankWriter
 {
 public:
-    FilterbankWriter();
-    FilterbankWriter(const FilterbankWriter &filwriter);
-    FilterbankWriter & operator=(const FilterbankWriter &filwriter);
-    FilterbankWriter(const Filterbank &temp);
-    ~FilterbankWriter();
-    void prepare(DataBuffer<float> &databuffer);
-    void run(DataBuffer<float> &databuffer);
+	FilterbankWriter();
+	FilterbankWriter(const FilterbankWriter &filwriter);
+	FilterbankWriter & operator=(const FilterbankWriter &filwriter);
+	FilterbankWriter(const Filterbank &temp);
+	~FilterbankWriter();
+	void prepare(DataBuffer<float> &databuffer);
+	void run(DataBuffer<float> &databuffer);
 public:
-    float outstd;
-    float outmean;
-    Filterbank fil;
-    std::ofstream outfile;
+	float outstd;
+	float outmean;
+	Filterbank fil;
+	std::ofstream outfile;
 };
 
 #endif /* FILTERBANKWRITER_H */

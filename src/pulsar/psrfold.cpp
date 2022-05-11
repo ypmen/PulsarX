@@ -51,7 +51,7 @@ int main(int argc, const char *argv[])
 {
 	init_logging();
 
-    /* options */
+	/* options */
 	int verbose = 0;
 	bool outbest = false;
 
@@ -66,8 +66,8 @@ int main(int argc, const char *argv[])
 			("fd", value<int>()->default_value(1), "Frequency downsample")
 			("zapthre", value<float>()->default_value(4), "Threshold in IQR for zapping channels")
 			("dm", value<double>()->default_value(0), "DM (pc/cc)")
-            ("f0", value<double>()->default_value(0), "F0 (Hz)")
-            ("f1", value<double>()->default_value(0), "F1 (Hz/s)")
+			("f0", value<double>()->default_value(0), "F0 (Hz)")
+			("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("acc", value<double>()->default_value(0), "Acceleration (m/s/s)")
 			("pepoch", value<double>(), "F0/F1/acc epoch (MJD)")
 			("scale", value<int>()->default_value(1), "F0,F1,dm search range scale in phase")
@@ -104,7 +104,7 @@ int main(int argc, const char *argv[])
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
 			("fill", value<string>()->default_value("rand"), "Fill the zapped samples by [mean, rand]")
-            ("render", "Using new folding algorithm (deprecated, used by default)")
+			("render", "Using new folding algorithm (deprecated, used by default)")
 			("dspsr", "Using dspsr folding algorithm")
 #ifdef HAVE_PLOTX
 			("plotx", "Using PlotX for plotting")
@@ -113,16 +113,16 @@ int main(int argc, const char *argv[])
 			("cont", "Input files are contiguous")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
 
-    positional_options_description pos_desc;
-    pos_desc.add("input", -1);
-    command_line_parser parser{argc, argv};
-    parser.options(desc).style(command_line_style::default_style | command_line_style::allow_short);
-    parser.options(desc).positional(pos_desc);
-    parsed_options parsed_options = parser.run();
+	positional_options_description pos_desc;
+	pos_desc.add("input", -1);
+	command_line_parser parser{argc, argv};
+	parser.options(desc).style(command_line_style::default_style | command_line_style::allow_short);
+	parser.options(desc).positional(pos_desc);
+	parsed_options parsed_options = parser.run();
 
-    variables_map vm;
-    store(parsed_options, vm);
-    notify(vm);
+	variables_map vm;
+	store(parsed_options, vm);
+	notify(vm);
 
 	if (vm.count("help"))
 	{
@@ -172,12 +172,12 @@ int main(int argc, const char *argv[])
 	bool noplot = vm.count("noplot");
 	bool noarch = vm.count("noarch");
 	bool contiguous = vm.count("cont");
-    string rootname = vm["rootname"].as<string>();
+	string rootname = vm["rootname"].as<string>();
 	string src_name = vm["srcname"].as<string>();
 	string s_telescope = vm["telescope"].as<string>();
-    num_threads = vm["threads"].as<unsigned int>();
-    vector<double> jump = vm["jump"].as<vector<double>>();
-    vector<string> fnames = vm["input"].as<vector<string>>();
+	num_threads = vm["threads"].as<unsigned int>();
+	vector<double> jump = vm["jump"].as<vector<double>>();
+	vector<string> fnames = vm["input"].as<vector<string>>();
 	double src_raj = vm["ra"].as<double>();
 	double src_dej = vm["dec"].as<double>();
 
@@ -219,7 +219,7 @@ int main(int argc, const char *argv[])
 		}
 	}
 
-    psf[0].open();
+	psf[0].open();
 	psf[0].primary.load(psf[0].fptr);
 	psf[0].load_mode();
 	psf[0].subint.load_header(psf[0].fptr);
@@ -271,51 +271,51 @@ int main(int argc, const char *argv[])
 
 	/** downsample */
 	int td = vm["td"].as<int>();
-    int fd = vm["fd"].as<int>();
+	int fd = vm["fd"].as<int>();
 
-    /** rfi */
+	/** rfi */
 	vector<pair<double, double>> zaplist;
 	vector<vector<string>> rfilist;
-    vector<string> rfi_opts;
+	vector<string> rfi_opts;
 	if (vm.count("rfi"))
 	{
-        rfi_opts = vm["rfi"].as<vector<string>>();
-        for (auto opt=rfi_opts.begin(); opt!=rfi_opts.end(); ++opt)
-        {
-            if (*opt=="mask" or *opt=="kadaneF" or *opt=="kadaneT")
-            {
-                vector<string> temp{*opt, *(opt+1), *(opt+2)};       
-                rfilist.push_back(temp);
-                advance(opt, 2);
-            }
-            else if (*opt == "zap")
-            {
-                zaplist.push_back(pair<double, double>(stod(*(opt+1)), stod(*(opt+2))));
-                advance(opt, 2);
-            }
-            else if (*opt=="zero" or *opt=="zdot")
-            {
-                vector<string> temp{*opt};
-                rfilist.push_back(temp);
-            }
-        }
+		rfi_opts = vm["rfi"].as<vector<string>>();
+		for (auto opt=rfi_opts.begin(); opt!=rfi_opts.end(); ++opt)
+		{
+			if (*opt=="mask" or *opt=="kadaneF" or *opt=="kadaneT")
+			{
+				vector<string> temp{*opt, *(opt+1), *(opt+2)};       
+				rfilist.push_back(temp);
+				advance(opt, 2);
+			}
+			else if (*opt == "zap")
+			{
+				zaplist.push_back(pair<double, double>(stod(*(opt+1)), stod(*(opt+2))));
+				advance(opt, 2);
+			}
+			else if (*opt=="zero" or *opt=="zdot")
+			{
+				vector<string> temp{*opt};
+				rfilist.push_back(temp);
+			}
+		}
 	}
 
 	double bandlimit = vm["bandlimit"].as<double>();
-    double bandlimitKT = vm["bandlimitKT"].as<double>();
-    double widthlimit = vm["widthlimit"].as<double>();
-    int tdRFI = vm["tdRFI"].as<int>();
+	double bandlimitKT = vm["bandlimitKT"].as<double>();
+	double widthlimit = vm["widthlimit"].as<double>();
+	int tdRFI = vm["tdRFI"].as<int>();
 	int fdRFI = vm["fdRFI"].as<int>();
-    float threKadaneF = vm["threKadaneF"].as<float>();
-    float threKadaneT = vm["threKadaneT"].as<float>();
-    float threMask = vm["threMask"].as<float>();
+	float threKadaneF = vm["threKadaneF"].as<float>();
+	float threKadaneT = vm["threKadaneT"].as<float>();
+	float threMask = vm["threMask"].as<float>();
 
 	Integration it;
 	psf[0].subint.load_integration(psf[0].fptr, 0, it);
 
 	long int nchans = it.nchan;
-    double tsamp = psf[0].subint.tbin;
-    int nifs = it.npol;
+	double tsamp = psf[0].subint.tbin;
+	int nifs = it.npol;
 
 	float *buffer = new float [nchans];
 
@@ -357,30 +357,30 @@ int main(int argc, const char *argv[])
 	baseline.close();
 	baseline.closable = true;
 
-    RFI rfi;
+	RFI rfi;
 	rfi.filltype = vm["fill"].as<string>();
 	rfi.prepare(baseline);
 	rfi.close();
 	rfi.closable = true;
 
 	std::string rfi_flags;
-    for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
-    {
-        for (auto r = irfi->begin(); r!=irfi->end(); ++r)
-        rfi_flags += *r + " ";
-    }
-    std::vector<std::pair<std::string, std::string>> meta = {
-        {"nsamples", std::to_string(rfi.nsamples)},
-        {"nchans", std::to_string(rfi.nchans)},
-        {"tsamp", std::to_string(rfi.tsamp)},
-        {"rfi_flags", rfi_flags},
-        {"kadaneF_snr_thre", std::to_string(threKadaneF)},
-        {"kadaneF_width_thre", std::to_string(widthlimit)},
-        {"filltype", vm["fill"].as<string>()}
-    };
-    format_logging("RFI Mitigation Info", meta);
-    
-    Pulsar::DedispersionLiteU dedisp;
+	for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
+	{
+		for (auto r = irfi->begin(); r!=irfi->end(); ++r)
+		rfi_flags += *r + " ";
+	}
+	std::vector<std::pair<std::string, std::string>> meta = {
+		{"nsamples", std::to_string(rfi.nsamples)},
+		{"nchans", std::to_string(rfi.nchans)},
+		{"tsamp", std::to_string(rfi.tsamp)},
+		{"rfi_flags", rfi_flags},
+		{"kadaneF_snr_thre", std::to_string(threKadaneF)},
+		{"kadaneF_width_thre", std::to_string(widthlimit)},
+		{"filltype", vm["fill"].as<string>()}
+	};
+	format_logging("RFI Mitigation Info", meta);
+	
+	Pulsar::DedispersionLiteU dedisp;
 	vector<Pulsar::ArchiveLite> folder;
 
 	std::vector<std::vector<double>> dmsegs;
@@ -388,15 +388,15 @@ int main(int argc, const char *argv[])
 
 	/** generate tempo2 predictor file */
 	if (vm.count("parfile"))
-    {
+	{
 		BOOST_LOG_TRIVIAL(info)<<"generate tempo2 predictor file";
 
 		std::vector<std::string> parfiles = vm["parfile"].as<std::vector<std::string>>();
-        
-        /**
-         * @brief read DM from parfile
-         * 
-         */
+		
+		/**
+		 * @brief read DM from parfile
+		 * 
+		 */
 		for (long int k=0; k<folder.size(); k++)
 		{
 			string filename = parfiles[k];
@@ -442,7 +442,7 @@ int main(int argc, const char *argv[])
 
 			system("rm pred.tim t2pred.dat");
 		}
-    }
+	}
 
 	dedisp.nsubband = vm["nsubband"].as<int>();
 	double maxdm = 0;
@@ -455,10 +455,10 @@ int main(int argc, const char *argv[])
 	}
 	dedisp.maxdm = maxdm;
 	dedisp.groupsize = GROUPSIZE;
-    dedisp.prepare(rfi);
+	dedisp.prepare(rfi);
 
-    DataBuffer<float> subdata;
-    dedisp.get_subdata(subdata, 0);
+	DataBuffer<float> subdata;
+	dedisp.get_subdata(subdata, 0);
 
 	long int ncand = folder.size();
 	if (ncand <= 0)
@@ -467,28 +467,28 @@ int main(int argc, const char *argv[])
 		exit(0);
 	}
 
-    for (long int k=0; k<ncand; k++)
+	for (long int k=0; k<ncand; k++)
 	{
 		folder[k].start_mjd = tstarts[idx[0]]+(ceil(1.*dedisp.offset/dedisp.ndump)*dedisp.ndump-dedisp.offset)*dedisp.tsamp*td;
 		if (vm.count("pepoch"))
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else
 			folder[k].ref_epoch = tstarts[idx[0]]+(ntotal*tsamp/2.);
-        folder[k].resize(1, subdata.nchans, folder[k].nbin);
+		folder[k].resize(1, subdata.nchans, folder[k].nbin);
 		folder[k].nblock = nblock;
 		folder[k].prepare(subdata);
 	}
 
-    psf[0].close();
+	psf[0].close();
 
 	BOOST_LOG_TRIVIAL(info)<<"start folding...";
 
-    int sumif = nifs>2? 2:nifs;
+	int sumif = nifs>2? 2:nifs;
 	
 	long int ntot = 0;
 	long int ntot2 = 0;
 	long int count = 0;
-    long int bcnt1 = 0;
+	long int bcnt1 = 0;
 	for (long int idxn=0; idxn<npsf; idxn++)
 	{
 		long int n = idx[idxn];
@@ -529,9 +529,9 @@ int main(int argc, const char *argv[])
 					}
 				}
 
-                memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
+				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
 				databuf.counter++;
-                bcnt1++;
+				bcnt1++;
 				ntot++;
 
 				if (ntot%ndump == 0)
@@ -542,7 +542,7 @@ int main(int argc, const char *argv[])
 
 					BOOST_LOG_TRIVIAL(debug)<<"normalize...";
 
-    				data = equalize.run(*data);
+					data = equalize.run(*data);
 
 					BOOST_LOG_TRIVIAL(debug)<<"remove baseline...";
 
@@ -554,33 +554,33 @@ int main(int argc, const char *argv[])
 					if (rfi.isbusy) rfi.closable = false;
 
 					for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
-                    {
-                        if ((*irfi)[0] == "mask")
-                        {
-                            data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
+					{
+						if ((*irfi)[0] == "mask")
+						{
+							data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
 							if (rfi.isbusy) rfi.closable = false;
 						}
-                        else if ((*irfi)[0] == "kadaneF")
-                        {
-                            data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
+						else if ((*irfi)[0] == "kadaneF")
+						{
+							data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
 							if (rfi.isbusy) rfi.closable = false;
 						}
-                        else if ((*irfi)[0] == "kadaneT")
-                        {
-                            data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
+						else if ((*irfi)[0] == "kadaneT")
+						{
+							data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
 							if (rfi.isbusy) rfi.closable = false;
 						}
-                        else if ((*irfi)[0] == "zdot")
-                        {
-                            data = rfi.zdot(*data);
+						else if ((*irfi)[0] == "zdot")
+						{
+							data = rfi.zdot(*data);
 							if (rfi.isbusy) rfi.closable = false;
 						}
-                        else if ((*irfi)[0] == "zero")
-                        {
-                            data = rfi.zero(*data);
+						else if ((*irfi)[0] == "zero")
+						{
+							data = rfi.zero(*data);
 							if (rfi.isbusy) rfi.closable = false;
 						}
-                    }
+					}
 
 					data->closable = true;
 					dedisp.prerun(*data);
@@ -595,7 +595,7 @@ int main(int argc, const char *argv[])
 							dedisp.run();
 						}
 						dedisp.get_subdata(subdata, k%GROUPSIZE);
-                        
+						
 						if (dedisp.counter >= dedisp.offset+dedisp.ndump)
 						{
 							BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
@@ -609,7 +609,7 @@ int main(int argc, const char *argv[])
 
 					dedisp.postrun();
 
-                    bcnt1 = 0;
+					bcnt1 = 0;
 					databuf.open();
 				}
 
@@ -651,12 +651,12 @@ int main(int argc, const char *argv[])
 	dedisp.close();
 
 	double fmin = 1e6;
-    double fmax = 0.;
-    for (long int j=0; j<databuf.nchans; j++)
-    {
-        fmax = databuf.frequencies[j]>fmax? databuf.frequencies[j]:fmax;
-        fmin = databuf.frequencies[j]<fmin? databuf.frequencies[j]:fmin;
-    }
+	double fmax = 0.;
+	for (long int j=0; j<databuf.nchans; j++)
+	{
+		fmax = databuf.frequencies[j]>fmax? databuf.frequencies[j]:fmax;
+		fmin = databuf.frequencies[j]<fmin? databuf.frequencies[j]:fmin;
+	}
 
 	double tint = ntotal*tsamp;
 
@@ -829,8 +829,8 @@ int main(int argc, const char *argv[])
 	obsinfo["Source_name"] = src_name;
 	//start mjd
 	stringstream ss_mjd;
-    ss_mjd << setprecision(10) << fixed << tstarts[idx[0]].to_day();
-    string s_mjd = ss_mjd.str();
+	ss_mjd << setprecision(10) << fixed << tstarts[idx[0]].to_day();
+	string s_mjd = ss_mjd.str();
 	obsinfo["Date"] = s_mjd;
 	//ra dec string
 	string s_ra, s_dec;
@@ -842,7 +842,7 @@ int main(int argc, const char *argv[])
 	//beam
 	stringstream ss_ibeam;
 	if (vm.count("incoherent"))
-    	ss_ibeam << "ifbf" << setw(5) << setfill('0') << ibeam;
+		ss_ibeam << "ifbf" << setw(5) << setfill('0') << ibeam;
 	else
 		ss_ibeam << "cfbf" << setw(5) << setfill('0') << ibeam;
 	string s_ibeam = ss_ibeam.str();
@@ -870,8 +870,8 @@ int main(int argc, const char *argv[])
 
 	//pepoch
 	stringstream ss_pepoch;
-    ss_pepoch << setprecision(9) << fixed << folder[0].ref_epoch.to_day();
-    string s_pepoch = ss_pepoch.str();
+	ss_pepoch << setprecision(9) << fixed << folder[0].ref_epoch.to_day();
+	string s_pepoch = ss_pepoch.str();
 	obsinfo["Pepoch"] = s_pepoch;
 
 	BOOST_LOG_TRIVIAL(info)<<"write information to cand file...";
@@ -969,21 +969,21 @@ int main(int argc, const char *argv[])
 
 	BOOST_LOG_TRIVIAL(info)<<"done!";
 
-    return 0;
+	return 0;
 }
 
 void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector<Pulsar::ArchiveLite> &folder)
 {
 	std::vector<double> dmseg;
 
-    Pulsar::ArchiveLite fdr;
+	Pulsar::ArchiveLite fdr;
 
-    /** archive */
+	/** archive */
 	fdr.dm = vm["dm"].as<double>();
-    fdr.f0 = vm["f0"].as<double>();
-    fdr.f1 = vm["f1"].as<double>();
+	fdr.f0 = vm["f0"].as<double>();
+	fdr.f1 = vm["f1"].as<double>();
 	fdr.acc = vm["acc"].as<double>();
-    fdr.nbin = vm["nbin"].as<int>();
+	fdr.nbin = vm["nbin"].as<int>();
 
 	std::vector<float> vp0;
 	std::vector<int> vnbin;
@@ -995,30 +995,30 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 	}
 	std::vector<size_t> idx = argsort2<float>(vp0);
 
-    dmseg.push_back(vm["dm"].as<double>());
+	dmseg.push_back(vm["dm"].as<double>());
 
-    if (vm.count("candfile"))
-    {
-        string filename = vm["candfile"].as<string>();
-        string line;
-        ifstream candfile(filename);
-        
-        dmseg.clear();
+	if (vm.count("candfile"))
+	{
+		string filename = vm["candfile"].as<string>();
+		string line;
+		ifstream candfile(filename);
+		
+		dmseg.clear();
 		int gcnt = 0;
-        while (getline(candfile, line))
-        {
+		while (getline(candfile, line))
+		{
 			boost::trim(line);
 			if(!isdigit(line[0])) continue;
 			
-            vector<string> parameters;
-            boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
+			vector<string> parameters;
+			boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
 
-            dmseg.push_back(stod(parameters[1]));
+			dmseg.push_back(stod(parameters[1]));
 
 			fdr.dm = stod(parameters[1]);
 			fdr.acc = stod(parameters[2]);
-            fdr.f0 = stod(parameters[3]);
-            fdr.f1 = stod(parameters[4]);
+			fdr.f0 = stod(parameters[3]);
+			fdr.f1 = stod(parameters[4]);
 			fdr.snr = stod(parameters[5]);
 
 			for (long int k=0; k<vp0.size(); k++)
@@ -1036,8 +1036,8 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 				dmseg.clear();
 				gcnt = 0;
 			}
-            folder.push_back(fdr);
-        }
+			folder.push_back(fdr);
+		}
 
 		if (gcnt)
 		{
@@ -1045,13 +1045,13 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 			dmseg.clear();
 			gcnt = 0;
 		}
-    }
+	}
 	else if (vm.count("parfile"))
-    {
+	{
 		dmseg.clear();
 		int gcnt = 0;
 		std::vector<std::string> parfiles = vm["parfile"].as<std::vector<std::string>>();
-        for (long int k=0; k<parfiles.size(); k++)
+		for (long int k=0; k<parfiles.size(); k++)
 		{
 			string filename = parfiles[k];
 			string line;
@@ -1097,9 +1097,9 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 			gcnt = 0;
 		}
 	}
-    else
-    {
+	else
+	{
 		dmsegs.push_back(dmseg);
-        folder.push_back(fdr);
-    }
+		folder.push_back(fdr);
+	}
 }

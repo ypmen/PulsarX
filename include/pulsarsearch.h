@@ -29,52 +29,52 @@ using namespace boost::program_options;
 class PulsarSearch
 {
 public:
-    PulsarSearch();
-    ~PulsarSearch();
-    void prepare(DataBuffer<float> &databuffer);
-    void run(DataBuffer<float> &databuffer);
+	PulsarSearch();
+	~PulsarSearch();
+	void prepare(DataBuffer<float> &databuffer);
+	void run(DataBuffer<float> &databuffer);
 public:
-    //components
-    Downsample downsample;
-    Equalize equalize;
-    BaseLine baseline;
-    RFI rfi;
-    RealTime::SubbandDedispersion dedisp;
+	//components
+	Downsample downsample;
+	Equalize equalize;
+	BaseLine baseline;
+	RFI rfi;
+	RealTime::SubbandDedispersion dedisp;
 
-    //downsample
-    int td;
-    int fd;
+	//downsample
+	int td;
+	int fd;
 
-    //baseline
-    float bswidth;
+	//baseline
+	float bswidth;
 
-    //rfi
-    vector<pair<double, double>> zaplist;
-    vector<vector<string>> rfilist;
-    double bandlimit;
-    double widthlimit;
-    double bandlimitKT;
-    float threKadaneT;
-    float threKadaneF;
-    float threMask;
-    string filltype;
+	//rfi
+	vector<pair<double, double>> zaplist;
+	vector<vector<string>> rfilist;
+	double bandlimit;
+	double widthlimit;
+	double bandlimitKT;
+	float threKadaneT;
+	float threKadaneF;
+	float threMask;
+	string filltype;
 
-    //dedispere
-    double dms;
-    double ddm;
-    long int ndm;
+	//dedispere
+	double dms;
+	double ddm;
+	long int ndm;
 
-    int ibeam;
-    string rootname;
-    int id;
+	int ibeam;
+	string rootname;
+	int id;
 
-    float outmean;
-    float outstd;
-    int outnbits;
+	float outmean;
+	float outstd;
+	int outnbits;
 
-    string format;
+	string format;
 
-    Filterbank fildedisp;
+	Filterbank fildedisp;
 };
 
 void plan(variables_map &vm, vector<PulsarSearch> &search);

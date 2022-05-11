@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 {
 	init_logging();
 
-    /* options */
+	/* options */
 	int verbose = 0;
 
 	options_description desc{"Options"};
@@ -60,13 +60,13 @@ int main(int argc, char *argv[])
 			("rootname,o", value<std::string>()->default_value("J0000-00"), "Output rootname")
 			("input,f", value<std::vector<std::string>>()->multitoken()->composing(), "Input files");
 
-    command_line_parser parser{argc, argv};
-    parser.options(desc).style(command_line_style::default_style | command_line_style::allow_short);
-    parsed_options parsed_options = parser.run();
+	command_line_parser parser{argc, argv};
+	parser.options(desc).style(command_line_style::default_style | command_line_style::allow_short);
+	parsed_options parsed_options = parser.run();
 
-    variables_map vm;
-    store(parsed_options, vm);
-    notify(vm);
+	variables_map vm;
+	store(parsed_options, vm);
+	notify(vm);
 
 	if (vm.count("help"))
 	{
@@ -113,23 +113,23 @@ int main(int argc, char *argv[])
 	}
 	bool noplot = vm.count("noplot");
 	bool noarch = vm.count("noarch");
-    string rootname = vm["rootname"].as<std::string>();
+	string rootname = vm["rootname"].as<std::string>();
 	string src_name = vm["srcname"].as<std::string>();
 	string s_telescope = vm["telescope"].as<std::string>();
-    num_threads = vm["threads"].as<unsigned int>();
-    std::vector<std::string> fnames = vm["input"].as<std::vector<std::string>>();
+	num_threads = vm["threads"].as<unsigned int>();
+	std::vector<std::string> fnames = vm["input"].as<std::vector<std::string>>();
 	double src_raj = vm["ra"].as<double>();
 	double src_dej = vm["dec"].as<double>();
 
 	Psrfits psf;
 	psf.filename = fnames[0];
-    psf.open();
-    psf.primary.load(psf.fptr);
-    psf.load_mode();
-    psf.subint.load_header(psf.fptr);
-    
-    int ibeam = vm["ibeam"].as<int>();
-    if (vm["ibeam"].defaulted())
+	psf.open();
+	psf.primary.load(psf.fptr);
+	psf.load_mode();
+	psf.subint.load_header(psf.fptr);
+	
+	int ibeam = vm["ibeam"].as<int>();
+	if (vm["ibeam"].defaulted())
 	{
 		if (strcmp(psf.primary.ibeam, "") != 0)
 			ibeam = stoi(psf.primary.ibeam);
@@ -166,18 +166,18 @@ int main(int argc, char *argv[])
 		}
 	}
 
-    psf.close();
+	psf.close();
 
 	/** rfi */
 	std::vector<std::pair<double, double>> zaplist;
-    if (vm.count("zap"))
+	if (vm.count("zap"))
 	{
-        std::vector<double> zap_opts = vm["zap"].as<std::vector<double>>();
-        for (auto opt=zap_opts.begin(); opt!=zap_opts.end(); ++opt)
-        {
-            zaplist.push_back(pair<double, double>(*(opt+0), *(opt+1)));
-            advance(opt, 1);
-        }
+		std::vector<double> zap_opts = vm["zap"].as<std::vector<double>>();
+		for (auto opt=zap_opts.begin(); opt!=zap_opts.end(); ++opt)
+		{
+			zaplist.push_back(pair<double, double>(*(opt+0), *(opt+1)));
+			advance(opt, 1);
+		}
 	}
 
 	/** form obsinfo*/
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 				if (isdigit(line[0]))
 				{
 					std::vector<std::string> parameters;
-            		boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
+					boost::split(parameters, line, boost::is_any_of("\t "), boost::token_compress_on);
 
 					std::vector<double> dmfa_dmffdot(6);
 					dmfa_dmffdot[0] = std::stod(parameters[1]);
@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
 
 	BOOST_LOG_TRIVIAL(info)<<"read "<<narch<<" archives...";
 
-    /* read archive */
+	/* read archive */
 	for (long int k=0; k<narch; k++)
 	{
 		if (!scales.empty()) scale = scales[k];
@@ -631,5 +631,5 @@ int main(int argc, char *argv[])
 
 	BOOST_LOG_TRIVIAL(info)<<"done!";
 
-    return 0;
+	return 0;
 }
