@@ -38,6 +38,7 @@
 #include "constants.h"
 #include "preprocesslite.h"
 #include "baseline.h"
+#include "patch.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -103,6 +104,9 @@ int main(int argc, const char *argv[])
 			("threKadaneF", value<float>()->default_value(7), "S/N threshold of KadaneF")
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
+			("threPatch", value<float>()->default_value(4), "IQR threshold of patch for bad data")
+			("widthPatch", value<float>()->default_value(0.4), "Width threshold (s) of patch for bad data")
+			("fillPatch", value<std::string>()->default_value("none"), "Fill the bad data by [none, mean, rand] in patch")
 			("fill", value<string>()->default_value("rand"), "Fill the zapped samples by [mean, rand]")
 			("render", "Using new folding algorithm (deprecated, used by default)")
 			("dspsr", "Using dspsr folding algorithm")
@@ -339,6 +343,13 @@ int main(int argc, const char *argv[])
 		nend = endfrac*ntotal;
 	}
 
+	Patch patch;
+	patch.filltype = vm["fillPatch"].as<string>();
+	patch.width = vm["widthPatch"].as<float>();
+	patch.threshold = vm["threPatch"].as<float>();
+	patch.prepare(databuf);
+	patch.close();
+
 	PreprocessLite prep;
 	prep.td = vm["td"].as<int>();
 	prep.fd = vm["fd"].as<int>();
@@ -535,20 +546,14 @@ int main(int argc, const char *argv[])
 				ntot++;
 
 				if (ntot%ndump == 0)
-				{
-					BOOST_LOG_TRIVIAL(debug)<<"preprocess...";
+				{					
+					DataBuffer<float> *data = patch.filter(databuf);
+					
+					data = prep.run(*data);
 
-					DataBuffer<float> *data = prep.run(databuf);
+					data = equalize.filter(*data);
 
-					BOOST_LOG_TRIVIAL(debug)<<"normalize...";
-
-					data = equalize.run(*data);
-
-					BOOST_LOG_TRIVIAL(debug)<<"remove baseline...";
-
-					data = baseline.run(*data);
-
-					BOOST_LOG_TRIVIAL(debug)<<"remove rfi...";
+					data = baseline.filter(*data);
 
 					data = rfi.zap(*data, zaplist);
 					if (rfi.isbusy) rfi.closable = false;

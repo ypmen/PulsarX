@@ -94,9 +94,9 @@ void PulsarSearch::run(DataBuffer<float> &databuffer)
 {
 	DataBuffer<float> *data = downsample.run(databuffer);
 	
-	data = equalize.run(*data);
+	data = equalize.filter(*data);
 
-	data = baseline.run(*data);
+	data = baseline.filter(*data);
 
 	data = rfi.zap(*data, zaplist);
 	if (rfi.isbusy) rfi.closable = false;

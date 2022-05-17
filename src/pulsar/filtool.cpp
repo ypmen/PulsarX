@@ -14,6 +14,7 @@
 
 #include "dedisperse.h"
 #include "databuffer.h"
+#include "patch.h"
 #include "preprocesslite.h"
 #include "filmaker.h"
 #include "filterbank.h"
@@ -60,6 +61,9 @@ int main(int argc, const char *argv[])
 			("threMask", value<float>()->default_value(10), "S/N threshold of Mask")
 			("threKadaneF", value<float>()->default_value(7), "S/N threshold of KadaneF")
 			("threKadaneT", value<float>()->default_value(7), "S/N threshold of KadaneT")
+			("threPatch", value<float>()->default_value(4), "IQR threshold of patch for bad data")
+			("widthPatch", value<float>()->default_value(0.4), "Width threshold (s) of patch for bad data")
+			("fillPatch", value<std::string>()->default_value("none"), "Fill the bad data by [none, mean, rand] in patch")
 			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
 			("source_name,s", value<std::string>()->default_value("J0000-00"), "Source name")
 			("rootname,o", value<std::string>()->default_value("J0000-00"), "Output rootname")
@@ -197,9 +201,16 @@ int main(int argc, const char *argv[])
 	long int ndump = (int)(vm["seglen"].as<float>()/tsamp)/td_lcm/2*td_lcm*2;
 
 	DataBuffer<float> databuf(ndump, nchans);
-	databuf.closable = true;
+	databuf.closable = false;
 	databuf.tsamp = tsamp;
 	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
+
+	Patch patch;
+	patch.filltype = vm["fillPatch"].as<string>();
+	patch.width = vm["widthPatch"].as<float>();
+	patch.threshold = vm["threPatch"].as<float>();
+	patch.prepare(databuf);
+	patch.close();
 
 	PreprocessLite prep;
 	prep.td = td;
@@ -282,7 +293,8 @@ int main(int argc, const char *argv[])
 
 				if (ntot%ndump == 0)
 				{
-					DataBuffer<float> *data = prep.run(databuf);
+					DataBuffer<float> *data = patch.filter(databuf);
+					data = prep.run(*data);
 
 					for (long int ioutfil=0; ioutfil<noutfil; ioutfil++)
 					{
@@ -291,7 +303,7 @@ int main(int argc, const char *argv[])
 					}
 
 					bcnt1 = 0;
-					databuf.open();
+					//databuf.open();
 				}
 
 				if (++ns_filn == fil[n].nsamples)
