@@ -9,7 +9,7 @@ RUN useradd -ms /bin/bash pulsarx
 ENV DEBIAN_FRONTEND noninteractive
 ENV HOME /home/pulsarx
 
-ENV LD_LIBRARY_PATH=$HOME/software/lib:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=$HOME/software/lib:/usr/local/lib:$LD_LIBRARY_PATH
 ENV YMW16_DIR=$HOME/software/PulsarX/src/ymw16
 ENV PATH=$PATH:$HOME/software/bin
 ENV OMP_NUM_THREADS=1
