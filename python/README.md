@@ -11,5 +11,5 @@
 ## Tools
 
 - ### orbit_solver (solve the binary orbit using Multinest)
-  usage: mpiexec -n 6 orbit_solver -y [examples/orbit_solve/yaml.conf](yaml.conf) \
+  usage: mpiexec -n 6 orbit_solver -y [yaml.conf](examples/orbit_solve/yaml.conf) \
   tips: if the elliptic orbit can't fit the data, you can try to fit with circular orbit first to narrow the search range of PB, and then run elliptic orbit search again.
