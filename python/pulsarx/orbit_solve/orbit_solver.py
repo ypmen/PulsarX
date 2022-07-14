@@ -10,7 +10,7 @@ import logging
 import argparse
 import pymultinest
 from scipy.optimize import fsolve
-import solve_orbit.orbit_utils as orbit_utils
+import orbit_utils
 import yaml
 import os
 
@@ -117,9 +117,10 @@ def plot(vpar):
 
 	mass_min = get_minimum_mass(fmass)
 
-	log.info(f"f0 = {f0}, asini_c = {asini_c}, Pb = {Pb}, T0 = {T0}, e = {e}, omega = {omega}, mass_function = {fmass}, mass_min={mass_min}")
+	log.info(f"binary parameters:\nF0\t{f0}\nA1\t{asini_c}\nPb\t{Pb}\nT0\t{T0}\nECC\t{e}\nOM\t{omega*180./np.pi}")
+	log.info(f"mass_function = {fmass}, mass_min={mass_min}")
 
-	vT_s = np.linspace(vT.min()-1, vT.max()+1, 1000)
+	vT_s = T0 + np.arange(1000)/1000. * Pb
 	vffdot_s = orbit_utils.compute_f0_f1(vT_s, f0, asini_c, Pb, T0, e, omega)
 	vf0_s, vf1_s = vffdot_s[:, 0], vffdot_s[:, 1]
  
@@ -142,20 +143,20 @@ def plot(vpar):
 		ax3 = plt.subplot(222)
 		ax4 = plt.subplot(224, sharex = ax3)
 	
-		ax1.plot(vT_s, vf0_s, 'r')
-		ax1.errorbar(vT, vf0, yerr=vf0err, fmt='bo')
+		ax1.plot((vT_s-T0)/Pb % 1., vf0_s, 'r')
+		ax1.errorbar((vT-T0)/Pb % 1., vf0, yerr=vf0err, fmt='bo')
 		ax1.set_ylabel(r'$f0 (Hz)$')
 		
-		ax2.errorbar(vT, deltaf0, yerr=vf0err, fmt='bo')
-		ax2.set_xlabel(r'T (day)')
+		ax2.errorbar((vT-T0)/Pb % 1., deltaf0, yerr=vf0err, fmt='bo')
+		ax2.set_xlabel(r'Mean anomaly (phase)')
 		ax2.set_ylabel(r'$\Delta f0 (Hz)$')
 	
-		ax3.plot(vT_s, vf1_s, 'r')
-		ax3.errorbar(vT, vf1, yerr=vf1err, fmt='bo')
+		ax3.plot((vT_s-T0)/Pb % 1., vf1_s, 'r')
+		ax3.errorbar((vT-T0)/Pb % 1., vf1, yerr=vf1err, fmt='bo')
 		ax3.set_ylabel(r'$f1 (Hz)$')
 		
-		ax4.errorbar(vT, deltaf1, yerr=vf1err, fmt='bo')
-		ax4.set_xlabel(r'T (day)')
+		ax4.errorbar((vT-T0)/Pb % 1., deltaf1, yerr=vf1err, fmt='bo')
+		ax4.set_xlabel(r'Mean anomaly (phase)')
 		ax4.set_ylabel(r'$\Delta f1 (Hz)$')
 	
 		ax2.set_title(rf"$\chi^2 = {np.mean(deltaf0*deltaf0/(vf0err*vf0err)):.2f}$")
@@ -166,12 +167,12 @@ def plot(vpar):
 		ax1 = plt.subplot(211)
 		ax2 = plt.subplot(212, sharex = ax1)
 	
-		ax1.plot(vT_s, vf0_s, 'r')
-		ax1.errorbar(vT, vf0, yerr=vf0err, fmt='bo')
+		ax1.plot((vT_s-T0)/Pb % 1., vf0_s, 'r')
+		ax1.errorbar((vT-T0)/Pb % 1., vf0, yerr=vf0err, fmt='bo')
 		ax1.set_ylabel(r'$f0 (Hz)$')
 		
-		ax2.errorbar(vT, deltaf0, yerr=vf0err, fmt='bo')
-		ax2.set_xlabel(r'T (day)')
+		ax2.errorbar((vT-T0)/Pb % 1., deltaf0, yerr=vf0err, fmt='bo')
+		ax2.set_xlabel(r'Mean anomaly (phase)')
 		ax2.set_ylabel(r'$\Delta f0 (Hz)$')
 	
 		ax2.set_title(rf"$\chi^2 = {np.mean(deltaf0*deltaf0/(vf0err*vf0err)):.2f}$")

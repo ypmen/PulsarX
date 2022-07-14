@@ -36,20 +36,44 @@ RUN apt-get install -y git \
     pgplot5 \
     wget \
     make \
+	cmake \
+	mpich \
     libx11-dev \
+	python3-pip \
     python3-dev \
     python3-distutils \
     python3-numpy \
+	python3-scipy \
     python3-matplotlib
 
 USER pulsarx
 
-#install sofa
 WORKDIR $HOME
 RUN mkdir software
+
+USER root
+
 WORKDIR $HOME/software
-RUN wget https://www.iausofa.org/2020_0721_C/sofa_c-20200721.tar.gz --no-check-certificate && \
-    tar -zxvf sofa_c-20200721.tar.gz
+RUN git clone https://github.com/JohannesBuchner/MultiNest.git
+WORKDIR $HOME/software/MultiNest/build
+RUN cmake -DCMAKE_PREFIX_PATH=$HOME/software ..
+RUN make && make install
+
+RUN pip3 install mpi4py
+RUN pip3 install pybind11
+RUN pip3 install pyyaml
+
+WORKDIR $HOME/software
+RUN git clone https://github.com/JohannesBuchner/PyMultiNest/
+WORKDIR $HOME/software/PyMultiNest
+RUN python3 setup.py install
+
+USER pulsarx
+
+#install sofa
+WORKDIR $HOME/software
+RUN wget https://www.iausofa.org/2020_0721_C/sofa_c-20200721.tar.gz --no-check-certificate
+RUN tar -zxvf sofa_c-20200721.tar.gz
 WORKDIR $HOME/software/sofa/20200721/c/src
 RUN make && make test
 
@@ -104,5 +128,12 @@ RUN ./bootstrap
 RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/sofa/20200721/c/src -L$HOME/software/lib" CPPFLAGS="-I$HOME/software/sofa/20200721/c/src -I$HOME/software/include"
 RUN make && make install
 RUN make clean
+
+USER root
+
+WORKDIR $HOME/software/PulsarX/python
+RUN python3 setup.py install
+
+USER pulsarx
 
 WORKDIR $HOME
