@@ -7,7 +7,7 @@ ext_modules = [
     Pybind11Extension(
         "orbit_utils",
         sources=["cpp/orbit_utils.cpp"],
-	extra_compile_args=["-O3"],
+	extra_compile_args=["-O3", "-mavx2"],
     ),
 ]
 
