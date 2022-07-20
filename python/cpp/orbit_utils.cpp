@@ -15,12 +15,14 @@
 
 #include <cmath>
 
-pybind11::array_t<double> compute_f0_f1(pybind11::array_t<double> &vT, double f0, double asini_c, double Pb, double T0, double e, double omega)
+pybind11::array_t<double> compute_f0_f1(pybind11::array_t<double> &vT, double f0, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {
 	auto array_T = vT.unchecked<1>();
 	size_t size = array_T.size();
 
 	double *vf0_f1 = new double [size * 2];
+
+	double sqrt_1_ee = std::sqrt(1. - e * e);
 
 	for (size_t i=0; i<size; i++)
 	{
@@ -43,13 +45,18 @@ pybind11::array_t<double> compute_f0_f1(pybind11::array_t<double> &vT, double f0
 
 		double sin_E = std::sin(E);
 		double cos_E = std::cos(E);
+
+		// calculate omega
+    	double omega = omega0 + omega_dot / (365.25 / Pb) * (norbit + forbit);
+
+		// calculate v/c, a/c
 		double sin_omega = std::sin(omega);
 		double cos_omega = std::cos(omega);
 
 		double temp = 2 * M_PI / (Pb * 86400. * (1. - e * cos_E));
 
-		double doppler_factor1 = asini_c * (-sin_omega * sin_E + std::sqrt(1. - e * e) * cos_omega * cos_E) * temp;
-		double doppler_factor2 = asini_c * (-e * sin_omega + sin_omega * cos_E + std::sqrt(1. - e * e) * cos_omega * sin_E) / (e * cos_E - 1.) * std::pow(temp, 2.);
+		double doppler_factor1 = -asini_c * (-sin_omega * sin_E + sqrt_1_ee * cos_omega * cos_E) * temp;
+		double doppler_factor2 = -asini_c * (-e * sin_omega + sin_omega * cos_E + sqrt_1_ee * cos_omega * sin_E) / (e * cos_E - 1.) * std::pow(temp, 2.);
 	
 		vf0_f1[i * 2 + 0] = f0 * (1. + doppler_factor1);
 		vf0_f1[i * 2 + 1] = f0 * doppler_factor2;
@@ -87,7 +94,7 @@ inline double haddd(__m256d a)
 	return ((double *)&a)[0] + ((double *)&a)[2];
 }
 
-pybind11::array_t<double> compute_f0_f1(pybind11::array_t<double> &vT, double f0, double asini_c, double Pb, double T0, double e, double omega)
+pybind11::array_t<double> compute_f0_f1(pybind11::array_t<double> &vT, double f0, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {
 	auto array_T = vT.unchecked<1>();
 	size_t size = array_T.size();
@@ -96,8 +103,10 @@ pybind11::array_t<double> compute_f0_f1(pybind11::array_t<double> &vT, double f0
 
 	__m256d avx_Pb = _mm256_set_pd(Pb, Pb, Pb, Pb);
 	__m256d avx_T0 = _mm256_set_pd(T0, T0, T0, T0);
-	__m256d avx_e = _mm256_set_pd(e, e, e, e);
-	__m256d avx_omega = _mm256_set_pd(omega, omega, omega, omega);
+	double sqrt_1_ee = std::sqrt(1. - e * e);
+
+	__m256d avx_zero = _mm256_set_pd(0., 0., 0., 0.);
+	__m256d avx_2_PI = _mm256_set_pd(2. * M_PI, 2. * M_PI, 2. * M_PI, 2. * M_PI);
 
 	__m256d avx_threshold = _mm256_set_pd(1e-14, 1e-14, 1e-14, 1e-14);
 
@@ -132,16 +141,20 @@ pybind11::array_t<double> compute_f0_f1(pybind11::array_t<double> &vT, double f0
 			avx_E += avx_dE;
 		}
 
-		// calculate v/c, a/c
 		__m256d avx_sin_E = _ZGVdN4v_sin(avx_E);
 		__m256d avx_cos_E = _ZGVdN4v_cos(avx_E);
+
+		// calculate omega
+    	__m256d avx_omega = omega0 + omega_dot / (365.25 / Pb) * (avx_norbit + avx_forbit);
+
+		// calculate v/c, a/c
 		__m256d avx_sin_omega = _ZGVdN4v_sin(avx_omega);
 		__m256d avx_cos_omega = _ZGVdN4v_cos(avx_omega);
 
 		__m256d avx_temp = 2 * M_PI / (Pb * 86400. * (1. - e * avx_cos_E));
 
-		__m256d avx_doppler_factor1 = asini_c * (-avx_sin_omega * avx_sin_E + _mm256_sqrt_pd(1. - avx_e * avx_e) * avx_cos_omega * avx_cos_E) * avx_temp;
-		__m256d avx_doppler_factor2 = asini_c * (-e * avx_sin_omega + avx_sin_omega * avx_cos_E + _mm256_sqrt_pd(1. - avx_e * avx_e) * avx_cos_omega * avx_sin_E) / (e * avx_cos_E - 1.) * _mm256_mul_pd(avx_temp, avx_temp);
+		__m256d avx_doppler_factor1 = -asini_c * (-avx_sin_omega * avx_sin_E + sqrt_1_ee * avx_cos_omega * avx_cos_E) * avx_temp;
+		__m256d avx_doppler_factor2 = -asini_c * (-e * avx_sin_omega + avx_sin_omega * avx_cos_E + sqrt_1_ee * avx_cos_omega * avx_sin_E) / (e * avx_cos_E - 1.) * _mm256_mul_pd(avx_temp, avx_temp);
 		
 		__m256d avx_f0 = f0 * (1. + avx_doppler_factor1);
 		__m256d avx_f1 = f0 * avx_doppler_factor2;
@@ -195,7 +208,7 @@ double get_chi2(pybind11::array_t<double> &data)
 		chi2 += tmp * tmp;
 	}
 
-	return -0.5 * chi2;
+	return chi2;
 }
 
 PYBIND11_MODULE(orbit_utils, m)

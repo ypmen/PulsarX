@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 solve the orbit based on the epoch-F0-F1
-to-do: 1) the error of parameter is not checked; 2) add F2 search; 3) add OMDOT search
+to-do: 1) add F2 search;
 """
 from email.policy import default
 import numpy as np
@@ -42,15 +42,22 @@ PB_min = np.log10(config['parameter_range']['PB_min'])
 PB_max = np.log10(config['parameter_range']['PB_max'])
 ECC_min = config['parameter_range']['ECC_min']
 ECC_max = config['parameter_range']['ECC_max']
+OMDOT_min = config['parameter_range']['OMDOT_min'] / 360.
+OMDOT_max = config['parameter_range']['OMDOT_max'] / 360.
 
 dat = np.loadtxt(config['data']['path'])
 
 vT = dat[:, 0]
+vT -= np.mean(vT)
 vf0 = dat[:, 1]
 vf0err = dat[:, 2]
 if config['data']['fit_F1']:
 	vf1 = dat[:, 3]
 	vf1err = dat[:, 4]
+
+def get_ffdot(T, f0, asini_c, Pb, T0, e, omega, omega_dot):
+	vffdot = orbit_utils.compute_f0_f1(T, f0, asini_c, Pb, T0, e, omega, omega_dot)
+	return vffdot[:, 0], vffdot[:, 1]
 
 def myprior(cube, ndim, nparams):
 	# f0
@@ -65,7 +72,10 @@ def myprior(cube, ndim, nparams):
 		# e
 		cube[4] = ECC_min + cube[4] * (ECC_max-ECC_min)
 		# omega
-		cube[5] = 0 + cube[5] * 2. * np.pi
+		cube[5] = 0. + cube[5] * 1.
+		if config['binary']['OMDOT']:
+			# omega dot
+			cube[6] = OMDOT_min + cube[6] * (OMDOT_max-OMDOT_min)
 
 def myloglike(cube, ndim, nparams):
 	return likli(cube)
@@ -77,20 +87,22 @@ def likli(vpar):
 	T0 = vpar[3] * Pb
 	e = 0.
 	omega = 0.
+	omega_dot = 0.
 	if not config['binary']['circular']:
 		e = vpar[4]
-		omega = vpar[5]
+		omega = vpar[5] * 2. * np.pi
+		if config['binary']['OMDOT']:
+			# omega dot
+			omega_dot = vpar[6] * 2. * np.pi
 	
-	vffdot = orbit_utils.compute_f0_f1(vT, f0, asini_c, Pb, T0, e, omega)
- 
-	vf0_s, vf1_s = vffdot[:, 0], vffdot[:, 1]
- 
+	vf0_s, vf1_s = get_ffdot(vT, f0, asini_c, Pb, T0, e, omega, omega_dot)
+  
 	chi2 = orbit_utils.get_chi2(np.concatenate([vf0, vf0_s, vf0err]).reshape(3, -1))
 
 	if config['data']['fit_F1']:
 		chi2 += orbit_utils.get_chi2(np.concatenate([vf1, vf1_s, vf1err]).reshape(3, -1))
   
-	return chi2
+	return 0.5 * (1. - len(vT)) * np.log(chi2)
 
 def get_mass_function(asini_c, Pb, e):
 	return Pb*86400.*(2.*np.pi/Pb/86400.*asini_c*const_c)**3/(2.*np.pi*const_G)*(1.-e*e)**1.5/const_solarmass
@@ -102,35 +114,99 @@ def get_minimum_mass(f):
 	root = fsolve(func, 10.)
 	return root[0]
 
-def plot(vpar):
+def format_val_err(val, err, style="plain", low=-5., high=6.):
+    if style == "sci" and (np.abs(val) < 10**low or np.abs(val) > 10**high):
+        n = 0
+        if val != 0.:
+            n = np.int(np.floor(np.log10(np.abs(val))))
+            val *= 10**(-n)
+            err *= 10**(-n)
+            
+            if err > 1.:
+                return f"{val:.0f}({err:.0f})e{n}"
+            else:
+                n = np.int(-np.floor(np.log10(err))+1)
+                return f"{val:.{n}f}({err*10**n:.0f})e{n}"
+        else:
+            n = np.int(np.floor(np.log10(np.abs(err))))
+            val *= 10**(-n)
+            err *= 10**(-n)
+            return f"{val:.0f}({err:.0f})e{n}"
+    else:
+        if err >= 1. or (val == 0. and err == 0.):
+            return f"{val:.0f}({err:.0f})"
+        else:
+            if (err < np.abs(val) and err != 0.) or val == 0.:
+                n = np.int(-np.floor(np.log10(err))+1)
+                return f"{val:.{n}f}({err*10**n:.0f})"
+            else:
+                n = np.int(-np.floor(np.log10(np.abs(err)))+1)
+                return f"{val:.{n}f}({err*10**n:.0f})"
+
+def circular_transform(samples):
+	phi_mean = np.arctan2(np.mean(np.sin(samples*2*np.pi)), np.mean(np.cos(samples*2*np.pi)))/(2*np.pi)
+	phimod = (samples-phi_mean)%1.
+	ind = phimod>0.5
+	phimod[ind] = phimod[ind]-1.
+	return phimod+phi_mean
+
+def plot(vpar, vpar_err):
 	f0 = vpar[0]
-	asini_c = 10**vpar[1]
-	Pb = 10**vpar[2]
-	T0 = vpar[3] * Pb
+	f0_err = vpar_err[0]
+	asini_c = vpar[1]
+	asini_c_err = vpar_err[1]
+	Pb = vpar[2]
+	Pb_err = vpar_err[2]
+	T0 = vpar[3]
+	T0_err = vpar_err[3]
 	e = 0.
+	e_err = 0.
 	omega = 0.
+	omega_err = 0.
+	omega_dot = 0.
+	omega_dot_err = 0.
 	if not config['binary']['circular']:
 		e = vpar[4]
+		e_err = vpar_err[4]
 		omega = vpar[5]
+		omega_err = vpar_err[5]
+		if config['binary']['OMDOT']:
+			# omega dot
+			omega_dot = vpar[6]
+			omega_dot_err = vpar_err[6]
+
+	s_f0 = format_val_err(f0, f0_err, style='sci')
+	s_asini_c = format_val_err(asini_c, asini_c_err, style='sci')
+	s_Pb = format_val_err(Pb, Pb_err, style='sci')
+	s_T0 = format_val_err(T0, T0_err, style='sci')
+	s_e = format_val_err(e, e_err, style='sci')
+	s_omega = "0(0)"
+	s_omega_dot = "0(0)"
+	if not config['binary']['circular']:
+		s_omega = format_val_err(omega/np.pi*180., omega_err/np.pi*180., style='sci')
+		if config['binary']['OMDOT']:
+			s_omega_dot = format_val_err(omega_dot/np.pi*180., omega_dot_err/np.pi*180., style='sci')
 
 	fmass = get_mass_function(asini_c, Pb, e)
 
 	mass_min = get_minimum_mass(fmass)
 
-	log.info(f"binary parameters:\nF0\t{f0}\nA1\t{asini_c}\nPb\t{Pb}\nT0\t{T0}\nECC\t{e}\nOM\t{omega*180./np.pi}")
+	log.info(f"binary parameters:\n" f"F0\t{f0}\t{f0_err}\n" f"A1\t{asini_c}\t{asini_c_err}\n" f"Pb\t{Pb}\t{Pb_err}\n" f"T0\t{T0}\t{T0_err}\n" f"ECC\t{e}\t{e_err}\n" f"OM\t{omega*180./np.pi}\t{omega_err*180./np.pi}\n" f"OMDOT\t{omega_dot*180./np.pi}\t{omega_dot_err*180./np.pi}")
 	log.info(f"mass_function = {fmass}, mass_min={mass_min}")
 
-	vT_s = T0 + np.arange(1000)/1000. * Pb
-	vffdot_s = orbit_utils.compute_f0_f1(vT_s, f0, asini_c, Pb, T0, e, omega)
-	vf0_s, vf1_s = vffdot_s[:, 0], vffdot_s[:, 1]
- 
-	vffdot_t = orbit_utils.compute_f0_f1(vT, f0, asini_c, Pb, T0, e, omega)
-	vf0_t, vf1_t = vffdot_t[:, 0], vffdot_t[:, 1]
+	if config['binary']['OMDOT'] or not config['plot']['mean_anomaly']:
+		vT_s = np.linspace(vT.min()-1., vT.max()+1., 1000)
+	else:
+		vT_s = T0 + np.arange(1000)/1000. * Pb
 
-	deltaf0 = vf0 - vf0_t		
+	vf0_s, vf1_s = get_ffdot(vT_s, f0, asini_c, Pb, T0, e, omega, omega_dot)
+ 
+	vf0_t, vf1_t = get_ffdot(vT, f0, asini_c, Pb, T0, e, omega, omega_dot)
+
+	deltaf0 = vf0 - vf0_t
  
 	fig = plt.figure(figsize=(12, 9))
-	fig.suptitle(rf"$\nu = {f0:.6f} (Hz), \frac{{a \sin i}}{{c}} = {asini_c:.2f} (ls), P_b = {Pb:.5f} (day), e = {e:2f}, f = {fmass:.8f} (M_\odot), M_{{min}} = {mass_min:.2f} (M_\odot)$", fontsize=14)
+	fig.suptitle(f"A1={s_asini_c}, PB={s_Pb}, T0={s_T0}, ECC={s_e}, OM={s_omega}, OMDOT={s_omega_dot}\n"f"F0={s_f0} (Hz), f={fmass:2f}, Massmin={mass_min:2f}", fontsize=14)
 
 	if config['data']['fit_F1']:
 		log.info(f"plot F0 and F1 fitting")
@@ -143,21 +219,38 @@ def plot(vpar):
 		ax3 = plt.subplot(222)
 		ax4 = plt.subplot(224, sharex = ax3)
 	
-		ax1.plot((vT_s-T0)/Pb % 1., vf0_s, 'r')
-		ax1.errorbar((vT-T0)/Pb % 1., vf0, yerr=vf0err, fmt='bo')
-		ax1.set_ylabel(r'$f0 (Hz)$')
+		if config['plot']['mean_anomaly'] and not config['binary']['OMDOT']:
+			ax1.plot((vT_s-T0)/Pb % 1., vf0_s, 'r')
+			ax1.errorbar((vT-T0)/Pb % 1., vf0, yerr=vf0err, fmt='bo')
+			ax1.set_ylabel(r'$f0 (Hz)$')
 		
-		ax2.errorbar((vT-T0)/Pb % 1., deltaf0, yerr=vf0err, fmt='bo')
-		ax2.set_xlabel(r'Mean anomaly (phase)')
-		ax2.set_ylabel(r'$\Delta f0 (Hz)$')
+			ax2.errorbar((vT-T0)/Pb % 1., deltaf0, yerr=vf0err, fmt='bo')
+			ax2.set_xlabel(r'Mean anomaly (phase)')
+			ax2.set_ylabel(r'$\Delta f0 (Hz)$')
 	
-		ax3.plot((vT_s-T0)/Pb % 1., vf1_s, 'r')
-		ax3.errorbar((vT-T0)/Pb % 1., vf1, yerr=vf1err, fmt='bo')
-		ax3.set_ylabel(r'$f1 (Hz)$')
+			ax3.plot((vT_s-T0)/Pb % 1., vf1_s, 'r')
+			ax3.errorbar((vT-T0)/Pb % 1., vf1, yerr=vf1err, fmt='bo')
+			ax3.set_ylabel(r'$f1 (Hz)$')
 		
-		ax4.errorbar((vT-T0)/Pb % 1., deltaf1, yerr=vf1err, fmt='bo')
-		ax4.set_xlabel(r'Mean anomaly (phase)')
-		ax4.set_ylabel(r'$\Delta f1 (Hz)$')
+			ax4.errorbar((vT-T0)/Pb % 1., deltaf1, yerr=vf1err, fmt='bo')
+			ax4.set_xlabel(r'Mean anomaly (phase)')
+			ax4.set_ylabel(r'$\Delta f1 (Hz)$')
+		else:
+			ax1.plot(vT_s, vf0_s, 'r')
+			ax1.errorbar(vT, vf0, yerr=vf0err, fmt='bo')
+			ax1.set_ylabel(r'$f0 (Hz)$')
+		
+			ax2.errorbar(vT, deltaf0, yerr=vf0err, fmt='bo')
+			ax2.set_xlabel(r'T (day)')
+			ax2.set_ylabel(r'$\Delta f0 (Hz)$')
+	
+			ax3.plot(vT_s, vf1_s, 'r')
+			ax3.errorbar(vT, vf1, yerr=vf1err, fmt='bo')
+			ax3.set_ylabel(r'$f1 (Hz)$')
+		
+			ax4.errorbar(vT, deltaf1, yerr=vf1err, fmt='bo')
+			ax4.set_xlabel(r'T (day)')
+			ax4.set_ylabel(r'$\Delta f1 (Hz)$')
 	
 		ax2.set_title(rf"$\chi^2 = {np.mean(deltaf0*deltaf0/(vf0err*vf0err)):.2f}$")
 		ax4.set_title(rf"$\chi^2 = {np.mean(deltaf1*deltaf1/(vf1err*vf1err)):.2f}$")
@@ -167,13 +260,22 @@ def plot(vpar):
 		ax1 = plt.subplot(211)
 		ax2 = plt.subplot(212, sharex = ax1)
 	
-		ax1.plot((vT_s-T0)/Pb % 1., vf0_s, 'r')
-		ax1.errorbar((vT-T0)/Pb % 1., vf0, yerr=vf0err, fmt='bo')
-		ax1.set_ylabel(r'$f0 (Hz)$')
-		
-		ax2.errorbar((vT-T0)/Pb % 1., deltaf0, yerr=vf0err, fmt='bo')
-		ax2.set_xlabel(r'Mean anomaly (phase)')
-		ax2.set_ylabel(r'$\Delta f0 (Hz)$')
+		if config['plot']['mean_anomaly'] and not config['binary']['OMDOT']:
+			ax1.plot((vT_s-T0)/Pb % 1., vf0_s, 'r')
+			ax1.errorbar((vT-T0)/Pb % 1., vf0, yerr=vf0err, fmt='bo')
+			ax1.set_ylabel(r'$f0 (Hz)$')
+			
+			ax2.errorbar((vT-T0)/Pb % 1., deltaf0, yerr=vf0err, fmt='bo')
+			ax2.set_xlabel(r'Mean anomaly (phase)')
+			ax2.set_ylabel(r'$\Delta f0 (Hz)$')
+		else:
+			ax1.plot(vT_s, vf0_s, 'r')
+			ax1.errorbar(vT, vf0, yerr=vf0err, fmt='bo')
+			ax1.set_ylabel(r'$f0 (Hz)$')
+			
+			ax2.errorbar(vT, deltaf0, yerr=vf0err, fmt='bo')
+			ax2.set_xlabel(r'T (day)')
+			ax2.set_ylabel(r'$\Delta f0 (Hz)$')
 	
 		ax2.set_title(rf"$\chi^2 = {np.mean(deltaf0*deltaf0/(vf0err*vf0err)):.2f}$")
 
@@ -193,7 +295,10 @@ def main():
 	if not config['plot']['plot_only']:
 		ndim = 4
 		if not config['binary']['circular']:
-			ndim = 6
+			if config['binary']['OMDOT']:
+				ndim = 7
+			else:
+				ndim = 6
 		pymultinest.run(myloglike, myprior, ndim,
 						n_params=None,
 						n_clustering_params=None,
@@ -219,10 +324,23 @@ def main():
 						init_MPI=False,
 						dump_callback=None)
 
-	samples = np.loadtxt(out_dir+'/'+rootname+'.txt')
-	id = np.argmax(-samples[:, 1])
-	vpar0 = samples[id, 2:]
-	plot(vpar0)
+	samples = np.loadtxt(out_dir+'/'+rootname+'post_equal_weights.dat')
+	samples[:, 1] = 10**samples[:, 1]
+	samples[:, 2] = 10**samples[:, 2]
+	samples[:, 3] = circular_transform(samples[:, 3])
+	ilik = 5
+	if not config['binary']['circular']:
+		ilik += 1
+		samples[:, 5] = circular_transform(samples[:, 5]) * 2. * np.pi
+		if config['binary']['OMDOT']:
+			ilik += 1
+			samples[:, 6] = samples[:, 6] * 2. * np.pi
+	id = np.argmax(samples[:, ilik])
+	vpar0 = samples[id, :-1]
+	samples[:, 3] *= vpar0[2]
+	vpar0 = samples[id, :-1]
+	vpar0_err = np.std(samples[:, :-1], 0)
+	plot(vpar0, vpar0_err)
 
 if __name__ == "__main__":
 	main()
