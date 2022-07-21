@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """
 solve the orbit based on the epoch-F0-F1
-to-do: 1) add F2 search;
 """
 from email.policy import default
 import numpy as np
@@ -340,6 +339,7 @@ def main():
 	samples[:, 3] *= vpar0[2]
 	vpar0 = samples[id, :-1]
 	vpar0_err = np.std(samples[:, :-1], 0)
+
 	plot(vpar0, vpar0_err)
 
 if __name__ == "__main__":
