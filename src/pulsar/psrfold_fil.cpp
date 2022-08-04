@@ -80,6 +80,7 @@ int main(int argc, const char *argv[])
 			("noplot", "Do not generate figures")
 			("noarch", "Do not generate archives")
 			("parfile", value<vector<string>>(), "Input pulsar par files")
+			("t2pred", value<vector<string>>(), "Input t2pred files")
 			("candfile", value<string>(), "Input cand file")
 			("template", value<string>(), "Input fold template file")
 			("nbin,b", value<int>()->default_value(32), "Number of bins per period")
@@ -376,7 +377,19 @@ int main(int argc, const char *argv[])
 	produce(vm, dmsegs, folder);
 
 	/** generate tempo2 predictor file */
-	if (vm.count("parfile"))
+	if (vm.count("t2pred"))
+	{
+		BOOST_LOG_TRIVIAL(info)<<"read tempo2 predictor file";
+
+		std::vector<std::string> t2preds = vm["t2pred"].as<std::vector<std::string>>();
+		
+		for (long int k=0; k<folder.size(); k++)
+		{
+			folder[k].use_t2pred = true;
+			folder[k].pred.read_t2pred(t2preds[k]);
+		}
+	}
+	else if (vm.count("parfile"))
 	{
 		BOOST_LOG_TRIVIAL(info)<<"generate tempo2 predictor file";
 
@@ -863,6 +876,10 @@ int main(int argc, const char *argv[])
 	string s_pepoch = ss_pepoch.str();
 	obsinfo["Pepoch"] = s_pepoch;
 
+	stringstream ss_pepoch_in_candfile;
+	ss_pepoch_in_candfile << setprecision(13) << fixed << folder[0].ref_epoch.to_day();
+	string s_pepoch_in_candfile = ss_pepoch_in_candfile.str();
+
 	BOOST_LOG_TRIVIAL(info)<<"write information to cand file...";
 
 	std::ofstream outfile;
@@ -878,7 +895,7 @@ int main(int argc, const char *argv[])
 	outfile<<"#GL "<<obsinfo["GL"]<<endl;
 	outfile<<"#GB "<<obsinfo["GB"]<<endl;
 	outfile<<"#MaxDM_YMW16 "<<obsinfo["MaxDM_YMW16"]<<endl;
-	outfile<<"#Pepoch "<<obsinfo["Pepoch"]<<endl;
+	outfile<<"#Pepoch "<<s_pepoch_in_candfile<<endl;
 	outfile<<"#id       dm_old      dm_new      dm_err		dist_ymw16     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
 
 	for (long int k=0; k<ncand; k++)
@@ -904,6 +921,8 @@ int main(int argc, const char *argv[])
 			writer.run(folder[k], gridsearch[k]);
 		}
 
+		double f1_in_candfile = gridsearch[k].f1;
+
 		gridsearch[k].get_snr_width();
 		gridsearch[k].get_error(obsinfo);
 
@@ -927,7 +946,7 @@ int main(int argc, const char *argv[])
 		outfile<<setprecision(15)<<gridsearch[k].f0<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_f0<<"\t\t";
 		outfile<<setprecision(15)<<folder[k].f1<<"\t\t";
-		outfile<<setprecision(15)<<gridsearch[k].f1<<"\t\t";
+		outfile<<setprecision(15)<<f1_in_candfile<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_f1<<"\t\t";
 		outfile<<setprecision(15)<<-folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].acc<<"\t\t";
