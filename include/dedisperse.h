@@ -15,6 +15,7 @@
 #endif
 
 #include "utils.h"
+#include "logging.h"
 
 //#define FIFO_NOT_FIXED 1
 #define RADIUS 4
