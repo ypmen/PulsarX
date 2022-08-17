@@ -47,6 +47,7 @@ OMDOT_max = config['parameter_range']['OMDOT_max'] / 360.
 dat = np.loadtxt(config['data']['path'])
 
 vT = dat[:, 0]
+T_c = np.mean(vT)
 vT -= np.mean(vT)
 vf0 = dat[:, 1]
 vf0err = dat[:, 2]
@@ -114,33 +115,33 @@ def get_minimum_mass(f):
 	return root[0]
 
 def format_val_err(val, err, style="plain", low=-5., high=6.):
-    if style == "sci" and (np.abs(val) < 10**low or np.abs(val) > 10**high):
-        n = 0
-        if val != 0.:
-            n = np.int(np.floor(np.log10(np.abs(val))))
-            val *= 10**(-n)
-            err *= 10**(-n)
-            
-            if err > 1.:
-                return f"{val:.0f}({err:.0f})e{n}"
-            else:
-                n = np.int(-np.floor(np.log10(err))+1)
-                return f"{val:.{n}f}({err*10**n:.0f})e{n}"
-        else:
-            n = np.int(np.floor(np.log10(np.abs(err))))
-            val *= 10**(-n)
-            err *= 10**(-n)
-            return f"{val:.0f}({err:.0f})e{n}"
-    else:
-        if err >= 1. or (val == 0. and err == 0.):
-            return f"{val:.0f}({err:.0f})"
-        else:
-            if (err < np.abs(val) and err != 0.) or val == 0.:
-                n = np.int(-np.floor(np.log10(err))+1)
-                return f"{val:.{n}f}({err*10**n:.0f})"
-            else:
-                n = np.int(-np.floor(np.log10(np.abs(err)))+1)
-                return f"{val:.{n}f}({err*10**n:.0f})"
+	if style == "sci" and (np.abs(val) < 10**low or np.abs(val) > 10**high):
+		n = 0
+		if val != 0.:
+			n = np.int(np.floor(np.log10(np.abs(val))))
+			val *= 10**(-n)
+			err *= 10**(-n)
+			
+			if err > 1.:
+				return f"{val:.0f}({err:.0f})e{n}"
+			else:
+				n = np.int(-np.floor(np.log10(err))+1)
+				return f"{val:.{n}f}({err*10**n:.0f})e{n}"
+		else:
+			n = np.int(np.floor(np.log10(np.abs(err))))
+			val *= 10**(-n)
+			err *= 10**(-n)
+			return f"{val:.0f}({err:.0f})e{n}"
+	else:
+		if err >= 1. or (val == 0. and err == 0.):
+			return f"{val:.0f}({err:.0f})"
+		else:
+			if (err < np.abs(val) and err != 0.) or val == 0.:
+				n = np.int(-np.floor(np.log10(err))+1)
+				return f"{val:.{n}f}({err*10**n:.0f})"
+			else:
+				n = np.int(-np.floor(np.log10(np.abs(err)))+1)
+				return f"{val:.{n}f}({err*10**n:.0f})"
 
 def circular_transform(samples):
 	phi_mean = np.arctan2(np.mean(np.sin(samples*2*np.pi)), np.mean(np.cos(samples*2*np.pi)))/(2*np.pi)
@@ -177,11 +178,12 @@ def plot(vpar, vpar_err):
 	s_f0 = format_val_err(f0, f0_err, style='sci')
 	s_asini_c = format_val_err(asini_c, asini_c_err, style='sci')
 	s_Pb = format_val_err(Pb, Pb_err, style='sci')
-	s_T0 = format_val_err(T0, T0_err, style='sci')
-	s_e = format_val_err(e, e_err, style='sci')
+	s_T0 = format_val_err(T0 + T_c, T0_err, style='sci')
+	s_e = "0(0)"
 	s_omega = "0(0)"
 	s_omega_dot = "0(0)"
 	if not config['binary']['circular']:
+		s_e = format_val_err(e, e_err, style='sci')
 		s_omega = format_val_err(omega/np.pi*180., omega_err/np.pi*180., style='sci')
 		if config['binary']['OMDOT']:
 			s_omega_dot = format_val_err(omega_dot/np.pi*180., omega_dot_err/np.pi*180., style='sci')
@@ -190,7 +192,7 @@ def plot(vpar, vpar_err):
 
 	mass_min = get_minimum_mass(fmass)
 
-	log.info(f"binary parameters:\n" f"F0\t{f0}\t{f0_err}\n" f"A1\t{asini_c}\t{asini_c_err}\n" f"Pb\t{Pb}\t{Pb_err}\n" f"T0\t{T0}\t{T0_err}\n" f"ECC\t{e}\t{e_err}\n" f"OM\t{omega*180./np.pi}\t{omega_err*180./np.pi}\n" f"OMDOT\t{omega_dot*180./np.pi}\t{omega_dot_err*180./np.pi}")
+	log.info(f"binary parameters:\n" f"F0\t{f0}\t{f0_err}\n" f"A1\t{asini_c}\t{asini_c_err}\n" f"Pb\t{Pb}\t{Pb_err}\n" f"T0\t{T0 + T_c}\t{T0_err}\n" f"ECC\t{e}\t{e_err}\n" f"OM\t{omega*180./np.pi}\t{omega_err*180./np.pi}\n" f"OMDOT\t{omega_dot*180./np.pi}\t{omega_dot_err*180./np.pi}")
 	log.info(f"mass_function = {fmass}, mass_min={mass_min}")
 
 	if config['binary']['OMDOT'] or not config['plot']['mean_anomaly']:
@@ -327,7 +329,7 @@ def main():
 	samples[:, 1] = 10**samples[:, 1]
 	samples[:, 2] = 10**samples[:, 2]
 	samples[:, 3] = circular_transform(samples[:, 3])
-	ilik = 5
+	ilik = 4
 	if not config['binary']['circular']:
 		ilik += 1
 		samples[:, 5] = circular_transform(samples[:, 5]) * 2. * np.pi
