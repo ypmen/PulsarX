@@ -20,6 +20,14 @@ TreeDedispersion::TreeDedispersion()
 	dms = 0.;
 	ddm = 0.;
 
+	if_alloc_buffer = true;
+	if_alloc_bufferT = true;
+	if_alloc_dedata = true;
+
+	ptr_dedata = NULL;
+	ptr_buffer = NULL;
+	ptr_bufferT = NULL;
+
 	ready = false;
 	fmax = 0.;
 	fmin = 0.;
@@ -81,9 +89,13 @@ void TreeDedispersion::prepare(DataBuffer<float> &databuffer)
 
 	nsamples = ndump + maxdelayn;
 
-	dedata.resize(nchans * nsamples, 0.);
-	bufferT.resize(nchans * nsamples, 0.);
-	buffer.resize(nsamples * nchans);
+	if (if_alloc_dedata)
+		dedata.resize(nchans * nsamples, 0.);
+	if (if_alloc_bufferT)
+		bufferT.resize(nchans * nsamples, 0.);
+	if (if_alloc_buffer)
+		buffer.resize(nsamples * nchans, 0.);
+	
 	cache0.resize(nsamples, 0.);
 	cache1.resize(nsamples, 0.);
 
@@ -222,6 +234,12 @@ void TreeDedispersion::update_map()
 
 void TreeDedispersion::transform(size_t depth, size_t ichan)
 {
+#ifndef __AVX2__
+	std::vector<float> *temp = bufferT.empty() ? ptr_bufferT : &bufferT;
+#else
+	std::vector<float, boost::alignment::aligned_allocator<float, 32>> *temp = bufferT.empty() ? ptr_bufferT : &bufferT;
+#endif
+
 	if (depth == maxdepth)
 	{
 		return;
@@ -238,20 +256,20 @@ void TreeDedispersion::transform(size_t depth, size_t ichan)
 			if (hit[depth * nchans + ichan * (ndm * 2) + idm])
 			{
 				size_t delayn0 = delayn[depth * nchans + ichan * (ndm * 2) + idm];
-				std::rotate_copy(bufferT.begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples, bufferT.begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples + delayn0, bufferT.begin() + (2 * ichan + 1) * ndm * nsamples + (idm + 1) * nsamples, cache0.begin());
+				std::rotate_copy(temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples + delayn0, temp->begin() + (2 * ichan + 1) * ndm * nsamples + (idm + 1) * nsamples, cache0.begin());
 			}
 
 			if (hit[depth * nchans + ichan * (ndm * 2) + ndm + idm])
 			{
 				size_t delayn1 = delayn[depth * nchans + ichan * (ndm * 2) + ndm + idm];
-				std::rotate_copy(bufferT.begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples, bufferT.begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples + delayn1, bufferT.begin() + (2 * ichan + 1) * ndm * nsamples + (idm + 1) * nsamples, cache1.begin());
+				std::rotate_copy(temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples + delayn1, temp->begin() + (2 * ichan + 1) * ndm * nsamples + (idm + 1) * nsamples, cache1.begin());
 			}
 
 			if (hit[depth * nchans + ichan * (ndm * 2) + ndm + idm])
 			{
 				for (size_t i=0; i<nsamples; i++)
 				{
-					bufferT[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] = bufferT[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] + cache1[i];
+					(*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] + cache1[i];
 				}
 			}
 
@@ -259,7 +277,7 @@ void TreeDedispersion::transform(size_t depth, size_t ichan)
 			{
 				for (size_t i=0; i<nsamples; i++)
 				{
-					bufferT[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] = bufferT[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] + cache0[i];
+					(*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] + cache0[i];
 				}
 			}
 		}
@@ -271,20 +289,20 @@ void TreeDedispersion::transform(size_t depth, size_t ichan)
 			if (hit[depth * nchans + ichan * (ndm * 2) + idm])
 			{
 				size_t delayn0 = delayn[depth * nchans + ichan * (ndm * 2) + idm];
-				std::rotate_copy(bufferT.begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples, bufferT.begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples + delayn0, bufferT.begin() + (2 * ichan + 0) * ndm * nsamples + (idm + 1) * nsamples, cache0.begin());
+				std::rotate_copy(temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples + delayn0, temp->begin() + (2 * ichan + 0) * ndm * nsamples + (idm + 1) * nsamples, cache0.begin());
 			}
 
 			if (hit[depth * nchans + ichan * (ndm * 2) + ndm + idm])
 			{
 				size_t delayn1 = delayn[depth * nchans + ichan * (ndm * 2) + ndm + idm];
-				std::rotate_copy(bufferT.begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples, bufferT.begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples + delayn1, bufferT.begin() + (2 * ichan + 0) * ndm * nsamples + (idm + 1) * nsamples, cache1.begin());
+				std::rotate_copy(temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples + delayn1, temp->begin() + (2 * ichan + 0) * ndm * nsamples + (idm + 1) * nsamples, cache1.begin());
 			}
 
 			if (hit[depth * nchans + ichan * (ndm * 2) + idm])
 			{
 				for (size_t i=0; i<nsamples; i++)
 				{
-					bufferT[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] = bufferT[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] + cache0[i];
+					(*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] + cache0[i];
 				}
 			}
 
@@ -292,7 +310,7 @@ void TreeDedispersion::transform(size_t depth, size_t ichan)
 			{
 				for (size_t i=0; i<nsamples; i++)
 				{
-					bufferT[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] = bufferT[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] + cache1[i];
+					(*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] + cache1[i];
 				}
 			}
 		}
@@ -331,8 +349,24 @@ void TreeDedispersion::run(DataBuffer<float> &databuffer)
 	counter += ndump;
 }
 
+void TreeDedispersion::run()
+{
+	transpose_pad<float>(ptr_bufferT->data(), ptr_buffer->data(), nsamples, nchans);
+
+	for (size_t j=0; j<nsubband; j++)
+	{
+		transform(depthsub, j);
+	}
+
+	transpose_pad<float>(ptr_dedata->data(), ptr_bufferT->data(), nsubband, nchans / nsubband * nsamples);
+
+	counter += ndump;
+}
+
 void TreeDedispersion::get_subdata(double dm, DataBuffer<float> &subdata)
 {
+	std::vector<float> *temp = dedata.empty() ? ptr_dedata : &dedata;
+
 	subdata.resize(ndump, nsubband);
 	subdata.tsamp = tsamp;
 	subdata.frequencies = frequencies_sub;
@@ -342,7 +376,7 @@ void TreeDedispersion::get_subdata(double dm, DataBuffer<float> &subdata)
 
 	size_t k = mapsub[dmid];
 
-	std::copy(dedata.begin() + k * nsamples * nsubband, dedata.begin() + (k * nsamples + ndump) * nsubband, subdata.buffer.begin());
+	std::copy(temp->begin() + k * nsamples * nsubband, temp->begin() + (k * nsamples + ndump) * nsubband, subdata.buffer.begin());
 
 	subdata.counter += ndump;
 }
@@ -354,6 +388,8 @@ DedispersionX::DedispersionX()
 	nsubband = 0;
 	dm_boost = 0.;
 	ddm_init = 0.;
+
+	nchans = 0;
 }
 
 DedispersionX::~DedispersionX()
@@ -364,7 +400,7 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 {
 	double tsamp = databuffer.tsamp;
 	std::vector<double> frequencies = databuffer.frequencies;
-	size_t nchans = databuffer.nchans;
+	nchans = databuffer.nchans;
 
 	assert((nchans & (nchans - 1)) == 0);
 
@@ -384,6 +420,8 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 
 	double maxdm = dmlist_sort.back();
 
+	size_t nsamples0 = 0;
+
 	DataBuffer<float> *d = databuffer.get();
 	size_t ds = 1;
 	do
@@ -392,11 +430,19 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 
 		Downsample downsample(ds, 1);
 		downsample.prepare(*d);
+		if (ds == 1)
+		{
+			downsample.closable = true;
+			downsample.close();
+		}
 
 		TreeDedispersion treededispersion;
 		treededispersion.nsubband = nsubband;
 		treededispersion.dms = dms;
 		treededispersion.ddm = ddm;
+		treededispersion.if_alloc_buffer = false;
+		treededispersion.if_alloc_bufferT = false;
+		treededispersion.if_alloc_dedata = false;
 
 		if (dmlist_sort.front() < dme)
 		{
@@ -419,6 +465,11 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 			hit.push_back(false);
 		}
 
+		if (ds == 1)
+		{
+			nsamples0 = treededispersion.get_nsamples() > nsamples0 ? treededispersion.get_nsamples() : nsamples0;
+		}
+
 		downsamples.push_back(downsample);
 		treededispersions.push_back(treededispersion);
 		
@@ -433,6 +484,38 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 		}
 	} while (dms <= maxdm);
 
+	// allocate memory for treededispersions
+	buffers.resize(treededispersions.size());
+	bufferTs.resize(treededispersions.size());
+	dedatas.resize(treededispersions.size());
+	
+	for (size_t k=0; k<treededispersions.size(); k++)
+	{
+		if (downsamples[k].td == 1 && downsamples[k].fd == 1)
+		{
+			if (buffers[0].empty() && bufferTs[0].empty() && dedatas[0].empty())
+			{
+				buffers[0].resize(nsamples0 * nchans, 0.);
+				bufferTs[0].resize(nchans * nsamples0, 0.);
+				dedatas[0].resize(nchans * nsamples0, 0.);
+			}
+			treededispersions[k].update_nsamples(nsamples0);
+			treededispersions[k].ptr_buffer = &buffers[0];
+			treededispersions[k].ptr_dedata = &dedatas[0];
+			treededispersions[k].ptr_bufferT = &bufferTs[0];
+		}
+		else
+		{
+			buffers[k].resize(treededispersions[k].get_nsamples() * treededispersions[k].get_nchans(), 0.);
+			bufferTs[k].resize(treededispersions[k].get_nchans() * treededispersions[k].get_nsamples(), 0.);
+			dedatas[k].resize(treededispersions[k].get_nchans() * treededispersions[k].get_nsamples(), 0.);
+
+			treededispersions[k].ptr_buffer = &buffers[k];
+			treededispersions[k].ptr_dedata = &dedatas[k];
+			treededispersions[k].ptr_bufferT = &bufferTs[k];
+		}
+	}
+
 	std::string hit_str;
 	for (auto h=hit.begin(); h!=hit.end(); ++h) hit_str += *h ? "1 " : "0 ";
 	std::vector<std::pair<std::string, std::string>> meta = {
@@ -444,6 +527,114 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 			{"dm range hit", hit_str},
 		};
 	format_logging("Dedispersion Outline", meta);
+}
+
+void DedispersionX::prerun(DataBuffer<float> &databuffer)
+{
+	BOOST_LOG_TRIVIAL(debug)<<"perform data buffering";
+
+	bool closable_bak = databuffer.closable;
+
+	databuffer.closable = false;
+
+	DataBuffer<float> *d = databuffer.get();
+	for (size_t k=0; k<downsamples.size(); k++)
+	{
+		d = downsamples[k].run(*d);
+	}
+
+	bool enable = true;
+	for (size_t k=0; k<downsamples.size(); k++)
+	{
+		if (treededispersions[k].is_ready())
+		{
+			if (downsamples[k].td == 1 && downsamples[k].fd == 1)
+			{
+				if (enable)
+				{
+					std::vector<float> &buffer = buffers[0];
+					size_t nsamples = buffer.size() / nchans;
+					size_t ndump = treededispersions[k].get_ndump();
+					size_t nspace = nsamples - ndump;
+
+					for (size_t i=0; i<ndump; i++)
+					{
+						for (size_t j=0; j<nchans; j++)
+						{
+							buffer[(i + nspace) * nchans + j] = databuffer.buffer[i * nchans + j];
+						}
+					}
+
+					enable = false;
+				}
+			}
+			else
+			{
+				std::vector<float> &buffer = buffers[k];
+				size_t nsamples = buffer.size() / nchans;
+				size_t ndump = treededispersions[k].get_ndump();
+				size_t nspace = nsamples - ndump;
+
+				for (size_t i=0; i<ndump; i++)
+				{
+					for (size_t j=0; j<nchans; j++)
+					{
+						buffer[(i + nspace) * nchans + j] = downsamples[k].buffer[i * nchans + j];
+					}
+				}
+			}
+		}
+	}
+
+	databuffer.closable = closable_bak;
+
+	BOOST_LOG_TRIVIAL(debug)<<"finished";
+}
+
+void DedispersionX::postrun(DataBuffer<float> &databuffer)
+{
+	bool enable = true;
+	for (size_t k=0; k<downsamples.size(); k++)
+	{
+		if (treededispersions[k].is_ready())
+		{
+			if (downsamples[k].td == 1 && downsamples[k].fd == 1)
+			{
+				if (enable)
+				{
+					std::vector<float> &buffer = buffers[0];
+					size_t nsamples = buffer.size() / nchans;
+					size_t ndump = treededispersions[k].get_ndump();
+					size_t nspace = nsamples - ndump;
+					for (size_t i=0; i<nspace; i++)
+					{
+						for (size_t j=0; j<nchans; j++)
+						{
+							buffer[i * nchans + j] = buffer[(i + ndump) * nchans + j];
+						}
+					}
+
+					enable = false;
+				}
+			}
+			else
+			{
+				std::vector<float> &buffer = buffers[k];
+				size_t nsamples = buffer.size() / nchans;
+				size_t ndump = treededispersions[k].get_ndump();
+				size_t nspace = nsamples - ndump;
+				for (size_t i=0; i<nspace; i++)
+				{
+					for (size_t j=0; j<nchans; j++)
+					{
+						buffer[i * nchans + j] = buffer[(i + ndump) * nchans + j];
+					}
+				}
+			}
+		}
+	}
+
+	if (databuffer.closable) databuffer.close();
 }
 
 void DedispersionX::run(DataBuffer<float> &databuffer)
@@ -468,15 +659,31 @@ void DedispersionX::run(DataBuffer<float> &databuffer)
 		if (treededispersions[k].is_ready())
 		{
 			if (downsamples[k].td == 1 && downsamples[k].fd == 1)
+			{
 				treededispersions[k].run(databuffer);
+			}
 			else
+			{
 				treededispersions[k].run(downsamples[k]);
+			}
 		}
 	}
 
 	databuffer.closable = closable_bak;
 
 	if (databuffer.closable) databuffer.close();
+
+	BOOST_LOG_TRIVIAL(debug)<<"finished";
+}
+
+void DedispersionX::run(size_t k)
+{
+	BOOST_LOG_TRIVIAL(debug)<<"perform dedispersion";
+
+	if (treededispersions[k].is_ready())
+	{
+		treededispersions[k].run();
+	}
 
 	BOOST_LOG_TRIVIAL(debug)<<"finished";
 }

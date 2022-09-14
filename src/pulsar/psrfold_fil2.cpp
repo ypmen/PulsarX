@@ -39,6 +39,8 @@
 #include "preprocesslite.h"
 #include "baseline.h"
 #include "patch.h"
+#include "psrfitsreader.h"
+#include "filterbankreader.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -93,8 +95,8 @@ int main(int argc, const char *argv[])
 			("telescope", value<string>()->default_value("Fake"), "Telescope name")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
 			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
-			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
-			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
+			("ra", value<string>()->default_value("00:00:00"), "RA (hhmmss.s)")
+			("dec", value<string>()->default_value("00:00:00"), "DEC (ddmmss.s)")
 			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
 			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
 			("bandcorr", value<double>()->default_value(10), "CLFD correlation bandwidth threshold to differentiate RFI and real signal (MHz)")
@@ -117,7 +119,11 @@ int main(int argc, const char *argv[])
 			("plotx", "Using PlotX for plotting")
 #endif
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
+			("wts", "Apply DAT_WTS")
+			("scloffs", "Apply DAT_SCL and DAT_OFFS")
+			("zero_off", "Apply ZERO_OFF")
 			("cont", "Input files are contiguous")
+			("psrfits", "Input psrfits format data")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
 
 	positional_options_description pos_desc;
@@ -180,81 +186,52 @@ int main(int argc, const char *argv[])
 	bool noarch = vm.count("noarch");
 	bool contiguous = vm.count("cont");
 	string rootname = vm["rootname"].as<string>();
-	string src_name = vm["srcname"].as<string>();
-	string s_telescope = vm["telescope"].as<string>();
 	num_threads = vm["threads"].as<unsigned int>();
 	vector<double> jump = vm["jump"].as<vector<double>>();
 	vector<string> fnames = vm["input"].as<vector<string>>();
-	double src_raj = vm["ra"].as<double>();
-	double src_dej = vm["dec"].as<double>();
 
-	long int nfil = fnames.size();
-	Filterbank *fil = new Filterbank [nfil];
-	for (long int i=0; i<nfil; i++)
-	{
-		fil[i].filename = fnames[i];
-	}
+	bool apply_wts = false;
+	bool apply_scloffs = false;
+	bool apply_zero_off = false;
 
-	vector<MJD> tstarts;
-	vector<MJD> tends;
-	long int ntotal = 0;
-	for (long int i=0; i<nfil; i++)
-	{
-		fil[i].read_header();
-		ntotal += fil[i].nsamples;
-		MJD tstart(fil[i].tstart);
-		tstarts.push_back(tstart);
-		tends.push_back(tstart+fil[i].nsamples*fil[i].tsamp);
-	}
-	vector<size_t> idx = argsort(tstarts);
-	for (long int i=0; i<nfil-1; i++)
-	{
-		if (abs((tends[idx[i]]-tstarts[idx[i+1]]).to_second())>0.5*fil[idx[i]].tsamp)
-		{
-			if (contiguous)
-			{
-				BOOST_LOG_TRIVIAL(warning)<<"time not contiguous"<<endl;
-			}
-			else
-			{
-				BOOST_LOG_TRIVIAL(error)<<"time not contiguous"<<endl;
-				exit(-1);
-			}
-		}
-	}
+	if (vm.count("wts"))
+		apply_wts = true;
+	if (vm.count("scloffs"))
+		apply_scloffs = true;
+	if (vm.count("zero_off"))
+		apply_zero_off = true;
 
-	int ibeam = vm["ibeam"].as<int>();
+	PSRDataReader * reader;
 
-	if (vm["srcname"].defaulted())
-	{
-		if (strcmp(fil[0].source_name, "") != 0)
-			src_name = fil[0].source_name;
-	}
-	if (vm["telescope"].defaulted())
-	{
-		get_telescope_name(fil[0].telescope_id, s_telescope);
-	}
+	if (vm.count("psrfits"))
+		reader= new PsrfitsReader;
+	else
+		reader= new FilterbankReader;
 
-	if (vm["ibeam"].defaulted())
-	{
-		if (fil[0].ibeam != 0)
-			ibeam = fil[0].ibeam;
-	}
+	if (!vm["ibeam"].defaulted())
+		reader->beam = std::to_string(vm["ibeam"].as<int>());
+	if (!vm["telescope"].defaulted())
+		reader->telescope = vm["telescope"].as<std::string>();
+	if (!vm["ra"].defaulted())
+		reader->ra = vm["ra"].as<std::string>();
+	if (!vm["dec"].defaulted())
+		reader->dec = vm["dec"].as<std::string>();
+	if (!vm["srcname"].defaulted())
+		reader->source_name = vm["srcname"].as<std::string>();
 
-	if (vm["ra"].defaulted())
-	{
-		if (fil[0].src_raj != 0.)
-		{
-			src_raj = fil[0].src_raj;
-		}
-	}
-	if (vm["dec"].defaulted())
-	{
-		if (fil[0].src_dej != 0.)
-		{
-			src_dej = fil[0].src_dej;
-		}
-	}
+	reader->fnames = fnames;
+	reader->sumif = true;
+	reader->contiguous = contiguous;
+	reader->verbose = verbose;
+	reader->apply_scloffs = apply_scloffs;
+	reader->apply_wts = apply_wts;
+	reader->apply_zero_off = apply_zero_off;
+	reader->check();
+	reader->read_header();
+
+	string src_name = reader->source_name;
+	string s_telescope = reader->telescope;
+	int ibeam = reader->beam.empty() ? 0 : std::stoi(reader->beam);
 
 	/** downsample */
 	int td = vm["td"].as<int>();
@@ -297,9 +274,10 @@ int main(int argc, const char *argv[])
 	float threKadaneT = vm["threKadaneT"].as<float>();
 	float threMask = vm["threMask"].as<float>();
 
-	long int nchans = fil[0].nchans;
-	double tsamp = fil[0].tsamp;
-	int nifs = fil[0].nifs;
+	long int nchans = reader->nchans;
+	double tsamp = reader->tsamp;
+	int nifs = reader->nifs;
+	long int ntotal = reader->nsamples;
 
 	vector<Pulsar::ArchiveLite> folder;
 
@@ -309,11 +287,7 @@ int main(int argc, const char *argv[])
 	double maxdm = *std::max_element(dmlist.begin(), dmlist.end());
 	double fmin = 1e6;
 	double fmax = 0.;
-	for (long int j=0; j<nchans; j++)
-	{
-		fmax = fil[0].frequency_table[j] > fmax ? fil[0].frequency_table[j] : fmax;
-		fmin = fil[0].frequency_table[j] < fmin ? fil[0].frequency_table[j] : fmin;
-	}
+	reader->get_fmin_fmax(fmin, fmax);
 
 	double ddm_init = vm["ddminit"].as<double>();
 	double dm_boost = vm["dmboost"].as<double>();
@@ -328,7 +302,7 @@ int main(int argc, const char *argv[])
 	DataBuffer<float> databuf(ndump, nchans);
 	databuf.closable = true;
 	databuf.tsamp = tsamp;
-	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
+	memcpy(&databuf.frequencies[0], reader->frequencies.data(), sizeof(double)*nchans);
 
 	long int nstart = jump[0]/tsamp;
 	long int nend = ntotal-jump[1]/tsamp;
@@ -340,6 +314,9 @@ int main(int argc, const char *argv[])
 		nstart = startfrac*ntotal;
 		nend = endfrac*ntotal;
 	}
+
+	reader->skip_start = nstart;
+	reader->skip_end = ntotal - nend;
 
 	Patch patch;
 	patch.filltype = vm["fillPatch"].as<string>();
@@ -416,8 +393,8 @@ int main(int argc, const char *argv[])
 		{
 			string filename = parfiles[k];
 
-			double mjd_start = (tstarts[idx[0]].to_day())-0.01;
-			double mjd_end = (tends[idx.back()].to_day())+1;
+			double mjd_start = (reader->mjd_starts[reader->idmap.front()].to_day())-0.01;
+			double mjd_end = (reader->mjd_ends[reader->idmap.back()].to_day())+1;
 			double fmin = databuf.frequencies[0];
 			double fmax = databuf.frequencies[0];
 			for (long int j=0; j<nchans; j++)
@@ -469,6 +446,25 @@ int main(int argc, const char *argv[])
 
 	size_t ndmseg = dedisp.get_nsegments();
 
+	// calculate dm batch
+	std::vector<std::vector<size_t>> batchs;
+	for (size_t l=0; l<ndmseg; l++)
+	{
+		double dms_tmp = dedisp.get_dms(l);
+		double ddm_tmp = dedisp.get_ddm(l);
+
+		std::vector<size_t> batch;
+		for (long int k=0; k<folder.size(); k++)
+		{
+			double dm_tmp = folder[k].dm;
+			if ((dm_tmp >= dms_tmp) && (dm_tmp < dms_tmp + rfi.nchans * ddm_tmp))
+			{
+				batch.push_back(k);
+			}
+		}
+		batchs.push_back(batch);
+	}
+
 #ifndef _OPENMP
 	std::vector<DataBuffer<float>> subdatas;
 	for (size_t k=0; k<ndmseg; k++)
@@ -513,166 +509,115 @@ int main(int argc, const char *argv[])
 		tsamps[k] = dedisp.get_tsamp(folder[k].dm);
 		ids[k] = dedisp.get_id(folder[k].dm);
 
-		folder[k].start_mjd = tstarts[idx[0]] + (ceil(1. * offsets[k] / ndumps[k]) * ndumps[k] - offsets[k]) * tsamps[k];
+		folder[k].start_mjd = reader->start_mjd + (ceil(1. * offsets[k] / ndumps[k]) * ndumps[k] - offsets[k]) * tsamps[k];
 		if (vm.count("pepoch"))
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else
-			folder[k].ref_epoch = tstarts[idx[0]]+(ntotal*tsamp/2.);
+			folder[k].ref_epoch = reader->start_mjd + (ntotal*tsamp/2.);
 		folder[k].resize(1, subdatas[ids[k]].nchans, folder[k].nbin);
 		folder[k].nblock = nblock;
 		folder[k].prepare(subdatas[ids[k]]);
 	}
 
 	BOOST_LOG_TRIVIAL(info)<<"start folding...";
-
-	int sumif = nifs>2? 2:nifs;
 	
-	long int ntot = 0;
-	long int ntot2 = 0;
-	long int count = 0;
-	long int bcnt1 = 0;
-	for (long int idxn=0; idxn<nfil; idxn++)
+	while (!reader->is_end)
 	{
-		long int n = idx[idxn];
-		long int nseg = ceil(1.*fil[n].nsamples/NSBLK);
-		long int ns_filn = 0;
+		if (reader->read_data(databuf, ndump) != ndump) break;
 
-		for (long int s=0; s<nseg; s++)
+		databuf.counter += ndump;
+
+		DataBuffer<float> *data = patch.filter(databuf);
+		
+		data = prep.run(*data);
+
+		data = equalize.filter(*data);
+
+		data = baseline.filter(*data);
+
+		data = rfi.zap(*data, zaplist);
+		if (rfi.isbusy) rfi.closable = false;
+
+		for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
 		{
-			if (verbose)
+			if ((*irfi)[0] == "mask")
 			{
-				cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
-				cerr<<"("<<100.*count/ntotal<<"%)";
+				data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
+				if (rfi.isbusy) rfi.closable = false;
 			}
-
-			fil[n].read_data(NSBLK);
-			assert(fil[n].ndata != 0);
-#ifdef EIGHTBIT
-			unsigned char *pcur = (unsigned char *)(fil[n].data);
-#endif
-			for (long int i=0; i<NSBLK; i++)
+			else if ((*irfi)[0] == "kadaneF")
 			{
-				count++;
-
-				if (count-1<nstart or count-1>nend)
-				{
-					if (++ns_filn == fil[n].nsamples)
-					{
-						goto next;
-					}
-					pcur += nifs*nchans;
-					continue;
-				}
-
-				memset(buffer, 0, sizeof(float)*nchans);
-				long int m = 0;
-				for (long int k=0; k<sumif; k++)
-				{
-					for (long int j=0; j<nchans; j++)
-					{
-						buffer[j] +=  pcur[m++];
-					}
-				}
-
-				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
-				databuf.counter++;
-				bcnt1++;
-				ntot++;
-
-				if (ntot%ndump == 0)
-				{
-					DataBuffer<float> *data = patch.filter(databuf);
-					
-					data = prep.run(*data);
-
-					data = equalize.filter(*data);
-
-					data = baseline.filter(*data);
-
-					data = rfi.zap(*data, zaplist);
-					if (rfi.isbusy) rfi.closable = false;
-
-					for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
-					{
-						if ((*irfi)[0] == "mask")
-						{
-							data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
-							if (rfi.isbusy) rfi.closable = false;
-						}
-						else if ((*irfi)[0] == "kadaneF")
-						{
-							data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
-							if (rfi.isbusy) rfi.closable = false;
-						}
-						else if ((*irfi)[0] == "kadaneT")
-						{
-							data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
-							if (rfi.isbusy) rfi.closable = false;
-						}
-						else if ((*irfi)[0] == "zdot")
-						{
-							data = rfi.zdot(*data);
-							if (rfi.isbusy) rfi.closable = false;
-						}
-						else if ((*irfi)[0] == "zero")
-						{
-							data = rfi.zero(*data);
-							if (rfi.isbusy) rfi.closable = false;
-						}
-					}
-
-					data->closable = true;
-
-					dedisp.run(*data);
-
-#ifndef _OPENMP
-					for (long int k=0; k<ncand; k++)
-					{
-						dedisp.get_subdata(folder[k].dm, subdatas[ids[k]]);
-						
-						if (dedisp.get_counter(folder[k].dm) >= offsets[k] + ndumps[k])
-						{
-							BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
-
-							if (vm.count("dspsr"))
-								folder[k].runDspsr(subdatas[ids[k]]);
-							else
-								folder[k].runTRLSM(subdatas[ids[k]]);				
-						}
-					}
-#else
-#pragma omp parallel for num_threads(num_threads)
-					for (long int k=0; k<ncand; k++)
-					{
-						int thread_id = omp_get_thread_num();
-
-						dedisp.get_subdata(folder[k].dm, subdatas[thread_id * ndmseg + ids[k]]);
-						
-						if (dedisp.get_counter(folder[k].dm) >= offsets[k] + ndumps[k])
-						{
-							BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
-
-							if (vm.count("dspsr"))
-								folder[k].runDspsr(subdatas[thread_id * ndmseg + ids[k]]);
-							else
-								folder[k].runTRLSM(subdatas[thread_id * ndmseg + ids[k]]);				
-						}
-					}
-#endif
-
-					bcnt1 = 0;
-					databuf.open();
-				}
-
-				if (++ns_filn == fil[n].nsamples)
-				{
-					goto next;
-				}
-				pcur += nifs*nchans;
+				data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
+				if (rfi.isbusy) rfi.closable = false;
+			}
+			else if ((*irfi)[0] == "kadaneT")
+			{
+				data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
+				if (rfi.isbusy) rfi.closable = false;
+			}
+			else if ((*irfi)[0] == "zdot")
+			{
+				data = rfi.zdot(*data);
+				if (rfi.isbusy) rfi.closable = false;
+			}
+			else if ((*irfi)[0] == "zero")
+			{
+				data = rfi.zero(*data);
+				if (rfi.isbusy) rfi.closable = false;
 			}
 		}
-		next:
-		fil[n].close();
+
+		data->closable = true;
+
+		dedisp.prerun(*data);
+
+		for (size_t l=0; l<ndmseg; l++)
+		{
+			dedisp.run(l);
+
+#ifndef _OPENMP
+			for (auto b=batchs[l].begin(); b!=batchs[l].end(); ++b)
+			{
+				size_t k = *b;
+
+				dedisp.get_subdata(folder[k].dm, subdatas[ids[k]]);
+				
+				if (dedisp.get_counter(folder[k].dm) >= offsets[k] + ndumps[k])
+				{
+					BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
+
+					if (vm.count("dspsr"))
+						folder[k].runDspsr(subdatas[ids[k]]);
+					else
+						folder[k].runTRLSM(subdatas[ids[k]]);				
+				}
+			}
+#else
+#pragma omp parallel for num_threads(num_threads)
+			for (auto b=batchs[l].begin(); b!=batchs[l].end(); ++b)
+			{
+				size_t k = *b;
+
+				int thread_id = omp_get_thread_num();
+
+				dedisp.get_subdata(folder[k].dm, subdatas[thread_id * ndmseg + ids[k]]);
+				
+				if (dedisp.get_counter(folder[k].dm) >= offsets[k] + ndumps[k])
+				{
+					BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
+
+					if (vm.count("dspsr"))
+						folder[k].runDspsr(subdatas[thread_id * ndmseg + ids[k]]);
+					else
+						folder[k].runTRLSM(subdatas[thread_id * ndmseg + ids[k]]);				
+				}
+			}
+#endif
+		}
+
+		dedisp.postrun(*data);
+
+		databuf.open();
 	}
 	databuf.close();
 
@@ -692,19 +637,28 @@ int main(int argc, const char *argv[])
 	for (long int l=0; l<nleft_max; l++)
 	{
 		rfi.open();
-		dedisp.run(rfi);
-		for (long int k=0; k<ncand; k++)
+		
+		dedisp.prerun(rfi);
+		
+		for (size_t m=0; m<ndmseg; m++)
 		{
-			dedisp.get_subdata(folder[k].dm, subdatas[ids[k]]);
-
-			if (nlefts[k]-- > 0)
+			dedisp.run(m);
+			for (auto b=batchs[m].begin(); b!=batchs[m].end(); ++b)
 			{
-				if (vm.count("dspsr"))
-					folder[k].runDspsr(subdatas[ids[k]]);
-				else
-					folder[k].runTRLSM(subdatas[ids[k]]);
+				size_t k = *b;
+
+				dedisp.get_subdata(folder[k].dm, subdatas[ids[k]]);
+
+				if (nlefts[k]-- > 0)
+				{
+					if (vm.count("dspsr"))
+						folder[k].runDspsr(subdatas[ids[k]]);
+					else
+						folder[k].runTRLSM(subdatas[ids[k]]);
+				}
 			}
 		}
+		dedisp.postrun(rfi);
 	}
 	
 	dedisp.close();
@@ -888,12 +842,12 @@ int main(int argc, const char *argv[])
 	obsinfo["Source_name"] = src_name;
 	//start mjd
 	stringstream ss_mjd;
-	ss_mjd << setprecision(10) << fixed << tstarts[idx[0]].to_day();
+	ss_mjd << setprecision(10) << fixed << reader->start_mjd.to_day();
 	string s_mjd = ss_mjd.str();
 	obsinfo["Date"] = s_mjd;
 	//ra dec string
-	string s_ra, s_dec;
-	get_s_radec(src_raj, src_dej, s_ra, s_dec);
+	string s_ra = reader->ra;
+	string s_dec = reader->dec;
 	obsinfo["RA"] = s_ra;
 	obsinfo["DEC"] = s_dec;
 	//telescope
@@ -907,7 +861,7 @@ int main(int argc, const char *argv[])
 	string s_ibeam = ss_ibeam.str();
 	obsinfo["Beam"] = s_ibeam;	
 	//data filename
-	obsinfo["Filename"] = fnames[idx[0]];
+	obsinfo["Filename"] = fnames[reader->idmap[0]];
 	//observation length
 	obsinfo["Obslen"] = to_string(tint);
 	//observation frequency
@@ -1023,14 +977,7 @@ int main(int argc, const char *argv[])
 
 	outfile.close();
 
-	if (verbose)
-	{
-		cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
-		cerr<<"("<<100.*count/ntotal<<"%)"<<endl;
-	}
-
 	delete [] buffer;
-	delete [] fil;
 
 	BOOST_LOG_TRIVIAL(info)<<"done!";
 

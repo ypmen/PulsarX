@@ -28,10 +28,38 @@ namespace Pulsar
 	public:
 		TreeDedispersion();
 		~TreeDedispersion();
+		void alloc_dedata()
+		{
+			dedata.resize(nchans * nsamples, 0.);
+		}
+		void free_dedata()
+		{
+			dedata.clear();
+			dedata.shrink_to_fit();
+		}
+		void alloc_buffer()
+		{
+			buffer.resize(nsamples * nchans, 0.);
+		}
+		void free_buffer()
+		{
+			buffer.clear();
+			buffer.shrink_to_fit();
+		}
+		void alloc_bufferT()
+		{
+			bufferT.resize(nchans * nsamples, 0.);
+		}
+		void free_bufferT()
+		{
+			bufferT.clear();
+			bufferT.shrink_to_fit();
+		}
 		void close();
 		void prepare(DataBuffer<float> &databuffer);
 		void update_hit(const std::vector<double> &vdm);
 		void run(DataBuffer<float> &databuffer);
+		void run();
 		void get_subdata(double dm, DataBuffer<float> &subdata);
 
 	public:
@@ -40,10 +68,12 @@ namespace Pulsar
 		size_t get_offset(){return offset;}
 		double get_tsamp(){return tsamp;}
 		size_t get_ndump(){return ndump;}
+		size_t get_nsamples(){return nsamples;}
 		size_t get_counter(){return counter;}
 
 		void update_nchans(size_t n){nchans = n;}
 		void update_ndump(size_t n){ndump = n;}
+		void update_nsamples(size_t n){nsamples = n;}
 		void update_tsamp(double t){tsamp = t;}
 		void update_frequencies(const std::vector<double> &f){frequencies = f;}
 
@@ -91,11 +121,22 @@ namespace Pulsar
 		size_t nsubband;
 		double dms;
 		double ddm;
+
+		bool if_alloc_buffer;
+		bool if_alloc_bufferT;
+		bool if_alloc_dedata;
+
+		std::vector<float> *ptr_dedata;
+		std::vector<float> *ptr_buffer;
+#ifndef __AVX2__
+		std::vector<float> *ptr_bufferT;
+#else
+		std::vector<float, boost::alignment::aligned_allocator<float, 32>> *ptr_bufferT;
+#endif
 	
 	private:
 		std::vector<float> dedata;
 		std::vector<float> buffer;
-
 #ifndef __AVX2__
 		std::vector<float> bufferT;
 #else
@@ -142,7 +183,10 @@ namespace Pulsar
 		DedispersionX();
 		~DedispersionX();
 		void prepare(DataBuffer<float> &databuffer);
+		void prerun(DataBuffer<float> &databuffer);
+		void postrun(DataBuffer<float> &databuffer);
 		void run(DataBuffer<float> &databuffer);
+		void run(size_t k);
 		
 		void close()
 		{
@@ -150,6 +194,15 @@ namespace Pulsar
 			{
 				downsamples[k].close();
 				treededispersions[k].close();
+
+				buffers[k].clear();
+				buffers[k].shrink_to_fit();
+
+				bufferTs[k].clear();
+				bufferTs[k].shrink_to_fit();
+
+				dedatas[k].clear();
+				dedatas[k].shrink_to_fit();
 			}
 		}
 
@@ -187,7 +240,16 @@ namespace Pulsar
 				double dme = treededispersions[k].dms + treededispersions[k].get_nchans() * treededispersions[k].ddm;
 				if (dms <= dm && dme > dm)
 				{
-					return treededispersions[k].get_offset();
+					if (downsamples[k].td == 1 && downsamples[k].fd == 1)
+					{
+						size_t nsamples = buffers[0].size()/nchans;
+						size_t ndump = treededispersions[k].get_ndump();
+						return nsamples - ndump;
+					}
+					else
+					{
+						return treededispersions[k].get_offset();
+					}
 				}
 			}
 
@@ -267,6 +329,7 @@ namespace Pulsar
 		size_t get_nsegments(){return downsamples.size();}
 
 		double get_dms(size_t k){return treededispersions[k].dms;}
+		double get_ddm(size_t k){return treededispersions[k].ddm;}
 
 		bool is_hit(size_t k){return hit[k];}
 	
@@ -277,8 +340,16 @@ namespace Pulsar
 		double ddm_init; // optional
 	
 	private:
+		size_t nchans;
 		std::vector<TreeDedispersion> treededispersions;
 		std::vector<Downsample> downsamples;
+		std::vector<std::vector<float>> buffers;
+#ifndef __AVX2__
+		std::vector<std::vector<float>> bufferTs;
+#else
+		std::vector<std::vector<float, boost::alignment::aligned_allocator<float, 32>>> bufferTs;
+#endif
+		std::vector<std::vector<float>> dedatas;
 		std::vector<bool> hit;
 
 	public:
