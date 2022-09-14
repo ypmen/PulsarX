@@ -594,9 +594,9 @@ int main(int argc, const char *argv[])
 			}
 #else
 #pragma omp parallel for num_threads(num_threads)
-			for (auto b=batchs[l].begin(); b!=batchs[l].end(); ++b)
+			for (size_t m=0; m<batchs[l].size(); m++)
 			{
-				size_t k = *b;
+				size_t k = batchs[l][m];
 
 				int thread_id = omp_get_thread_num();
 
