@@ -40,6 +40,8 @@
 #include "preprocesslite.h"
 #include "baseline.h"
 #include "patch.h"
+#include "psrfitsreader.h"
+#include "filterbankreader.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -116,7 +118,11 @@ int main(int argc, const char *argv[])
 			("plotx", "Using PlotX for plotting")
 #endif
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
+			("wts", "Apply DAT_WTS")
+			("scloffs", "Apply DAT_SCL and DAT_OFFS")
+			("zero_off", "Apply ZERO_OFF")
 			("cont", "Input files are contiguous")
+			("psrfits", "Input psrfits format data")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
 
 	positional_options_description pos_desc;
@@ -179,81 +185,52 @@ int main(int argc, const char *argv[])
 	bool noarch = vm.count("noarch");
 	bool contiguous = vm.count("cont");
 	string rootname = vm["rootname"].as<string>();
-	string src_name = vm["srcname"].as<string>();
-	string s_telescope = vm["telescope"].as<string>();
 	num_threads = vm["threads"].as<unsigned int>();
 	vector<double> jump = vm["jump"].as<vector<double>>();
 	vector<string> fnames = vm["input"].as<vector<string>>();
-	double src_raj = vm["ra"].as<double>();
-	double src_dej = vm["dec"].as<double>();
 
-	long int nfil = fnames.size();
-	Filterbank *fil = new Filterbank [nfil];
-	for (long int i=0; i<nfil; i++)
-	{
-		fil[i].filename = fnames[i];
-	}
+	bool apply_wts = false;
+	bool apply_scloffs = false;
+	bool apply_zero_off = false;
 
-	vector<MJD> tstarts;
-	vector<MJD> tends;
-	long int ntotal = 0;
-	for (long int i=0; i<nfil; i++)
-	{
-		fil[i].read_header();
-		ntotal += fil[i].nsamples;
-		MJD tstart(fil[i].tstart);
-		tstarts.push_back(tstart);
-		tends.push_back(tstart+fil[i].nsamples*fil[i].tsamp);
-	}
-	vector<size_t> idx = argsort(tstarts);
-	for (long int i=0; i<nfil-1; i++)
-	{
-		if (abs((tends[idx[i]]-tstarts[idx[i+1]]).to_second())>0.5*fil[idx[i]].tsamp)
-		{
-			if (contiguous)
-			{
-				BOOST_LOG_TRIVIAL(warning)<<"time not contiguous"<<endl;
-			}
-			else
-			{
-				BOOST_LOG_TRIVIAL(error)<<"time not contiguous"<<endl;
-				exit(-1);
-			}
-		}
-	}
+	if (vm.count("wts"))
+		apply_wts = true;
+	if (vm.count("scloffs"))
+		apply_scloffs = true;
+	if (vm.count("zero_off"))
+		apply_zero_off = true;
 
-	int ibeam = vm["ibeam"].as<int>();
+	PSRDataReader * reader;
 
-	if (vm["srcname"].defaulted())
-	{
-		if (strcmp(fil[0].source_name, "") != 0)
-			src_name = fil[0].source_name;
-	}
-	if (vm["telescope"].defaulted())
-	{
-		get_telescope_name(fil[0].telescope_id, s_telescope);
-	}
+	if (vm.count("psrfits"))
+		reader= new PsrfitsReader;
+	else
+		reader= new FilterbankReader;
 
-	if (vm["ibeam"].defaulted())
-	{
-		if (fil[0].ibeam != 0)
-			ibeam = fil[0].ibeam;
-	}
+	if (!vm["ibeam"].defaulted())
+		reader->beam = std::to_string(vm["ibeam"].as<int>());
+	if (!vm["telescope"].defaulted())
+		reader->telescope = vm["telescope"].as<std::string>();
+	if (!vm["ra"].defaulted())
+		reader->ra = vm["ra"].as<std::string>();
+	if (!vm["dec"].defaulted())
+		reader->dec = vm["dec"].as<std::string>();
+	if (!vm["srcname"].defaulted())
+		reader->source_name = vm["srcname"].as<std::string>();
 
-	if (vm["ra"].defaulted())
-	{
-		if (fil[0].src_raj != 0.)
-		{
-			src_raj = fil[0].src_raj;
-		}
-	}
-	if (vm["dec"].defaulted())
-	{
-		if (fil[0].src_dej != 0.)
-		{
-			src_dej = fil[0].src_dej;
-		}
-	}
+	reader->fnames = fnames;
+	reader->sumif = true;
+	reader->contiguous = contiguous;
+	reader->verbose = verbose;
+	reader->apply_scloffs = apply_scloffs;
+	reader->apply_wts = apply_wts;
+	reader->apply_zero_off = apply_zero_off;
+	reader->check();
+	reader->read_header();
+
+	string src_name = reader->source_name;
+	string s_telescope = reader->telescope;
+	int ibeam = reader->beam.empty() ? 0 : std::stoi(reader->beam);
 
 	/** downsample */
 	int td = vm["td"].as<int>();
@@ -296,11 +273,10 @@ int main(int argc, const char *argv[])
 	float threKadaneT = vm["threKadaneT"].as<float>();
 	float threMask = vm["threMask"].as<float>();
 
-	long int nchans = fil[0].nchans;
-	double tsamp = fil[0].tsamp;
-	int nifs = fil[0].nifs;
-
-	float *buffer = new float [nchans];
+	long int nchans = reader->nchans;
+	double tsamp = reader->tsamp;
+	int nifs = reader->nifs;
+	long int ntotal = reader->nsamples;
 
 	int blocksize = vm["blocksize"].as<int>();
 	long int ndump = ceil((blocksize/tsamp)/td)*td;
@@ -309,7 +285,7 @@ int main(int argc, const char *argv[])
 	DataBuffer<float> databuf(ndump, nchans);
 	databuf.closable = true;
 	databuf.tsamp = tsamp;
-	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
+	memcpy(&databuf.frequencies[0], reader->frequencies.data(), sizeof(double)*nchans);
 
 	long int nstart = jump[0]/tsamp;
 	long int nend = ntotal-jump[1]/tsamp;
@@ -403,8 +379,8 @@ int main(int argc, const char *argv[])
 		{
 			string filename = parfiles[k];
 
-			double mjd_start = (tstarts[idx[0]].to_day())-0.01;
-			double mjd_end = (tends[idx.back()].to_day())+1;
+			double mjd_start = (reader->mjd_starts[reader->idmap.front()].to_day())-0.01;
+			double mjd_end = (reader->mjd_ends[reader->idmap.back()].to_day())+1;
 			double fmin = databuf.frequencies[0];
 			double fmax = databuf.frequencies[0];
 			for (long int j=0; j<nchans; j++)
@@ -471,11 +447,11 @@ int main(int argc, const char *argv[])
 
 	for (long int k=0; k<ncand; k++)
 	{
-		folder[k].start_mjd = tstarts[idx[0]]+(ceil(1.*dedisp.offset/dedisp.ndump)*dedisp.ndump-dedisp.offset)*dedisp.tsamp*td;
+		folder[k].start_mjd = reader->start_mjd+(ceil(1.*dedisp.offset/dedisp.ndump)*dedisp.ndump-dedisp.offset)*dedisp.tsamp*td;
 		if (vm.count("pepoch"))
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else
-			folder[k].ref_epoch = tstarts[idx[0]]+(ntotal*tsamp/2.);
+			folder[k].ref_epoch = reader->start_mjd+(ntotal*tsamp/2.);
 		folder[k].resize(1, subdata.nchans, folder[k].nbin);
 		folder[k].nblock = nblock;
 		folder[k].prepare(subdata);
@@ -483,143 +459,83 @@ int main(int argc, const char *argv[])
 
 	BOOST_LOG_TRIVIAL(info)<<"start folding...";
 
-	int sumif = nifs>2? 2:nifs;
-	
-	long int ntot = 0;
-	long int ntot2 = 0;
-	long int count = 0;
-	long int bcnt1 = 0;
-	for (long int idxn=0; idxn<nfil; idxn++)
+	while (!reader->is_end)
 	{
-		long int n = idx[idxn];
-		long int nseg = ceil(1.*fil[n].nsamples/NSBLK);
-		long int ns_filn = 0;
+		if (reader->read_data(databuf, ndump) != ndump) break;
 
-		for (long int s=0; s<nseg; s++)
+		databuf.counter += ndump;
+
+		DataBuffer<float> *data = patch.filter(databuf);
+		
+		data = prep.run(*data);
+
+		data = equalize.filter(*data);
+
+		data = baseline.filter(*data);
+
+		data = rfi.zap(*data, zaplist);
+		if (rfi.isbusy) rfi.closable = false;
+
+		for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
 		{
-			if (verbose)
+			if ((*irfi)[0] == "mask")
 			{
-				cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
-				cerr<<"("<<100.*count/ntotal<<"%)";
+				data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
+				if (rfi.isbusy) rfi.closable = false;
 			}
-
-			fil[n].read_data(NSBLK);
-			assert(fil[n].ndata != 0);
-#ifdef FAST
-			unsigned char *pcur = (unsigned char *)(fil[n].data);
-#endif
-			for (long int i=0; i<NSBLK; i++)
+			else if ((*irfi)[0] == "kadaneF")
 			{
-				count++;
-
-				if (count-1<nstart or count-1>nend)
-				{
-					if (++ns_filn == fil[n].nsamples)
-					{
-						goto next;
-					}
-					pcur += nifs*nchans;
-					continue;
-				}
-
-				memset(buffer, 0, sizeof(float)*nchans);
-				long int m = 0;
-				for (long int k=0; k<sumif; k++)
-				{
-					for (long int j=0; j<nchans; j++)
-					{
-						buffer[j] +=  pcur[m++];
-					}
-				}
-
-				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
-				databuf.counter++;
-				bcnt1++;
-				ntot++;
-
-				if (ntot%ndump == 0)
-				{
-					DataBuffer<float> *data = patch.filter(databuf);
-					
-					data = prep.run(*data);
-
-					data = equalize.filter(*data);
-
-					data = baseline.filter(*data);
-
-					data = rfi.zap(*data, zaplist);
-					if (rfi.isbusy) rfi.closable = false;
-
-					for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
-					{
-						if ((*irfi)[0] == "mask")
-						{
-							data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
-							if (rfi.isbusy) rfi.closable = false;
-						}
-						else if ((*irfi)[0] == "kadaneF")
-						{
-							data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
-							if (rfi.isbusy) rfi.closable = false;
-						}
-						else if ((*irfi)[0] == "kadaneT")
-						{
-							data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
-							if (rfi.isbusy) rfi.closable = false;
-						}
-						else if ((*irfi)[0] == "zdot")
-						{
-							data = rfi.zdot(*data);
-							if (rfi.isbusy) rfi.closable = false;
-						}
-						else if ((*irfi)[0] == "zero")
-						{
-							data = rfi.zero(*data);
-							if (rfi.isbusy) rfi.closable = false;
-						}
-					}
-
-					data->closable = true;
-					dedisp.prerun(*data);
-
-					for (long int k=0; k<ncand; k++)
-					{
-						if (k%GROUPSIZE == 0)
-						{
-							BOOST_LOG_TRIVIAL(debug)<<"dedisperse group "<<k/GROUPSIZE<<"...";
-
-							dedisp.updatedm(dmsegs[k/GROUPSIZE]);
-							dedisp.run();
-						}
-						dedisp.get_subdata(subdata, k%GROUPSIZE);
-						
-						if (dedisp.counter >= dedisp.offset+dedisp.ndump)
-						{
-							BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
-
-							if (vm.count("dspsr"))
-								folder[k].runDspsr(subdata);
-							else
-								folder[k].runTRLSM(subdata);				
-						}
-					}
-
-					dedisp.postrun();
-
-					bcnt1 = 0;
-					databuf.open();
-				}
-
-				if (++ns_filn == fil[n].nsamples)
-				{
-					goto next;
-				}
-				pcur += nifs*nchans;
+				data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
+				if (rfi.isbusy) rfi.closable = false;
+			}
+			else if ((*irfi)[0] == "kadaneT")
+			{
+				data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
+				if (rfi.isbusy) rfi.closable = false;
+			}
+			else if ((*irfi)[0] == "zdot")
+			{
+				data = rfi.zdot(*data);
+				if (rfi.isbusy) rfi.closable = false;
+			}
+			else if ((*irfi)[0] == "zero")
+			{
+				data = rfi.zero(*data);
+				if (rfi.isbusy) rfi.closable = false;
 			}
 		}
-		next:
-		fil[n].close();
+
+		data->closable = true;
+		dedisp.prerun(*data);
+
+		for (long int k=0; k<ncand; k++)
+		{
+			if (k%GROUPSIZE == 0)
+			{
+				BOOST_LOG_TRIVIAL(debug)<<"dedisperse group "<<k/GROUPSIZE<<"...";
+
+				dedisp.updatedm(dmsegs[k/GROUPSIZE]);
+				dedisp.run();
+			}
+			dedisp.get_subdata(subdata, k%GROUPSIZE);
+			
+			if (dedisp.counter >= dedisp.offset+dedisp.ndump)
+			{
+				BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
+
+				if (vm.count("dspsr"))
+					folder[k].runDspsr(subdata);
+				else
+					folder[k].runTRLSM(subdata);				
+			}
+		}
+
+		dedisp.postrun();
+
+		databuf.open();
 	}
+
+				
 	databuf.close();
 
 	/**
@@ -831,12 +747,12 @@ int main(int argc, const char *argv[])
 	obsinfo["Source_name"] = src_name;
 	//start mjd
 	stringstream ss_mjd;
-	ss_mjd << setprecision(10) << fixed << tstarts[idx[0]].to_day();
+	ss_mjd << setprecision(10) << fixed << reader->start_mjd.to_day();
 	string s_mjd = ss_mjd.str();
 	obsinfo["Date"] = s_mjd;
 	//ra dec string
-	string s_ra, s_dec;
-	get_s_radec(src_raj, src_dej, s_ra, s_dec);
+	string s_ra = reader->ra;
+	string s_dec = reader->dec;
 	obsinfo["RA"] = s_ra;
 	obsinfo["DEC"] = s_dec;
 	//telescope
@@ -850,7 +766,7 @@ int main(int argc, const char *argv[])
 	string s_ibeam = ss_ibeam.str();
 	obsinfo["Beam"] = s_ibeam;	
 	//data filename
-	obsinfo["Filename"] = fnames[idx[0]];
+	obsinfo["Filename"] = fnames[reader->idmap[0]];
 	//observation length
 	obsinfo["Obslen"] = to_string(tint);
 	//observation frequency
@@ -965,15 +881,6 @@ int main(int argc, const char *argv[])
 	}
 
 	outfile.close();
-
-	if (verbose)
-	{
-		cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
-		cerr<<"("<<100.*count/ntotal<<"%)"<<endl;
-	}
-
-	delete [] buffer;
-	delete [] fil;
 
 	BOOST_LOG_TRIVIAL(info)<<"done!";
 

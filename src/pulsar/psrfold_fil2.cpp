@@ -293,8 +293,6 @@ int main(int argc, const char *argv[])
 	double dm_boost = vm["dmboost"].as<double>();
 	size_t maxds = Pulsar::DedispersionX::get_maxds(maxdm, tsamp * td, fmax, fmin, nchans / fd, ddm_init, dm_boost);
 
-	float *buffer = new float [nchans];
-
 	int blocksize = vm["blocksize"].as<int>();
 	long int ndump = ceil((blocksize/tsamp)/(td*maxds))*(td*maxds);
 	int nblock = ceil(vm["tsubint"].as<double>())/blocksize;
@@ -976,8 +974,6 @@ int main(int argc, const char *argv[])
 	}
 
 	outfile.close();
-
-	delete [] buffer;
 
 	BOOST_LOG_TRIVIAL(info)<<"done!";
 
