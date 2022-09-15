@@ -232,7 +232,7 @@ size_t FilterbankReader::read_data(DataBuffer<float> &databuffer, size_t ndump, 
 						cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
 						cerr<<"("<<100.*count/nsamples<<"%)";
 					}
-					return bcnt1;
+					return ndump;
 				}
 
 				if (bcnt1 == ndump)
@@ -286,4 +286,9 @@ size_t FilterbankReader::read_data(DataBuffer<float> &databuffer, size_t ndump, 
 		cerr<<"("<<100.*count/nsamples<<"%)";
 	}
 	return bcnt1;
+}
+
+void FilterbankReader::get_filterbank_template(Filterbank &filtem)
+{
+	filtem = fil[idmap[0]];
 }

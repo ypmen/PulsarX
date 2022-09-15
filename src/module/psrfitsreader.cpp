@@ -409,3 +409,21 @@ size_t PsrfitsReader::read_data(DataBuffer<float> &databuffer, size_t ndump, boo
 	}
 	return bcnt1;
 }
+
+void PsrfitsReader::get_filterbank_template(Filterbank &filtem)
+{
+	filtem.use_frequence_table = false;
+	filtem.data_type = 1;
+	strcpy(filtem.rawdatafile, psf[idmap[0]].filename.c_str());
+	filtem.tstart =start_mjd.to_day();
+	filtem.tsamp = tsamp;
+	filtem.nifs = nifs;
+	if (sumif) filtem.nifs = 1;
+	filtem.nchans = nchans;
+	
+	get_fch1_foff(filtem.fch1, filtem.foff);
+
+	if (filtem.frequency_table != NULL) delete [] filtem.frequency_table;
+	filtem.frequency_table = new double [16320];
+	memcpy(filtem.frequency_table, frequencies.data(), sizeof(double)*nchans);
+}
