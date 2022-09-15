@@ -46,6 +46,8 @@ public:
 	virtual double get_tsamp_curfile() = 0;
 	virtual size_t get_count_curfile() = 0;
 	virtual size_t get_count() = 0;
+	virtual size_t get_ifile() = 0;
+	virtual size_t get_ifile_ordered() = 0;
 
 public:
 	void get_fmin_fmax(double &fmin, double &fmax)

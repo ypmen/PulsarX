@@ -24,6 +24,8 @@ public:
 	double get_tsamp_curfile(){return fil[idmap[ifile_cur]].tsamp;}
 	size_t get_count_curfile(){return ns_filn;}
 	size_t get_count(){return count;}
+	size_t get_ifile(){return ifile_cur;}
+	size_t get_ifile_ordered(){return idmap[ifile_cur];}
 
 private:
 	size_t ntot;

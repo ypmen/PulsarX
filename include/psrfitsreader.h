@@ -24,6 +24,8 @@ public:
 	double get_tsamp_curfile(){return psf[idmap[ifile_cur]].subint.tbin;}
 	size_t get_count_curfile(){return ns_psfn;}
 	size_t get_count(){return count;}
+	size_t get_ifile(){return ifile_cur;}
+	size_t get_ifile_ordered(){return idmap[ifile_cur];}
 
 private:
 	Integration it;

@@ -179,7 +179,7 @@ size_t FilterbankReader::read_data(DataBuffer<float> &databuffer, size_t ndump, 
 			{
 				if (update_subint)
 				{
-					fil[n].read_data(nsblk);
+					fil[n].read_data(ns_filn, nsblk);
 				}
 				update_subint = false;
 			}
