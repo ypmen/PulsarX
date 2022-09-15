@@ -20,6 +20,8 @@
 #include "filterbank.h"
 #include "mjd.h"
 #include "logging.h"
+#include "psrfitsreader.h"
+#include "filterbankreader.h"
 
 using namespace boost::program_options;
 
@@ -49,8 +51,8 @@ int main(int argc, const char *argv[])
 			("filplan", value<std::string>(), "Input filterbank plan file")
 			("seglen,l", value<float>()->default_value(2), "Time length per segment (s)")
 			("zapthre", value<float>()->default_value(4), "Threshold in IQR for zapping channels")
-			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
-			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
+			("ra", value<string>()->default_value("00:00:00"), "RA (hhmmss.s)")
+			("dec", value<string>()->default_value("00:00:00"), "DEC (ddmmss.s)")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
 			("telescope", value<std::string>()->default_value("Fake"), "Telescope name")
 			("baseline", value<std::vector<float>>()->multitoken()->default_value(std::vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
@@ -67,7 +69,11 @@ int main(int argc, const char *argv[])
 			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
 			("source_name,s", value<std::string>()->default_value("J0000-00"), "Source name")
 			("rootname,o", value<std::string>()->default_value("J0000-00"), "Output rootname")
+			("wts", "Apply DAT_WTS")
+			("scloffs", "Apply DAT_SCL and DAT_OFFS")
+			("zero_off", "Apply ZERO_OFF")
 			("cont", "Input files are contiguous")
+			("psrfits", "Input psrfits format data")
 			("input,f", value<std::vector<std::string>>()->multitoken()->composing(), "Input files");
 
 	positional_options_description pos_desc;
@@ -100,81 +106,64 @@ int main(int argc, const char *argv[])
 	num_threads = vm["threads"].as<unsigned int>();
 	std::vector<double> jump = vm["jump"].as<std::vector<double>>();
 	std::vector<std::string> fnames = vm["input"].as<std::vector<std::string>>();
-	std::string source_name = vm["source_name"].as<std::string>();
 	std::string rootname = vm["rootname"].as<std::string>();
-	std::string s_telescope = vm["telescope"].as<std::string>();
+
+	bool apply_wts = false;
+	bool apply_scloffs = false;
+	bool apply_zero_off = false;
+
+	if (vm.count("wts"))
+		apply_wts = true;
+	if (vm.count("scloffs"))
+		apply_scloffs = true;
+	if (vm.count("zero_off"))
+		apply_zero_off = true;
+
+	PSRDataReader * reader;
+
+	if (vm.count("psrfits"))
+		reader= new PsrfitsReader;
+	else
+		reader= new FilterbankReader;
+
+	if (!vm["ibeam"].defaulted())
+		reader->beam = std::to_string(vm["ibeam"].as<int>());
+	if (!vm["telescope"].defaulted())
+		reader->telescope = vm["telescope"].as<std::string>();
+	if (!vm["ra"].defaulted())
+		reader->ra = vm["ra"].as<std::string>();
+	if (!vm["dec"].defaulted())
+		reader->dec = vm["dec"].as<std::string>();
+	if (!vm["srcname"].defaulted())
+		reader->source_name = vm["source_name"].as<std::string>();
+
+	reader->fnames = fnames;
+	reader->sumif = true;
+	reader->contiguous = contiguous;
+	reader->verbose = verbose;
+	reader->apply_scloffs = apply_scloffs;
+	reader->apply_wts = apply_wts;
+	reader->apply_zero_off = apply_zero_off;
+	reader->check();
+	reader->read_header();
+
+	string source_name = reader->source_name;
+	string s_telescope = reader->telescope;
+	int ibeam = reader->beam.empty() ? 0 : std::stoi(reader->beam);
 	int telescope_id = get_telescope_id(s_telescope);
-	int ibeam = vm["ibeam"].as<int>();
-	double src_raj = vm["ra"].as<double>();
-	double src_dej = vm["dec"].as<double>();
-
-	// sort fils and get nsamples
-	long int nfil = fnames.size();
-	Filterbank *fil = new Filterbank [nfil];
-	for (long int i=0; i<nfil; i++)
+	double src_raj = 0., src_dej;
+	if (!reader->ra.empty())
 	{
-		fil[i].filename = fnames[i];
+		string ra = reader->ra;
+		ra.erase(remove(ra.begin(), ra.end(), ':'), ra.end());
+		src_raj = stod(ra);
 	}
 
-	vector<MJD> tstarts;
-	vector<MJD> tends;
-	long int ntotal = 0;
-	for (long int i=0; i<nfil; i++)
+	if (!reader->dec.empty())
 	{
-		fil[i].read_header();
-		ntotal += fil[i].nsamples;
-		MJD tstart(fil[i].tstart);
-		tstarts.push_back(tstart);
-		tends.push_back(tstart+fil[i].nsamples*fil[i].tsamp);
-	}
-	vector<size_t> idx = argsort(tstarts);
-	for (long int i=0; i<nfil-1; i++)
-	{
-		if (abs((tends[idx[i]]-tstarts[idx[i+1]]).to_second())>0.5*fil[idx[i]].tsamp)
-		{
-			if (contiguous)
-			{
-				std:cerr<<"Warning: time not contiguous"<<endl;
-			}
-			else
-			{
-				std::cerr<<"Error: time not contiguous"<<endl;
-				exit(-1);
-			}
-		}
-	}
-
-	// update header
-	if (vm["source_name"].defaulted())
-	{
-		if (strcmp(fil[0].source_name, "") != 0)
-			source_name = fil[0].source_name;
-	}
-
-	if (vm["telescope"].defaulted())
-	{
-		telescope_id =  fil[0].telescope_id;
-	}
-
-	if (vm["ibeam"].defaulted())
-	{
-		if (fil[0].ibeam != 0)
-			ibeam = fil[0].ibeam;
-	}
-
-	if (vm["ra"].defaulted())
-	{
-		if (fil[0].src_raj != 0.)
-		{
-			src_raj = fil[0].src_raj;
-		}
-	}
-	if (vm["dec"].defaulted())
-	{
-		if (fil[0].src_dej != 0.)
-		{
-			src_dej = fil[0].src_dej;
-		}
+		string dec = reader->dec;
+		dec.erase(remove(dec.begin(), dec.end(), ':'), dec.end());
+		src_dej = stod(dec);
 	}
 
 	std::vector<FilMaker> filmakers;
@@ -184,11 +173,10 @@ int main(int argc, const char *argv[])
 	int td = vm["td"].as<int>();
 	int fd = vm["fd"].as<int>();
 
-	long int nchans = fil[0].nchans;
-	double tsamp = fil[0].tsamp;
-	int nifs = fil[0].nifs;
-
-	float *buffer = new float [nchans];
+	long int nchans = reader->nchans;
+	double tsamp = reader->tsamp;
+	int nifs = reader->nifs;
+	long int ntotal = reader->nsamples;
 
 	vector<int> tds;
 	for (auto fm=filmakers.begin(); fm!=filmakers.end(); ++fm)
@@ -203,7 +191,7 @@ int main(int argc, const char *argv[])
 	DataBuffer<float> databuf(ndump, nchans);
 	databuf.closable = false;
 	databuf.tsamp = tsamp;
-	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
+	memcpy(&databuf.frequencies[0], reader->frequencies.data(), sizeof(double)*nchans);
 
 	Patch patch;
 	patch.filltype = vm["fillPatch"].as<string>();
@@ -222,7 +210,7 @@ int main(int argc, const char *argv[])
 	long int noutfil = filmakers.size();
 	for (long int k=0; k<noutfil; k++)
 	{
-		filmakers[k].filwriter.fil = fil[idx[0]];
+		reader->get_filterbank_template(filmakers[k].filwriter.fil);
 		filmakers[k].ibeam = ibeam;
 		filmakers[k].rootname = rootname;
 		filmakers[k].source_name = source_name;
@@ -237,95 +225,26 @@ int main(int argc, const char *argv[])
 	long int nstart = jump[0]/tsamp;
 	long int nend = ntotal-jump[1]/tsamp;
 
-	int sumif = nifs>2? 2:nifs;
-	
-	long int ntot = 0;
-	long int ntot2 = 0;
-	long int count = 0;
-	long int bcnt1 = 0;
-	for (long int idxn=0; idxn<nfil; idxn++)
+	while (!reader->is_end)
 	{
-		long int n = idx[idxn];
-		long int nseg = ceil(1.*fil[n].nsamples/NSBLK);
-		long int ns_filn = 0;
+		if (reader->read_data(databuf, ndump) != ndump) break;
 
-		for (long int s=0; s<nseg; s++)
+		databuf.counter += ndump;
+
+		DataBuffer<float> *data = patch.filter(databuf);
+		data = prep.run(*data);
+
+		for (long int ioutfil=0; ioutfil<noutfil; ioutfil++)
 		{
-			if (verbose)
-			{
-				std::cerr<<"\r\rfinish "<<std::setprecision(2)<<std::fixed<<tsamp*count<<" seconds ";
-				std::cerr<<"("<<100.*count/ntotal<<"%)";
-			}
-
-			fil[n].read_data(NSBLK);
-			assert(fil[n].ndata != 0);
-#ifdef FAST
-			unsigned char *pcur = (unsigned char *)(fil[n].data);
-#endif
-			for (long int i=0; i<NSBLK; i++)
-			{
-				count++;
-
-				if (count-1<nstart or count-1>nend)
-				{
-					if (++ns_filn == fil[n].nsamples)
-					{
-						goto next;
-					}
-					pcur += nifs*nchans;
-					continue;
-				}
-
-				memset(buffer, 0, sizeof(float)*nchans);
-				long int m = 0;
-				for (long int k=0; k<sumif; k++)
-				{
-					for (long int j=0; j<nchans; j++)
-					{
-						buffer[j] +=  pcur[m++];
-					}
-				}
-
-				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
-				databuf.counter++;
-				bcnt1++;
-				ntot++;
-
-				if (ntot%ndump == 0)
-				{
-					DataBuffer<float> *data = patch.filter(databuf);
-					data = prep.run(*data);
-
-					for (long int ioutfil=0; ioutfil<noutfil; ioutfil++)
-					{
-						data->isbusy = true;
-						filmakers[ioutfil].run(*data);
-					}
-
-					bcnt1 = 0;
-					//databuf.open();
-				}
-
-				if (++ns_filn == fil[n].nsamples)
-				{
-					goto next;
-				}
-				pcur += nifs*nchans;
-			}
+			data->isbusy = true;
+			filmakers[ioutfil].run(*data);
 		}
-		next:
-		fil[n].close();
+
+		//databuf.open();
 	}
+
+				
 	databuf.close();
-
-	if (verbose)
-	{
-		cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
-		cerr<<"("<<100.*count/ntotal<<"%)"<<endl;
-	}
-
-	delete [] buffer;
-	delete [] fil;
 
 	return 0;
 }

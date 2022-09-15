@@ -190,6 +190,8 @@ void plan(variables_map &vm, std::vector<FilMaker> &filmakers)
 			std::vector<std::string> parameters;
 			boost::split(parameters, rfi_flags, boost::is_any_of("\t "), boost::token_compress_on);
 
+			fm.rfilist.clear();
+
 			for (auto opt=parameters.begin(); opt!=parameters.end(); ++opt)
 			{
 				if (*opt=="mask" or *opt=="kadaneF" or *opt=="kadaneT")
