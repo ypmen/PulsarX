@@ -23,6 +23,8 @@
 #include "patch.h"
 #include "preprocesslite.h"
 #include "logging.h"
+#include "psrfitsreader.h"
+#include "filterbankreader.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -73,7 +75,11 @@ int main(int argc, const char *argv[])
 			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("format", value<string>()->default_value("pulsarx"), "Output format of dedispersed data [pulsarx(default),sigproc,presto]")
+			("wts", "Apply DAT_WTS")
+			("scloffs", "Apply DAT_SCL and DAT_OFFS")
+			("zero_off", "Apply ZERO_OFF")
 			("cont", "Input files are contiguous")
+			("psrfits", "Input psrfits format data")
 			("input,f", value<vector<string>>()->multitoken()->composing(), "Input files");
 
 	positional_options_description pos_desc;
@@ -111,54 +117,44 @@ int main(int argc, const char *argv[])
 	float outstd = vm["std"].as<float>();
 	int outnbits = vm["nbits"].as<int>();
 
-	long int nfil = fnames.size();
-	Filterbank *fil = new Filterbank [nfil];
-	for (long int i=0; i<nfil; i++)
-	{
-		fil[i].filename = fnames[i];
-	}
+	bool apply_wts = false;
+	bool apply_scloffs = false;
+	bool apply_zero_off = false;
 
-	vector<MJD> tstarts;
-	vector<MJD> tends;
-	long int ntotal = 0;
-	for (long int i=0; i<nfil; i++)
-	{
-		fil[i].read_header();
-		ntotal += fil[i].nsamples;
-		MJD tstart(fil[i].tstart);
-		tstarts.push_back(tstart);
-		tends.push_back(tstart+fil[i].nsamples*fil[i].tsamp);
-	}
-	vector<size_t> idx = argsort(tstarts);
-	for (long int i=0; i<nfil-1; i++)
-	{
-		if (abs((tends[idx[i]]-tstarts[idx[i+1]]).to_second())>0.5*fil[idx[i]].tsamp)
-		{
-			if (contiguous)
-			{
-				BOOST_LOG_TRIVIAL(warning)<<"Warning: time not contiguous"<<endl;
-			}
-			else
-			{
-				BOOST_LOG_TRIVIAL(error)<<"Error: time not contiguous"<<endl;
-				exit(-1);
-			}
-		}
-	}
+	if (vm.count("wts"))
+		apply_wts = true;
+	if (vm.count("scloffs"))
+		apply_scloffs = true;
+	if (vm.count("zero_off"))
+		apply_zero_off = true;
 
-	int ibeam = vm["ibeam"].as<int>();
+	PSRDataReader * reader;
 
-	if (vm["ibeam"].defaulted())
-	{
-		if (fil[0].ibeam != 0)
-			ibeam = fil[0].ibeam;
-	}
+	if (vm.count("psrfits"))
+		reader= new PsrfitsReader;
+	else
+		reader= new FilterbankReader;
 
-	long int nchans = fil[0].nchans;
-	double tsamp = fil[0].tsamp;
-	int nifs = fil[0].nifs;
+	if (!vm["ibeam"].defaulted())
+		reader->beam = std::to_string(vm["ibeam"].as<int>());
 
-	float *buffer = new float [nchans];
+	reader->fnames = fnames;
+	reader->sumif = true;
+	reader->contiguous = contiguous;
+	reader->verbose = verbose;
+	reader->apply_scloffs = apply_scloffs;
+	reader->apply_wts = apply_wts;
+	reader->apply_zero_off = apply_zero_off;
+	reader->check();
+	reader->read_header();
+	reader->nsblk = 8192;
+
+	int ibeam = reader->beam.empty() ? 0 : std::stoi(reader->beam);
+
+	long int nchans = reader->nchans;
+	double tsamp = reader->tsamp;
+	int nifs = reader->nifs;
+	long int ntotal = reader->nsamples;
 
 	vector<PulsarSearch> search;
 	plan(vm, search);
@@ -176,7 +172,7 @@ int main(int argc, const char *argv[])
 	DataBuffer<float> databuf(ndump, nchans);
 	databuf.closable = true;
 	databuf.tsamp = tsamp;
-	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
+	memcpy(&databuf.frequencies[0], reader->frequencies.data(), sizeof(double)*nchans);
 
 	Patch patch;
 	patch.filltype = vm["fillPatch"].as<string>();
@@ -192,8 +188,8 @@ int main(int argc, const char *argv[])
 	prep.filltype = vm["fill"].as<string>();
 	prep.prepare(databuf);
 
-	long int nseg = jump[0]/tsamp;
-	long int njmp = jump[1]/tsamp;
+	long int nseg = std::ceil(jump[0]/tsamp / ndump) * ndump;
+	long int njmp = std::ceil(jump[1]/tsamp / ndump) * ndump;
 
 	long int ncover = 0;
 
@@ -210,109 +206,62 @@ int main(int argc, const char *argv[])
 	{
 		search[k].ibeam = ibeam;
 		search[k].rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
-		search[k].fildedisp = fil[0];
+		reader->get_filterbank_template(search[k].fildedisp);
 		search[k].fildedisp.fch1 = (databuf.frequencies.front()+databuf.frequencies.back())/2.;
 		search[k].fildedisp.foff = databuf.frequencies.back()-databuf.frequencies.front();
-		search[k].fildedisp.tstart = tstarts[idx[0]].to_day();
+		search[k].fildedisp.tstart = reader->start_mjd.to_day();
 		search[k].filltype = vm["fill"].as<string>();
 		search[k].prepare(prep);
 	}
 
-	int sumif = nifs>2? 2:nifs;
-	
-	long int jmpcont = 0;
 	long int ntot = 0;
-	long int ntot2 = 0;
+	long int jmpcont = 0;
 	long int count = 0;
-	long int bcnt1 = 0;
-	for (long int idxn=0; idxn<nfil; idxn++)
+	while (!reader->is_end)
 	{
-		long int n = idx[idxn];
-		long int nsegments = ceil(1.*fil[n].nsamples/NSBLK);
-		long int ns_filn = 0;
+		if (reader->read_data(databuf, ndump) != ndump) break;
 
-		for (long int s=0; s<nsegments; s++)
+		if (ntot == nseg)
 		{
-			if (verbose)
+			if (jmpcont < njmp)
 			{
-				cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
-				cerr<<"("<<100.*count/ntotal<<"%)";
+				jmpcont += ndump;
+				continue;
 			}
+			
+			ntot = 0;
+			jmpcont = 0;
 
-			fil[n].read_data(NSBLK);
-#ifdef FAST
-			unsigned char *pcur = (unsigned char *)(fil[n].data);
-#endif
-			for (long int i=0; i<NSBLK; i++)
+			ncover++;
+			for (long int k=0; k<nsearch; k++)
 			{
-				count++;
-				if (++ns_filn == fil[n].nsamples)
+				if (vm["format"].as<string>() == "presto")
 				{
-					goto next;
+					search[k].dedisp.makeinf(search[k].fildedisp);
 				}
-
-				if (ntot == nseg)
+				else if (vm["format"].as<string>() != "sigproc")
 				{
-					if (jmpcont++ < njmp)
-					{
-						pcur += nifs*nchans;
-						continue;
-					}
-				   
-					ntot = 0;
-					jmpcont = 0;
-
-					ncover++;
-					for (long int k=0; k<nsearch; k++)
-					{
-						if (vm["format"].as<string>() == "presto")
-						{
-							search[k].dedisp.makeinf(search[k].fildedisp);
-						}
-						else if (vm["format"].as<string>() != "sigproc")
-						{
-							search[k].dedisp.modifynblock();
-						}
-						search[k].dedisp.rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
-						search[k].dedisp.prepare(search[k].rfi);
-						search[k].fildedisp.tstart = (tstarts[idx[0]] + count*tsamp/86400.).to_day();
-						search[k].dedisp.preparedump(search[k].fildedisp, outnbits, vm["format"].as<string>());
-					}
+					search[k].dedisp.modifynblock();
 				}
-
-				memset(buffer, 0, sizeof(float)*nchans);
-				long int m = 0;
-				for (long int k=0; k<sumif; k++)
-				{
-					for (long int j=0; j<nchans; j++)
-					{
-						buffer[j] +=  pcur[m++];
-					}
-				}
-
-				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(float)*1*nchans);
-				databuf.counter++;
-				bcnt1++;
-				ntot++;
-
-				if (ntot%ndump == 0)
-				{
-					patch.filter(databuf);
-					prep.run(databuf);
-					for (auto sp=search.begin(); sp!=search.end(); ++sp)
-					{
-						prep.isbusy = true;
-						(*sp).run(prep);
-					}
-					bcnt1 = 0;
-					databuf.open();
-				}
-
-				pcur += nifs*nchans;
+				search[k].dedisp.rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
+				search[k].dedisp.prepare(search[k].rfi);
+				search[k].fildedisp.tstart = (reader->start_mjd + count*tsamp/86400.).to_day();
+				search[k].dedisp.preparedump(search[k].fildedisp, outnbits, vm["format"].as<string>());
 			}
 		}
-		next:
-		fil[n].close();
+
+		ntot += ndump;
+		count += ndump;
+
+		patch.filter(databuf);
+		prep.run(databuf);
+		for (auto sp=search.begin(); sp!=search.end(); ++sp)
+		{
+			prep.isbusy = true;
+			(*sp).run(prep);
+		}
+
+		databuf.open();
 	}
 
 	if (vm["format"].as<string>() == "presto")
@@ -329,15 +278,6 @@ int main(int argc, const char *argv[])
 			(*sp).dedisp.modifynblock();
 		}
 	}
-
-	if (verbose)
-	{
-		cerr<<"\r\rfinish "<<setprecision(2)<<fixed<<tsamp*count<<" seconds ";
-		cerr<<"("<<100.*count/ntotal<<"%)"<<endl;
-	}
-
-	delete [] buffer;
-	delete [] fil;
 
 	return 0;
 }
