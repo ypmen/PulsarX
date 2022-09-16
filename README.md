@@ -15,12 +15,12 @@ PulsarX is a toolset for pulsar searching, including RFI mitigation, dedispersio
 ## Programs
 
 - ### filtool 
-  clean the filterbank file and generate a new one, e.g.\
+  clean the filterbank file or psrfits file (--psrfits), and generate a new one, e.g.\
   `filtool -v --filplan`[`filplan.json`](examples/filplan.json)`-f *.fil`
-- ### dedisperse_all/dedisperse_all_fil
-  remove rfi and dedisperse the psrfits/filterbank file, e.g.\
+- ### dedisperse_all_fil
+  remove rfi and dedisperse the filterbank/psrfits (--psrfits) file, e.g.\
   `dedisperse_all_fil -v --ddplan` [`ddplan.txt`](examples/ddplan.txt) `-z zdot --format presto -f *.fil`
-- ### psrfold/psrfold_fil
+- ### psrfold_fil
   fold and optimize the pulsar candidate, e.g.\
   `psrfold_fil -v --template ~/software/PulsarX/include/template/meerkat_fold.template --candfile` [`example.cands`](examples/example.cands) `--plotx -n 64 -b 64 --clfd 2 -f *.fil`
   ![](examples/example.png)
