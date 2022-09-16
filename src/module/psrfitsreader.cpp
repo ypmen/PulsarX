@@ -339,8 +339,6 @@ size_t PsrfitsReader::read_data(DataBuffer<float> &databuffer, size_t ndump, boo
 
 				if (count == nsamples - skip_end)
 				{
-					if (bcnt1 == ndump) bcnt1 = 0;
-
 					if (ns_psfn == psf[n].subint.nsamples)
 					{
 						psf[n].close();
@@ -381,8 +379,7 @@ size_t PsrfitsReader::read_data(DataBuffer<float> &databuffer, size_t ndump, boo
 						update_subint = true;
 					}
 
-					bcnt1 = 0;
-					return ndump;
+					return bcnt1;
 				}
 
 				if (ns_psfn == psf[n].subint.nsamples)
