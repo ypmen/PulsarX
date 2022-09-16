@@ -13,6 +13,8 @@
 #include <iomanip>
 #include <string.h>
 #include <boost/program_options.hpp>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include "pulsarsearch.h"
 #include "subdedispersion.h"
@@ -159,10 +161,30 @@ int main(int argc, const char *argv[])
 	vector<PulsarSearch> search;
 	plan(vm, search);
 
+	size_t ndm_total = 0;
+
 	vector<int> tds;
 	for (auto sp=search.begin(); sp!=search.end(); ++sp)
 	{
 		tds.push_back((*sp).td*vm["td"].as<int>());
+
+		ndm_total += sp->ndm;
+	}
+
+	if (vm["format"].as<string>() == "sigproc" or vm["format"].as<string>() == "presto")
+	{
+		struct rlimit rlim;
+		int status = getrlimit(RLIMIT_NOFILE, &rlim);
+		if (status)
+			BOOST_LOG_TRIVIAL(warning)<<"Can't get the maximum file descriptor number";
+		int rlimit_nofile = rlim.rlim_cur;
+		if (ndm_total > rlimit_nofile)
+		{
+			BOOST_LOG_TRIVIAL(error)<<ndm_total<<" dedisersed files is larger than the maximum file descriptor number, please check ulimit -a";
+			exit(-1);
+		}
+
+		BOOST_LOG_TRIVIAL(info)<<"create "<<ndm_total<<" "<<vm["format"].as<string>()<<" dedispersed files";
 	}
 
 	long int td_lcm = findlcm(&tds[0], tds.size());
