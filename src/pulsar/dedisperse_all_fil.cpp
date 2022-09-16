@@ -243,6 +243,8 @@ int main(int argc, const char *argv[])
 	{
 		if (reader->read_data(databuf, ndump) != ndump) break;
 
+		databuf.counter += ndump;
+
 		if (ntot == nseg)
 		{
 			if (jmpcont < njmp)
