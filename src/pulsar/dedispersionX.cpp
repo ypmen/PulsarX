@@ -390,6 +390,7 @@ DedispersionX::DedispersionX()
 	ddm_init = 0.;
 
 	nchans = 0;
+	nsamples0 = 0;
 }
 
 DedispersionX::~DedispersionX()
@@ -420,7 +421,7 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 
 	double maxdm = dmlist_sort.back();
 
-	size_t nsamples0 = 0;
+	nsamples0 = 0;
 
 	DataBuffer<float> *d = databuffer.get();
 	size_t ds = 1;
@@ -496,10 +497,9 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 			if (buffers[0].empty() && bufferTs[0].empty() && dedatas[0].empty())
 			{
 				buffers[0].resize(nsamples0 * nchans, 0.);
-				bufferTs[0].resize(nchans * nsamples0, 0.);
-				dedatas[0].resize(nchans * nsamples0, 0.);
 			}
 			treededispersions[k].update_nsamples(nsamples0);
+			treededispersions[k].resize_cache();
 			treededispersions[k].ptr_buffer = &buffers[0];
 			treededispersions[k].ptr_dedata = &dedatas[0];
 			treededispersions[k].ptr_bufferT = &bufferTs[0];
@@ -507,8 +507,6 @@ void DedispersionX::prepare(DataBuffer<float> &databuffer)
 		else
 		{
 			buffers[k].resize(treededispersions[k].get_nsamples() * treededispersions[k].get_nchans(), 0.);
-			bufferTs[k].resize(treededispersions[k].get_nchans() * treededispersions[k].get_nsamples(), 0.);
-			dedatas[k].resize(treededispersions[k].get_nchans() * treededispersions[k].get_nsamples(), 0.);
 
 			treededispersions[k].ptr_buffer = &buffers[k];
 			treededispersions[k].ptr_dedata = &dedatas[k];

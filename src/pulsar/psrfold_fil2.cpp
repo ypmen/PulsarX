@@ -62,6 +62,7 @@ int main(int argc, const char *argv[])
 	desc.add_options()
 			("help,h", "Help")
 			("verbose,v", "Print debug information")
+			("save_memory", "Trade off memory with speed")
 			("threads,t", value<unsigned int>()->default_value(1), "Number of threads")
 			("jump,j", value<vector<double>>()->multitoken()->default_value(vector<double>{0, 0}, "0, 0"), "Time jump at the beginning and end (s)")
 			("frac", value<vector<double>>()->multitoken()->default_value(vector<double>{0, 1}, "0, 1"), "Reading data between start and end fraction")
@@ -444,6 +445,14 @@ int main(int argc, const char *argv[])
 
 	size_t ndmseg = dedisp.get_nsegments();
 
+	if (vm.count("save_memory") == 0)
+	{
+		for (size_t l=0; l<ndmseg; l++)
+		{
+			dedisp.alloc(l);
+		}
+	}
+
 	// calculate dm batch
 	std::vector<std::vector<size_t>> batchs;
 	for (size_t l=0; l<ndmseg; l++)
@@ -463,31 +472,6 @@ int main(int argc, const char *argv[])
 		batchs.push_back(batch);
 	}
 
-#ifndef _OPENMP
-	std::vector<DataBuffer<float>> subdatas;
-	for (size_t k=0; k<ndmseg; k++)
-	{
-		DataBuffer<float> subdata;
-		if (dedisp.is_hit(k))
-			dedisp.get_subdata(dedisp.get_dms(k), subdata);
-
-		subdatas.push_back(subdata);
-	}
-#else
-	std::vector<DataBuffer<float>> subdatas;
-	for (size_t t=0; t<num_threads; t++)
-	{
-		for (size_t k=0; k<ndmseg; k++)
-		{
-			DataBuffer<float> subdata;
-			if (dedisp.is_hit(k))
-				dedisp.get_subdata(dedisp.get_dms(k), subdata);
-
-			subdatas.push_back(subdata);
-		}
-	}
-#endif
-
 	long int ncand = folder.size();
 	if (ncand <= 0)
 	{
@@ -502,6 +486,9 @@ int main(int argc, const char *argv[])
 
 	for (long int k=0; k<ncand; k++)
 	{
+		DataBuffer<float> tmpsubdata;
+		dedisp.get_subdata_tem(folder[k].dm, tmpsubdata);
+
 		offsets[k] = dedisp.get_offset(folder[k].dm);
 		ndumps[k] = dedisp.get_ndump(folder[k].dm);
 		tsamps[k] = dedisp.get_tsamp(folder[k].dm);
@@ -512,9 +499,9 @@ int main(int argc, const char *argv[])
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else
 			folder[k].ref_epoch = reader->start_mjd + (ntotal*tsamp/2.);
-		folder[k].resize(1, subdatas[ids[k]].nchans, folder[k].nbin);
+		folder[k].resize(1, tmpsubdata.nchans, folder[k].nbin);
 		folder[k].nblock = nblock;
-		folder[k].prepare(subdatas[ids[k]]);
+		folder[k].prepare(tmpsubdata);
 	}
 
 	BOOST_LOG_TRIVIAL(info)<<"start folding...";
@@ -571,26 +558,30 @@ int main(int argc, const char *argv[])
 
 		for (size_t l=0; l<ndmseg; l++)
 		{
+			if (vm.count("save_memory"))
+				dedisp.alloc(l);
 			dedisp.run(l);
 
 #ifndef _OPENMP
+			DataBuffer<float> subdata;
 			for (auto b=batchs[l].begin(); b!=batchs[l].end(); ++b)
 			{
 				size_t k = *b;
 
-				dedisp.get_subdata(folder[k].dm, subdatas[ids[k]]);
+				dedisp.get_subdata(folder[k].dm, subdata);
 				
 				if (dedisp.get_counter(folder[k].dm) >= offsets[k] + ndumps[k])
 				{
 					BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
 
 					if (vm.count("dspsr"))
-						folder[k].runDspsr(subdatas[ids[k]]);
+						folder[k].runDspsr(subdata);
 					else
-						folder[k].runTRLSM(subdatas[ids[k]]);				
+						folder[k].runTRLSM(subdata);	
 				}
 			}
 #else
+			std::vector<DataBuffer<float>> subdatas(num_threads);
 #pragma omp parallel for num_threads(num_threads)
 			for (size_t m=0; m<batchs[l].size(); m++)
 			{
@@ -598,19 +589,21 @@ int main(int argc, const char *argv[])
 
 				int thread_id = omp_get_thread_num();
 
-				dedisp.get_subdata(folder[k].dm, subdatas[thread_id * ndmseg + ids[k]]);
+				dedisp.get_subdata(folder[k].dm, subdatas[thread_id]);
 				
 				if (dedisp.get_counter(folder[k].dm) >= offsets[k] + ndumps[k])
 				{
 					BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
 
 					if (vm.count("dspsr"))
-						folder[k].runDspsr(subdatas[thread_id * ndmseg + ids[k]]);
+						folder[k].runDspsr(subdatas[thread_id]);
 					else
-						folder[k].runTRLSM(subdatas[thread_id * ndmseg + ids[k]]);				
+						folder[k].runTRLSM(subdatas[thread_id]);
 				}
 			}
 #endif
+			if (vm.count("save_memory"))
+				dedisp.free(l);
 		}
 
 		dedisp.postrun(*data);
@@ -637,24 +630,30 @@ int main(int argc, const char *argv[])
 		rfi.open();
 		
 		dedisp.prerun(rfi);
+
+		DataBuffer<float> subdata;
 		
 		for (size_t m=0; m<ndmseg; m++)
 		{
+			if (vm.count("save_memory"))
+				dedisp.alloc(m);
 			dedisp.run(m);
 			for (auto b=batchs[m].begin(); b!=batchs[m].end(); ++b)
 			{
 				size_t k = *b;
 
-				dedisp.get_subdata(folder[k].dm, subdatas[ids[k]]);
+				dedisp.get_subdata(folder[k].dm, subdata);
 
 				if (nlefts[k]-- > 0)
 				{
 					if (vm.count("dspsr"))
-						folder[k].runDspsr(subdatas[ids[k]]);
+						folder[k].runDspsr(subdata);
 					else
-						folder[k].runTRLSM(subdatas[ids[k]]);
+						folder[k].runTRLSM(subdata);
 				}
 			}
+			if (vm.count("save_memory"))
+				dedisp.free(m);
 		}
 		dedisp.postrun(rfi);
 	}

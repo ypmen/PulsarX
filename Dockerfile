@@ -131,8 +131,8 @@ RUN make clean
 
 USER root
 
-WORKDIR $HOME/software/PulsarX/python
-RUN python3 setup.py install
+#WORKDIR $HOME/software/PulsarX/python
+#RUN python3 setup.py install
 
 USER pulsarx
 

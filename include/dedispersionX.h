@@ -61,6 +61,17 @@ namespace Pulsar
 		void run(DataBuffer<float> &databuffer);
 		void run();
 		void get_subdata(double dm, DataBuffer<float> &subdata);
+		void get_subdata_tem(double dm, DataBuffer<float> &subdata)
+		{
+			subdata.resize(ndump, nsubband);
+			subdata.tsamp = tsamp;
+			subdata.frequencies = frequencies_sub;
+		}
+		void resize_cache()
+		{
+			cache0.resize(nsamples, 0.);
+			cache1.resize(nsamples, 0.);
+		}
 
 	public:
 		bool is_ready(){return ready;}
@@ -73,7 +84,7 @@ namespace Pulsar
 
 		void update_nchans(size_t n){nchans = n;}
 		void update_ndump(size_t n){ndump = n;}
-		void update_nsamples(size_t n){nsamples = n;}
+		void update_nsamples(size_t n){nsamples = n;offset = nsamples-ndump;}
 		void update_tsamp(double t){tsamp = t;}
 		void update_frequencies(const std::vector<double> &f){frequencies = f;}
 
@@ -187,6 +198,38 @@ namespace Pulsar
 		void postrun(DataBuffer<float> &databuffer);
 		void run(DataBuffer<float> &databuffer);
 		void run(size_t k);
+		void alloc(size_t k)
+		{
+			if (downsamples[k].td == 1 && downsamples[k].fd == 1)
+			{
+				bufferTs[0].resize(nchans * nsamples0, 0.);
+				dedatas[0].resize(nchans * nsamples0, 0.);
+			}
+			else
+			{
+				bufferTs[k].resize(treededispersions[k].get_nchans() * treededispersions[k].get_nsamples(), 0.);
+				dedatas[k].resize(treededispersions[k].get_nchans() * treededispersions[k].get_nsamples(), 0.);
+			}
+		}
+		void free(size_t k)
+		{
+			if (downsamples[k].td == 1 && downsamples[k].fd == 1)
+			{
+				bufferTs[0].clear();
+				bufferTs[0].shrink_to_fit();
+
+				dedatas[0].clear();
+				dedatas[0].shrink_to_fit();
+			}
+			else
+			{
+				bufferTs[k].clear();
+				bufferTs[k].shrink_to_fit();
+
+				dedatas[k].clear();
+				dedatas[k].shrink_to_fit();
+			}
+		}
 		
 		void close()
 		{
@@ -216,6 +259,24 @@ namespace Pulsar
 				if (dms <= dm && dme > dm)
 				{
 					treededispersions[k].get_subdata(dm, subdata);
+					succ = true;
+				}
+			}
+
+			if (!succ)
+				BOOST_LOG_TRIVIAL(error) << "dm is out of range";
+		}
+
+		void get_subdata_tem(double dm, DataBuffer<float> &subdata)
+		{
+			bool succ = false;
+			for (size_t k=0; k<treededispersions.size(); k++)
+			{
+				double dms = treededispersions[k].dms;
+				double dme = treededispersions[k].dms + treededispersions[k].get_nchans() * treededispersions[k].ddm;
+				if (dms <= dm && dme > dm)
+				{
+					treededispersions[k].get_subdata_tem(dm, subdata);
 					succ = true;
 				}
 			}
@@ -341,6 +402,7 @@ namespace Pulsar
 	
 	private:
 		size_t nchans;
+		size_t nsamples0;
 		std::vector<TreeDedispersion> treededispersions;
 		std::vector<Downsample> downsamples;
 		std::vector<std::vector<float>> buffers;
