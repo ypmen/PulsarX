@@ -69,8 +69,8 @@ namespace Pulsar
 		}
 		void resize_cache()
 		{
-			cache0.resize(nsamples, 0.);
-			cache1.resize(nsamples, 0.);
+			cache0.resize(num_threads * nsamples, 0.);
+			cache1.resize(num_threads * nsamples, 0.);
 		}
 
 	public:

@@ -9,6 +9,10 @@
 #include "dedispersionX.h"
 #include "utils.h"
 
+#ifdef _OPENMP
+	#include <omp.h>
+#endif
+
 using namespace Pulsar;
 
 TreeDedispersion::TreeDedispersion()
@@ -96,8 +100,7 @@ void TreeDedispersion::prepare(DataBuffer<float> &databuffer)
 	if (if_alloc_buffer)
 		buffer.resize(nsamples * nchans, 0.);
 	
-	cache0.resize(nsamples, 0.);
-	cache1.resize(nsamples, 0.);
+	resize_cache();
 
 	size_t tmp = 1;
 	while (tmp < nchans)
@@ -251,25 +254,30 @@ void TreeDedispersion::transform(size_t depth, size_t ichan)
 	size_t ndm = (nchans >> (depth + 1));
 	if (frequencies.front() > frequencies.back())
 	{
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(num_threads)
+#endif
 		for (size_t idm=0; idm<ndm; idm++)
 		{
+			int thread_id = omp_get_thread_num();
+
 			if (hit[depth * nchans + ichan * (ndm * 2) + idm])
 			{
 				size_t delayn0 = delayn[depth * nchans + ichan * (ndm * 2) + idm];
-				std::rotate_copy(temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples + delayn0, temp->begin() + (2 * ichan + 1) * ndm * nsamples + (idm + 1) * nsamples, cache0.begin());
+				std::rotate_copy(temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples + delayn0, temp->begin() + (2 * ichan + 1) * ndm * nsamples + (idm + 1) * nsamples, cache0.begin() + thread_id * nsamples);
 			}
 
 			if (hit[depth * nchans + ichan * (ndm * 2) + ndm + idm])
 			{
 				size_t delayn1 = delayn[depth * nchans + ichan * (ndm * 2) + ndm + idm];
-				std::rotate_copy(temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples + delayn1, temp->begin() + (2 * ichan + 1) * ndm * nsamples + (idm + 1) * nsamples, cache1.begin());
+				std::rotate_copy(temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 1) * ndm * nsamples + idm * nsamples + delayn1, temp->begin() + (2 * ichan + 1) * ndm * nsamples + (idm + 1) * nsamples, cache1.begin() + thread_id * nsamples);
 			}
 
 			if (hit[depth * nchans + ichan * (ndm * 2) + ndm + idm])
 			{
 				for (size_t i=0; i<nsamples; i++)
 				{
-					(*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] + cache1[i];
+					(*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] + cache1[i + thread_id * nsamples];
 				}
 			}
 
@@ -277,32 +285,37 @@ void TreeDedispersion::transform(size_t depth, size_t ichan)
 			{
 				for (size_t i=0; i<nsamples; i++)
 				{
-					(*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] + cache0[i];
+					(*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] + cache0[i + thread_id * nsamples];
 				}
 			}
 		}
 	}
 	else
 	{
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(num_threads)
+#endif
 		for (size_t idm=0; idm<ndm; idm++)
 		{
+			int thread_id = omp_get_thread_num();
+
 			if (hit[depth * nchans + ichan * (ndm * 2) + idm])
 			{
 				size_t delayn0 = delayn[depth * nchans + ichan * (ndm * 2) + idm];
-				std::rotate_copy(temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples + delayn0, temp->begin() + (2 * ichan + 0) * ndm * nsamples + (idm + 1) * nsamples, cache0.begin());
+				std::rotate_copy(temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples + delayn0, temp->begin() + (2 * ichan + 0) * ndm * nsamples + (idm + 1) * nsamples, cache0.begin() + thread_id * nsamples);
 			}
 
 			if (hit[depth * nchans + ichan * (ndm * 2) + ndm + idm])
 			{
 				size_t delayn1 = delayn[depth * nchans + ichan * (ndm * 2) + ndm + idm];
-				std::rotate_copy(temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples + delayn1, temp->begin() + (2 * ichan + 0) * ndm * nsamples + (idm + 1) * nsamples, cache1.begin());
+				std::rotate_copy(temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples, temp->begin() + (2 * ichan + 0) * ndm * nsamples + idm * nsamples + delayn1, temp->begin() + (2 * ichan + 0) * ndm * nsamples + (idm + 1) * nsamples, cache1.begin() + thread_id * nsamples);
 			}
 
 			if (hit[depth * nchans + ichan * (ndm * 2) + idm])
 			{
 				for (size_t i=0; i<nsamples; i++)
 				{
-					(*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] + cache0[i];
+					(*temp)[(2 * ichan + 0) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] + cache0[i + thread_id * nsamples];
 				}
 			}
 
@@ -310,7 +323,7 @@ void TreeDedispersion::transform(size_t depth, size_t ichan)
 			{
 				for (size_t i=0; i<nsamples; i++)
 				{
-					(*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] + cache1[i];
+					(*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] = (*temp)[(2 * ichan + 1) * ndm * nsamples + idm * nsamples + i] + cache1[i + thread_id * nsamples];
 				}
 			}
 		}
