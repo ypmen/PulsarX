@@ -23,6 +23,7 @@ unsigned int num_threads = 1;
 PYBIND11_MODULE(filtools, m)
 {
 	pybind11::class_<DataBuffer<float>>(m, "DataBuffer")
+		.def(py::init<>())
 		.def(py::init<long int, int>())
 		.def("get_data",
 			[](const DataBuffer<float> &m) {
@@ -121,6 +122,7 @@ PYBIND11_MODULE(filtools, m)
 	pybind11::class_<Equalize, DataBuffer<float>>(m, "Equalize")
 		.def(py::init<>())
 		.def("prepare", &Equalize::prepare)
+		.def("filter", &Equalize::filter)
 		.def("run", &Equalize::run)
 		.def("get_data",
 			[](const Equalize &m) {
@@ -150,6 +152,7 @@ PYBIND11_MODULE(filtools, m)
 
 	pybind11::class_<RFI, DataBuffer<float>>(m, "RFI")
 		.def(py::init<>())
+		.def("prepare", &RFI::prepare)
 		.def("zap", &RFI::zap)
 		.def("zdot", &RFI::zdot)
 		.def("zero", &RFI::zero)
@@ -175,6 +178,7 @@ PYBIND11_MODULE(filtools, m)
 						m.buffer[j * ncol + i] = array_data(j, i);
 			}
 		)
+		.def_readwrite("filltype", &RFI::filltype)
 		.def_readonly("nsamples", &RFI::nsamples)
 		.def_readonly("nchans", &RFI::nchans)
 		.def_readonly("tsamp", &RFI::tsamp)
