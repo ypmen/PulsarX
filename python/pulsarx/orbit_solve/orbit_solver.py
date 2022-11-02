@@ -192,7 +192,7 @@ def plot(vpar, vpar_err):
 
 	mass_min = get_minimum_mass(fmass)
 
-	log.info(f"binary parameters:\n" f"F0\t{f0}\t{f0_err}\n" f"A1\t{asini_c}\t{asini_c_err}\n" f"Pb\t{Pb}\t{Pb_err}\n" f"T0\t{T0 + T_c}\t{T0_err}\n" f"ECC\t{e}\t{e_err}\n" f"OM\t{omega*180./np.pi}\t{omega_err*180./np.pi}\n" f"OMDOT\t{omega_dot*180./np.pi}\t{omega_dot_err*180./np.pi}")
+	log.info(f"binary parameters:\n" f"F0\t{f0}\t{f0_err}\n" f"A1\t{asini_c}\t{asini_c_err}\n" f"PB\t{Pb}\t{Pb_err}\n" f"T0\t{T0 + T_c}\t{T0_err}\n" f"ECC\t{e}\t{e_err}\n" f"OM\t{omega*180./np.pi}\t{omega_err*180./np.pi}\n" f"OMDOT\t{omega_dot*180./np.pi}\t{omega_dot_err*180./np.pi}")
 	log.info(f"mass_function = {fmass}, mass_min={mass_min}")
 
 	if config['binary']['OMDOT'] or not config['plot']['mean_anomaly']:

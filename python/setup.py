@@ -24,6 +24,7 @@ ext_modules = [
         "orbit_utils",
         sources=["cpp/orbit_utils.cpp"],
 	extra_compile_args=["-O3", "-mavx2"],
+        include_dirs=["../include", "../"]
     ),
 ]
 
