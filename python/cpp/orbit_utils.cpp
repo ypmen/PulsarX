@@ -215,7 +215,7 @@ pybind11::array_t<double> compute_Te(pybind11::array_t<double> &vTb, double asin
 	);
 }
 
-pybind11::array_t<double> timing(pybind11::array_t<double> vTb, double f0, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
+pybind11::array_t<double> timing(pybind11::array_t<double> vTb, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {
 	auto array_Tb = vTb.unchecked<1>();
 	size_t size = array_Tb.size();
@@ -229,7 +229,8 @@ pybind11::array_t<double> timing(pybind11::array_t<double> vTb, double f0, doubl
 	double phsin = 0., phcos = 0.;
 	for (size_t i=0; i<size; i++)
 	{
-		vphase[i] = f0 * array_Te(i) * 86400.;
+		double t = array_Te(i) * 86400.;
+		vphase[i] = f0 * t + 0.5 * f1 * t * t;
 
 		phsin += std::sin(2. * M_PI * vphase[i]);
 		phcos += std::cos(2. * M_PI * vphase[i]);
@@ -569,7 +570,7 @@ __m256d avx_compute_Te(__m256d avx_Tb, double asini_c, double Pb, double T0, dou
 	return avx_Te;
 }
 
-pybind11::array_t<double> timing(pybind11::array_t<double> vTb, double f0, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
+pybind11::array_t<double> timing(pybind11::array_t<double> vTb, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {
 	auto array_Tb = vTb.cast<pybind11::array_t<double>>().unchecked<1>();
 	size_t size = array_Tb.size();
@@ -595,7 +596,8 @@ pybind11::array_t<double> timing(pybind11::array_t<double> vTb, double f0, doubl
 		__m256d avx_Tb = _mm256_load_pd(aligned_Tb+i);
 		__m256d avx_Te = avx_compute_Te(avx_Tb, asini_c, Pb, T0, e, omega0, omega_dot);
 
-		__m256d avx_ph = f0 * avx_Te * 86400.;
+		__m256d avx_t = avx_Te * 86400.;
+		__m256d avx_ph = f0 * avx_t + 0.5 * f1 * avx_t * avx_t;
 
 		_mm256_store_pd(aligned_ph+i, avx_ph);
 
@@ -605,7 +607,8 @@ pybind11::array_t<double> timing(pybind11::array_t<double> vTb, double f0, doubl
 
 	__m256d avx_Tb = _mm256_load_pd(aligned_Tb + (aligned_size - 4));
 	__m256d avx_Te = avx_compute_Te(avx_Tb, asini_c, Pb, T0, e, omega0, omega_dot);
-	__m256d avx_ph = f0 * avx_Te * 86400.;
+	__m256d avx_t = avx_Te * 86400.;
+	__m256d avx_ph = f0 * avx_t + 0.5 * f1 * avx_t * avx_t;
 	_mm256_store_pd(aligned_ph+(aligned_size - 4), avx_ph);
 
 	__m256d avx_phsin_tmp = _ZGVdN4v_sin(avx_2_PI * avx_ph);
