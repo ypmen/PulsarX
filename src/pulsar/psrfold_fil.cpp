@@ -298,6 +298,9 @@ int main(int argc, const char *argv[])
 		nend = endfrac*ntotal;
 	}
 
+	reader->skip_start = nstart;
+	reader->skip_end = ntotal - nend;
+
 	Patch patch;
 	patch.filltype = vm["fillPatch"].as<string>();
 	patch.width = vm["widthPatch"].as<float>();
