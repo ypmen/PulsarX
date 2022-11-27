@@ -41,6 +41,8 @@ TreeDedispersion::TreeDedispersion()
 
 	maxdepth = 0;
 	depthsub = 0;
+
+	counter = 0;
 }
 
 TreeDedispersion::~TreeDedispersion()
