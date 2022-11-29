@@ -55,7 +55,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "OBSERVER", observer, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read OBSERVER"<<endl;
+		cerr<<"Warning: can not read OBSERVER"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -64,7 +64,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "PROJID", projid, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read PROJID"<<endl;
+		cerr<<"Warning: can not read PROJID"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -73,7 +73,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "TELESCOP", telesop, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read TELESCOP"<<endl;
+		cerr<<"Warning: can not read TELESCOP"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -82,7 +82,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "IBEAM", ibeam, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read IBEAM"<<endl;
+		cerr<<"Warning: can not read IBEAM"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -91,7 +91,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "OBS_MODE", obs_mode, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read OBS_MODE"<<endl;
+		cerr<<"Warning: can not read OBS_MODE"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -100,7 +100,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "DATE-OBS", date_obs, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read DATE-OBS"<<endl;
+		cerr<<"Warning: can not read DATE-OBS"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -109,7 +109,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TDOUBLE, "CHAN_DM", &chan_dm, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read CHAN_DM"<<endl;
+		cerr<<"Warning: can not read CHAN_DM"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -118,7 +118,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "SRC_NAME", src_name, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read SRC_NAME"<<endl;
+		cerr<<"Warning: can not read SRC_NAME"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -127,7 +127,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "RA", ra, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read RA"<<endl;
+		cerr<<"Warning: can not read RA"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -136,7 +136,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "DEC", dec, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read DEC"<<endl;
+		cerr<<"Warning: can not read DEC"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -145,7 +145,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "STT_CRD1", stt_crd1, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read OBS_MODE"<<endl;
+		cerr<<"Warning: can not read OBS_MODE"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -154,7 +154,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "STT_CRD2", stt_crd2, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read OBS_MODE"<<endl;
+		cerr<<"Warning: can not read OBS_MODE"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -163,7 +163,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "TRK_MODE", trk_mode, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read TRK_MODE"<<endl;
+		cerr<<"Warning: can not read TRK_MODE"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -172,7 +172,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "STP_CRD1", stp_crd1, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read STP_CRD1"<<endl;
+		cerr<<"Warning: can not read STP_CRD1"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -181,7 +181,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "STP_CRD2", stp_crd2, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read STP_CRD2"<<endl;
+		cerr<<"Warning: can not read STP_CRD2"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -190,7 +190,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TSTRING, "FD_MODE", fd_mode, NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read FD_MODE"<<endl;
+		cerr<<"Warning: can not read FD_MODE"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -199,7 +199,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TLONG, "STT_IMJD", &(start_mjd.stt_imjd), NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read STT_IMJD"<<endl;
+		cerr<<"Warning: can not read STT_IMJD"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -208,7 +208,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TLONG, "STT_SMJD", &(start_mjd.stt_smjd), NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read STT_SMJD"<<endl;
+		cerr<<"Warning: can not read STT_SMJD"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
@@ -217,7 +217,7 @@ bool PrimaryHDU::load(fitsfile *fptr)
 	fits_read_key(fptr, TDOUBLE, "STT_OFFS", &(start_mjd.stt_offs), NULL, &status);
 	if (status)
 	{
-		cerr<<"Error: can not read STT_OFFS"<<endl;
+		cerr<<"Warning: can not read STT_OFFS"<<endl;
 		fits_report_error(stderr, status);
 		status = 0;
 		res = false;
