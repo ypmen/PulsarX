@@ -158,6 +158,7 @@ namespace Pulsar
 		bool ready;
 		size_t counter;
 		size_t nchans;
+		size_t nchans_orig;
 		size_t ndump;
 		double tsamp;
 		std::vector<double> frequencies;
@@ -402,6 +403,7 @@ namespace Pulsar
 	
 	private:
 		size_t nchans;
+		size_t nchans_orig;
 		size_t nsamples0;
 		std::vector<TreeDedispersion> treededispersions;
 		std::vector<Downsample> downsamples;

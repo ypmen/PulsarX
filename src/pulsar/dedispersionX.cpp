@@ -19,6 +19,7 @@ TreeDedispersion::TreeDedispersion()
 {
 	nsubband = 0;
 	nchans = 0;
+	nchans_orig = 0;
 	ndump = 0;
 	tsamp = 0.;
 	dms = 0.;
@@ -84,8 +85,17 @@ void TreeDedispersion::prepare(DataBuffer<float> &databuffer)
 	tsamp = databuffer.tsamp;
 	ndump = databuffer.nsamples;
 
-	nchans = databuffer.nchans;
-	frequencies = databuffer.frequencies;
+	nchans_orig = databuffer.nchans;
+
+	nchans = std::pow(2, std::ceil(std::log2(nchans_orig)));
+	frequencies.resize(nchans);
+	double fch1 = databuffer.frequencies.front();
+	double foff = (databuffer.frequencies.back() - databuffer.frequencies.front()) / (nchans_orig - 1);
+
+	for (size_t j=0; j<nchans; j++)
+	{
+		frequencies[j] = fch1 + j * foff;
+	}
 
 	fmax = *std::max_element(frequencies.begin(), frequencies.end());
 	fmin = *std::min_element(frequencies.begin(), frequencies.end());
@@ -338,9 +348,9 @@ void TreeDedispersion::run(DataBuffer<float> &databuffer)
 
 	for (size_t i=0; i<ndump; i++)
 	{
-		for (size_t j=0; j<nchans; j++)
+		for (size_t j=0; j<nchans_orig; j++)
 		{
-			buffer[(i + nspace) * nchans + j] = databuffer.buffer[i * nchans + j];
+			buffer[(i + nspace) * nchans + j] = databuffer.buffer[i * nchans_orig + j];
 		}
 	}
 
@@ -355,7 +365,7 @@ void TreeDedispersion::run(DataBuffer<float> &databuffer)
 
 	for (size_t i=0; i<nspace; i++)
 	{
-		for (size_t j=0; j<nchans; j++)
+		for (size_t j=0; j<nchans_orig; j++)
 		{
 			buffer[i * nchans + j] = buffer[(i + ndump) * nchans + j];
 		}
@@ -405,6 +415,7 @@ DedispersionX::DedispersionX()
 	ddm_init = 0.;
 
 	nchans = 0;
+	nchans_orig = 0;
 	nsamples0 = 0;
 }
 
@@ -415,10 +426,17 @@ DedispersionX::~DedispersionX()
 void DedispersionX::prepare(DataBuffer<float> &databuffer)
 {
 	double tsamp = databuffer.tsamp;
-	std::vector<double> frequencies = databuffer.frequencies;
-	nchans = databuffer.nchans;
+	nchans_orig = databuffer.nchans;
+	nchans = std::pow(2, std::ceil(std::log2(nchans_orig)));
 
-	assert((nchans & (nchans - 1)) == 0);
+	std::vector<double> frequencies(nchans, 0.);
+	double fch1 = databuffer.frequencies.front();
+	double foff = (databuffer.frequencies.back() - databuffer.frequencies.front()) / (nchans_orig - 1);
+
+	for (size_t j=0; j<nchans; j++)
+	{
+		frequencies[j] = fch1 + j * foff;
+	}
 
 	double fmax = *std::max_element(frequencies.begin(), frequencies.end());
 	double fmin = *std::min_element(frequencies.begin(), frequencies.end());
@@ -572,9 +590,9 @@ void DedispersionX::prerun(DataBuffer<float> &databuffer)
 
 					for (size_t i=0; i<ndump; i++)
 					{
-						for (size_t j=0; j<nchans; j++)
+						for (size_t j=0; j<nchans_orig; j++)
 						{
-							buffer[(i + nspace) * nchans + j] = databuffer.buffer[i * nchans + j];
+							buffer[(i + nspace) * nchans + j] = databuffer.buffer[i * nchans_orig + j];
 						}
 					}
 
@@ -590,9 +608,9 @@ void DedispersionX::prerun(DataBuffer<float> &databuffer)
 
 				for (size_t i=0; i<ndump; i++)
 				{
-					for (size_t j=0; j<nchans; j++)
+					for (size_t j=0; j<nchans_orig; j++)
 					{
-						buffer[(i + nspace) * nchans + j] = downsamples[k].buffer[i * nchans + j];
+						buffer[(i + nspace) * nchans + j] = downsamples[k].buffer[i * nchans_orig + j];
 					}
 				}
 			}
@@ -621,7 +639,7 @@ void DedispersionX::postrun(DataBuffer<float> &databuffer)
 					size_t nspace = nsamples - ndump;
 					for (size_t i=0; i<nspace; i++)
 					{
-						for (size_t j=0; j<nchans; j++)
+						for (size_t j=0; j<nchans_orig; j++)
 						{
 							buffer[i * nchans + j] = buffer[(i + ndump) * nchans + j];
 						}
@@ -638,7 +656,7 @@ void DedispersionX::postrun(DataBuffer<float> &databuffer)
 				size_t nspace = nsamples - ndump;
 				for (size_t i=0; i<nspace; i++)
 				{
-					for (size_t j=0; j<nchans; j++)
+					for (size_t j=0; j<nchans_orig; j++)
 					{
 						buffer[i * nchans + j] = buffer[(i + ndump) * nchans + j];
 					}
