@@ -58,7 +58,7 @@ namespace Pulsar
 		}
 	public:
 		float get_chisq(vector<float> &pro);
-		void get_snr_width();
+		void get_snr_width(double c);
 		void get_error(std::map<std::string, std::string> &obsinfo);
 		void get_rms();
 		void subints_normalize();

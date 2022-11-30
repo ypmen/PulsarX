@@ -112,8 +112,9 @@ int main(int argc, const char *argv[])
 			("widthPatch", value<float>()->default_value(0.4), "Width threshold (s) of patch for bad data")
 			("fillPatch", value<std::string>()->default_value("none"), "Fill the bad data by [none, mean, rand] in patch")
 			("fill", value<string>()->default_value("rand"), "Fill the zapped samples by [mean, rand]")
-			("render", "Using new folding algorithm (deprecated, used by default)")
+			("render", "Using new folding algorithm (deprecated)")
 			("dspsr", "Using dspsr folding algorithm")
+			("presto", "Using presto folding algorithm (used by default)")
 #ifdef HAVE_PLOTX
 			("plotx", "Using PlotX for plotting")
 #endif
@@ -528,8 +529,10 @@ int main(int argc, const char *argv[])
 
 				if (vm.count("dspsr"))
 					folder[k].runDspsr(subdata);
+				else if (vm.count("render"))
+					folder[k].runTRLSM(subdata);
 				else
-					folder[k].runTRLSM(subdata);				
+					folder[k].runPresto(subdata);
 			}
 		}
 
@@ -842,7 +845,16 @@ int main(int argc, const char *argv[])
 
 		double f1_in_candfile = gridsearch[k].f1;
 
-		gridsearch[k].get_snr_width();
+		double c = 1;
+		double a = 0.96, b = 1.806;
+		double psi = 1. / (gridsearch[k].f0 * gridsearch[k].nbin * tsamp);
+		if (vm.count("dspsr"))
+			c = 1.;
+		else if (vm.count("render"))
+			c = 1.;
+		else
+			c = a * psi * std::pow((1. + std::pow(psi, b)), -1./b);
+		gridsearch[k].get_snr_width(c);
 		gridsearch[k].get_error(obsinfo);
 
 		double ymw16_dist = get_dist_ymw16(gl, gb, gridsearch[k].dm);

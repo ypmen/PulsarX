@@ -435,7 +435,7 @@ float GridSearch::get_chisq(vector<float> &pro)
  * 
  * @return snr
  */
-void GridSearch::get_snr_width()
+void GridSearch::get_snr_width(double c)
 {
 	profile.resize(nbin, 0.);
 	for (long int k=0; k<nsubint; k++)
@@ -494,6 +494,8 @@ void GridSearch::get_snr_width()
 			pulsespan[1] = iend;
 		}
 	}
+
+	snr *= std::sqrt(c);
 
 	width /= f0*nbin;
 }

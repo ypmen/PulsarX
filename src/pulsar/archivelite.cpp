@@ -366,6 +366,143 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 	return true;
 }
 
+bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
+{
+	if (databuffer.counter <= 0)
+		return false;
+
+	sub_int.tsubint = nblock*databuffer.nsamples*databuffer.tsamp;
+	MJD start_time = sub_mjd;
+	MJD end_time = sub_mjd + (nblock*databuffer.nsamples-1)*databuffer.tsamp;
+	MJD epoch = get_epoch(start_time, end_time, ref_epoch);
+	sub_int.offs_sub = (epoch-start_mjd).to_second();
+	sub_int.ffold = abs(get_ffold(epoch, ref_epoch));
+
+	double phi = 0.;
+	double f = 0.;
+
+	for (long int i=iblock*databuffer.nsamples; i<(iblock+1)*databuffer.nsamples; i++)
+	{
+		if (i%NSBLK == 0)
+		{
+			phi = get_phase(sub_mjd+(i-0.5)*databuffer.tsamp, ref_epoch);
+			f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
+		}
+
+		double low_phi = phi;
+		double high_phi = phi + f*databuffer.tsamp;
+		phi = high_phi;
+
+		if (low_phi > high_phi)
+		{
+			double tmp = low_phi;
+			low_phi = high_phi;
+			high_phi = tmp;
+		}
+
+		long int low_phin = floor(low_phi*nbin);
+		long int high_phin = floor(high_phi*nbin);
+		long int nphi = high_phin-low_phin+1;
+
+		assert(nphi<=nbin);
+
+		if (nphi == 1)
+		{
+			float vWli0 = 1.;
+
+			vWli0 = (high_phi-low_phi)*nbin;
+
+			long int l=low_phin%nbin;
+			l = l<0 ? l+nbin:l;
+			// {
+			// 	mxWTW[l*nbin+l] += vWli0*vWli0;
+			// }
+
+			for (long int j=0; j<databuffer.nchans; j++)
+			{       
+				vWTd_T[l*databuffer.nchans+j] += vWli0*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+			}
+		}
+		else if (nphi == 2)
+		{
+			float vWli0=1., vWli1=1.;
+
+			vWli0 = 1.-(low_phi*nbin-floor(low_phi*nbin));
+			vWli1 = high_phi*nbin-floor(high_phi*nbin);
+
+			long int l=low_phin%nbin;
+			l = l<0 ? l+nbin:l;
+			long int m = high_phin%nbin;
+			m = m<0 ? m+nbin:m;
+
+			// mxWTW[l*nbin+l] += vWli0*vWli0;
+			// mxWTW[l*nbin+m] += vWli0*vWli1;
+			// mxWTW[m*nbin+l] += vWli1*vWli0;
+			// mxWTW[m*nbin+m] += vWli1*vWli1;
+
+			for (long int j=0; j<databuffer.nchans; j++)
+			{
+				vWTd_T[l*databuffer.nchans+j] += vWli0*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+				vWTd_T[m*databuffer.nchans+j] += vWli1*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+			}
+		}
+		else
+		{
+			vector<float> vWli(nphi, 1.);
+			vector<int> binplan(nphi, 0);
+
+			vWli[0] = 1.-(low_phi*nbin-floor(low_phi*nbin));
+			vWli[nphi-1] = high_phi*nbin-floor(high_phi*nbin);
+
+			for (long int l=0; l<nphi; l++)
+			{
+				binplan[l] = (low_phin+l)%nbin;
+				binplan[l] = binplan[l]<0 ? binplan[l]+nbin:binplan[l];
+			}
+
+			// for (long int l=0; l<nphi; l++)
+			// {
+			// 	for (long int m=0; m<nphi; m++)
+			// 	{
+			// 		mxWTW[binplan[l]*nbin+binplan[m]] += vWli[l]*vWli[m];
+			// 	}
+			// }
+
+			for (long int l=0; l<nphi; l++)
+			{
+				for (long int j=0; j<databuffer.nchans; j++)
+				{
+					vWTd_T[binplan[l]*databuffer.nchans+j] += vWli[l]*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+				}
+			}
+		}
+	}
+
+	if (++iblock == nblock)
+	{
+		// for (long int l=0; l<nbin; l++)
+		// {
+		// 	for (long int m=0; m<nbin; m++)
+		// 	{
+		// 		mxWTW[l*nbin+m] /= (nblock*databuffer.nsamples*databuffer.tsamp*sub_int.ffold);
+		// 	}
+		// 	mxWTW[l*nbin+l] += 1;
+		// }
+
+		transpose_pad<float>(&sub_int.data[0], &vWTd_T[0], nbin, npol*nchan);
+		
+		sub_mjd += sub_int.tsubint;
+
+		profiles.push_back(sub_int);
+
+		iblock = 0;
+		// fill(mxWTW.begin(), mxWTW.end(), 0.);
+		fill(vWTd_T.begin(), vWTd_T.end(), 0.);
+	}
+
+	return true;
+}
+
 void ArchiveLite::read_archive(const std::string &fname)
 {
 	Psrfits arch;

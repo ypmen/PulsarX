@@ -576,7 +576,7 @@ int main(int argc, char *argv[])
 			writer.run(arch, gridsearch);
 		}
 
-		gridsearch.get_snr_width();
+		gridsearch.get_snr_width(1.);
 		gridsearch.get_error(obsinfo);
 
 		double ymw16_dist = get_dist_ymw16(gl, gb, gridsearch.dm);

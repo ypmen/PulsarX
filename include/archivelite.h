@@ -93,6 +93,7 @@ namespace Pulsar
 		void prepare(DataBuffer<float> &databuffer);
 		bool runDspsr(DataBuffer<float> &databuffer);
 		bool runTRLSM(DataBuffer<float> &databuffer);
+		bool runPresto(DataBuffer<float> &databuffer);
 		void resize(int np, int nc, int nb);
 		void dump2bin(const string &rootname)
 		{
