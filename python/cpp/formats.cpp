@@ -12,6 +12,7 @@
 
 namespace py = pybind11;
 
+#include <iostream>
 #include "psrfits.h"
 #include "filterbank.h"
 
