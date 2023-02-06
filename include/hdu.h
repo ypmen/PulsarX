@@ -114,6 +114,7 @@ public:
 
 	enum Integration::Mode mode;
 	enum Integration::DataType dtype;
+	enum Integration::PolType poltype;
 
 	Integration *integrations;
 };
