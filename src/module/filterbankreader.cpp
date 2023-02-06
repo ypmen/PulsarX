@@ -145,6 +145,17 @@ void FilterbankReader::read_header()
 
 	frequencies.resize(nchans, 0.);
 	std::memcpy(frequencies.data(), fil[0].frequency_table, sizeof(double) * nchans);
+
+	if (poltype == Integration::IQUV)
+	{
+		norm_x.resize(nchans, 1.);
+		norm_y.resize(nchans, 0.);
+	}
+	else
+	{
+		norm_x.resize(nchans, 1.);
+		norm_y.resize(nchans, 1.);
+	}
 }
 
 size_t FilterbankReader::read_data(DataBuffer<float> &databuffer, size_t ndump, bool virtual_reading)
@@ -205,7 +216,7 @@ size_t FilterbankReader::read_data(DataBuffer<float> &databuffer, size_t ndump, 
 								float xx = ((unsigned char *)(fil[n].data))[i*nifs*nchans+0*nchans+j] - zero_off;
 								float yy = ((unsigned char *)(fil[n].data))[i*nifs*nchans+1*nchans+j] - zero_off;
 
-								databuffer.buffer[bcnt1*nchans+j] = xx + yy;
+								databuffer.buffer[bcnt1*nchans+j] = norm_x[j] * xx + norm_y[j] * yy;
 							}
 						}
 				}
