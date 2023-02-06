@@ -20,7 +20,12 @@ public:
 	void check();
 	void read_header();
 	size_t read_data(DataBuffer<float> &databuffer, size_t ndump, bool virtual_reading = false);
-	MJD get_start_mjd_curfile(){return psf[idmap[ifile_cur]].primary.start_mjd;}
+	MJD get_start_mjd_curfile()
+	{
+		Integration tmpit;
+		psf[idmap[ifile_cur]].subint.load_integration(psf[idmap[ifile_cur]].fptr, 0, tmpit);
+		return psf[idmap[ifile_cur]].primary.start_mjd + (tmpit.offs_sub - 0.5 * psf[idmap[ifile_cur]].subint.nsblk * psf[idmap[ifile_cur]].subint.tbin);
+	}
 	double get_tsamp_curfile(){return psf[idmap[ifile_cur]].subint.tbin;}
 	size_t get_count_curfile(){return ns_psfn;}
 	size_t get_count(){return count;}
