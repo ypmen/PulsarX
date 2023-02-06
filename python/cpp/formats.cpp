@@ -10,6 +10,8 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
+#include <iostream>
+
 namespace py = pybind11;
 
 #include <iostream>
