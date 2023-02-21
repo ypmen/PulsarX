@@ -41,7 +41,7 @@ ext_modules = [
     ),
     Pybind11Extension(
         "orbit_utils",
-        sources=["cpp/orbit_utils.cpp"],
+        sources=["cpp/orbit_utils.cpp", "cpp/numerical_algorithm.cpp"],
 		extra_compile_args=["-O3", "-mavx2"],
 		libraries=["lapack"],
         include_dirs=["../include", "../"]
