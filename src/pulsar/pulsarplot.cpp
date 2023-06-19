@@ -57,6 +57,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 	long int nbin = gridsearch.nbin;
 
 	long int ndm = gridsearch.nddm;
+	long int nf2 = gridsearch.ndf2;
 	long int nf1 = gridsearch.ndf1;
 	long int nf0 = gridsearch.ndf0;
 
@@ -162,6 +163,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 		vchisq_dm[k] = a*vchisq_dm[k]+b;
 	}
 
+	int if2 = nf2/2;
 	int if1 = nf1/2;
 	int if0 = nf0/2;
 	double maxsnr = -1.;
@@ -186,7 +188,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 		for (long int k0=0; k0<nf0; k0++)
 		{
 			if (gridsearch.ffdotsearch)
-				mxsnr_ffdot[k1*nf0+k0] = gridsearch.mxsnr_ffdot[k1*nf0+k0];
+				mxsnr_ffdot[k1*nf0+k0] = gridsearch.mxsnr_ffdot[if2*nf1*nf0+k1*nf0+k0];
 			else
 				mxsnr_ffdot[k1*nf0+k0] = 0.;
 			

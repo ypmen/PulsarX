@@ -74,12 +74,13 @@ int main(int argc, const char *argv[])
 			("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("f2", value<double>()->default_value(0), "F2 (Hz/s/s)")
 			("acc", value<double>()->default_value(0), "Acceleration (m/s/s)")
-			("pepoch", value<double>(), "F0/F1/acc epoch (MJD)")
-			("scale", value<int>()->default_value(1), "F0,F1,dm search range scale in phase")
-			("nosearch", "Do not search dm,f0,f1")
+			("pepoch", value<double>(), "F0/F1/F2/acc epoch (MJD)")
+			("scale", value<int>()->default_value(1), "F0,F1,F2,dm search range scale in phase")
+			("nosearch", "Do not search dm,f0,f1,f2")
 			("nodmsearch", "Do not search dm")
 			("nof0search", "Do not search f0")
 			("nof1search", "Do not search f1")
+			("f2search", "search f2")
 			("noplot", "Do not generate figures")
 			("noarch", "Do not generate archives")
 			("parfile", value<vector<string>>(), "Input pulsar par files")
@@ -176,12 +177,14 @@ int main(int argc, const char *argv[])
 	bool nodmsearch = vm.count("nodmsearch");
 	bool nof0search = vm.count("nof0search");
 	bool nof1search = vm.count("nof1search");
-	if (nodmsearch && nof0search && nof1search) nosearch = true;
+	bool f2search = vm.count("f2search");
+	if (nodmsearch && nof0search && nof1search && (!f2search)) nosearch = true;
 	if (nosearch)
 	{
 		nodmsearch = true;
 		nof0search = true;
 		nof1search = true;
+		f2search = false;
 	}
 	bool noplot = vm.count("noplot");
 	bool noarch = vm.count("noarch");
@@ -600,6 +603,7 @@ int main(int argc, const char *argv[])
 		double dm = folder[k].dm;
 		double f0 = folder[k].f0;
 		double f1 = folder[k].f1;
+		double f2 = folder[k].f2;
 
 		if (!nodmsearch)
 		{
@@ -640,6 +644,19 @@ int main(int argc, const char *argv[])
 			gridsearch[k].ndf1 = 1;
 		}
 
+		if (f2search)
+		{
+			gridsearch[k].df2start = -scale*4*6./(tint*tint*tint);
+			gridsearch[k].df2step = 1./scale*abs(gridsearch[k].df2start/folder[k].nbin);
+			gridsearch[k].ndf2 = 2*abs(scale)*folder[k].nbin;
+		}
+		else
+		{
+			gridsearch[k].df2start = 0.;
+			gridsearch[k].df2step = 0.;
+			gridsearch[k].ndf2 = 1;
+		}
+
 		gridsearch[k].clfd_q = vm["clfd"].as<double>();
 		gridsearch[k].bandcorr = vm["bandcorr"].as<double>();
 
@@ -648,26 +665,30 @@ int main(int argc, const char *argv[])
 
 		if (!nosearch)
 		{
-			BOOST_LOG_TRIVIAL(info)<<"cand "<<k<<": initial dm(pc/cc)="<<gridsearch[k].dm<<", f0(Hz)="<<gridsearch[k].f0<<", f1(Hz/s)="<<gridsearch[k].f1;
+			BOOST_LOG_TRIVIAL(info)<<"cand "<<k<<": initial dm(pc/cc)="<<gridsearch[k].dm<<", f0(Hz)="<<gridsearch[k].f0<<", f1(Hz/s)="<<gridsearch[k].f1<<", f2(Hz/s/s)="<<gridsearch[k].f2;
 			BOOST_LOG_TRIVIAL(info)<<"search scale in phase is "<<scale<<std::endl
 			<<"dm search range: delta dm start="<<gridsearch[k].ddmstart<<", dm step="<<gridsearch[k].ddmstep<<", number of dm="<<gridsearch[k].nddm<<std::endl
 			<<"f0 search range: delta f0 start="<<gridsearch[k].df0start<<", f0 step="<<gridsearch[k].df0step<<", number of f0="<<gridsearch[k].ndf0<<std::endl
-			<<"f1 search range: delta f1 start="<<gridsearch[k].df1start<<", f1 step="<<gridsearch[k].df1step<<", number of f1="<<gridsearch[k].ndf1<<std::endl;
+			<<"f1 search range: delta f1 start="<<gridsearch[k].df1start<<", f1 step="<<gridsearch[k].df1step<<", number of f1="<<gridsearch[k].ndf1<<std::endl
+			<<"f2 search range: delta f2 start="<<gridsearch[k].df2start<<", f2 step="<<gridsearch[k].df2step<<", number of f2="<<gridsearch[k].ndf2<<std::endl;
 
 			double dm0 = gridsearch[k].dm;
 			double f00 = gridsearch[k].f0;
 			double f10 = gridsearch[k].f1;
+			double f20 = gridsearch[k].f2;
 			double dm1 = gridsearch[k].dm + 2*gridsearch[k].ddmstep;
 			double f01 = gridsearch[k].f0 + 2*gridsearch[k].df0step;
 			double f11 = gridsearch[k].f1 + 2*gridsearch[k].df1step;
+			double f21 = gridsearch[k].f2 + 2*gridsearch[k].df2step;
 			int cont = 0;
-			while ((abs(dm0-dm1)>gridsearch[k].ddmstep or abs(f00-f01)>gridsearch[k].df0step or abs(f10-f11)>gridsearch[k].df1step) and cont<8)
+			while ((abs(dm0-dm1)>gridsearch[k].ddmstep or abs(f00-f01)>gridsearch[k].df0step or abs(f10-f11)>gridsearch[k].df1step or abs(f20-f21)>gridsearch[k].df2step) and cont<8)
 			{
 				dm0 = gridsearch[k].dm;
 				f00 = gridsearch[k].f0;
 				f10 = gridsearch[k].f1;
+				f20 = gridsearch[k].f2;
 
-				if (!nof0search || !nof1search)
+				if (!nof0search || !nof1search || f2search)
 				{
 					gridsearch[k].runFFdot();
 					gridsearch[k].bestprofiles();
@@ -681,9 +702,10 @@ int main(int argc, const char *argv[])
 				dm1 = gridsearch[k].dm;
 				f01 = gridsearch[k].f0;
 				f11 = gridsearch[k].f1;
+				f21 = gridsearch[k].f2;
 
 				cont++;
-				BOOST_LOG_TRIVIAL(debug)<<"iteration "<<cont<<": dm(pc/cc)="<<gridsearch[k].dm<<", f0(Hz)="<<gridsearch[k].f0<<", f1(Hz/s)="<<gridsearch[k].f1;
+				BOOST_LOG_TRIVIAL(debug)<<"iteration "<<cont<<": dm(pc/cc)="<<gridsearch[k].dm<<", f0(Hz)="<<gridsearch[k].f0<<", f1(Hz/s)="<<gridsearch[k].f1<<", f2(Hz/s)="<<gridsearch[k].f2;
 			}
 		}
 
@@ -695,6 +717,7 @@ int main(int argc, const char *argv[])
 		dm = gridsearch[k].dm;
 		f0 = gridsearch[k].f0;
 		f1 = gridsearch[k].f1;
+		f2 = gridsearch[k].f2;
 
 		if (!nodmsearch)
 		{
@@ -736,6 +759,19 @@ int main(int argc, const char *argv[])
 			gridsearch[k].df1start = 0.;
 			gridsearch[k].df1step = 0.;
 			gridsearch[k].ndf1 = 1.;
+		}
+
+		if (f2search)
+		{
+			gridsearch[k].df2start = -scale*4*6./(tint*tint*tint);
+			gridsearch[k].df2step = 1./scale*abs(gridsearch[k].df2start/folder[k].nbin);
+			gridsearch[k].ndf2 = 2*abs(scale)*folder[k].nbin;
+		}
+		else
+		{
+			gridsearch[k].df2start = 0.;
+			gridsearch[k].df2step = 0.;
+			gridsearch[k].ndf2 = 1;
 		}
 
 		if (!nosearch)
@@ -819,7 +855,7 @@ int main(int argc, const char *argv[])
 	outfile<<"#GB "<<obsinfo["GB"]<<endl;
 	outfile<<"#MaxDM_YMW16 "<<obsinfo["MaxDM_YMW16"]<<endl;
 	outfile<<"#Pepoch "<<s_pepoch_in_candfile<<endl;
-	outfile<<"#id       dm_old      dm_new      dm_err		dist_ymw16     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
+	outfile<<"#id	dm_old	dm_new	dm_err	dist_ymw16	f0_old	f0_new	f0_err	f1_old	f1_new	f1_err	f2_old	f2_new	f2_err	acc_old	acc_new	acc_err	S/N	S/N_new"<<endl;
 
 	for (long int k=0; k<ncand; k++)
 	{
@@ -845,6 +881,7 @@ int main(int argc, const char *argv[])
 		}
 
 		double f1_in_candfile = gridsearch[k].f1;
+		double f2_in_candfile = gridsearch[k].f2;
 
 		double c = 1;
 		double a = 0.96, b = 1.806;
@@ -878,6 +915,9 @@ int main(int argc, const char *argv[])
 		outfile<<setprecision(15)<<folder[k].f1<<"\t\t";
 		outfile<<setprecision(15)<<f1_in_candfile<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_f1<<"\t\t";
+		outfile<<setprecision(15)<<folder[k].f2<<"\t\t";
+		outfile<<setprecision(15)<<f2_in_candfile<<"\t\t";
+		outfile<<setprecision(15)<<gridsearch[k].err_f2<<"\t\t";
 		outfile<<setprecision(15)<<-folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].acc<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_acc<<"\t\t";
