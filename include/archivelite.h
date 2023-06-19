@@ -113,7 +113,7 @@ namespace Pulsar
 			if (!use_t2pred)
 			{
 				long double t = (mjd-mjdref).to_second();
-				double phi = f0*t + 0.5*f1*t*t;
+				double phi = f0*t + 0.5*f1*t*t + f2*t*t*t/6.;
 				phi -= floor(phi);
 				return phi;
 			}
@@ -127,7 +127,7 @@ namespace Pulsar
 			if (!use_t2pred)
 			{
 				long double t = (mjd-mjdref).to_second();
-				double f = f0 + f1*t;
+				double f = f0 + f1*t + 0.5*f2*t;
 				return f;
 			}
 			else
@@ -140,15 +140,33 @@ namespace Pulsar
 		{
 			long double t = (start_time.to_second()+end_time.to_second())/2.;
 			t -= ref_epoch.to_second();
-			long int phi = floor(f0*t+0.5*f1*t*t);
+			long int phi = floor(f0*t+0.5*f1*t*t+f2*t*t*t/6.);
 			long double tepoch = 0.;
-			if (f1 != 0)
+			if (f1 != 0 || f2 != 0)
 			{
-				double tmp = f0*f0+2*f1*phi;
-				tmp = tmp<0? 0:tmp;
-				long double tepoch1 = (sqrt(tmp)-f0)/f1;
-				long double tepoch2 = (-sqrt(f0*f0+2*f1*phi)-f0)/f1;
-				tepoch = abs(t-tepoch1)<abs(t-tepoch2) ? tepoch1:tepoch2;
+				if (f2 == 0)
+				{
+					double tmp = f0*f0+2*f1*phi;
+					tmp = tmp<0? 0:tmp;
+					long double tepoch1 = (sqrt(tmp)-f0)/f1;
+					long double tepoch2 = (-sqrt(f0*f0+2*f1*phi)-f0)/f1;
+					tepoch = abs(t-tepoch1)<abs(t-tepoch2) ? tepoch1:tepoch2;
+				}
+				else
+				{
+					double a = phi / f0;
+					double b = -0.5 * f1 / f0;
+					double c = -f2 / f0 / 6.;
+
+					int n = 8;
+					tepoch = t;
+					long double dt = 1.;
+					while (std::abs(dt) > 1e-9 && --n >= 0)
+					{
+						dt = a - tepoch  + b * tepoch * tepoch + c * tepoch * tepoch * tepoch;
+						tepoch += dt;
+					}
+				}
 			}
 			else
 				tepoch = phi/f0;
@@ -160,6 +178,7 @@ namespace Pulsar
 		MJD ref_epoch;
 		double f0;
 		double f1;
+		double f2;
 		double acc;
 		double dm;
 		double snr;
