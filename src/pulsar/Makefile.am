@@ -1,4 +1,4 @@
-bin_PROGRAMS=dedisperse_all_fil psrfold_fil psrfold_fil2 filtool dmffdot
+bin_PROGRAMS=dedisperse_all_fil psrfold_fil psrfold_fil2 filtool dmffdot chop8
 
 AM_CPPFLAGS=-I$(top_srcdir)/include
 LDADD=-lboost_program_options -lxmodule -lxutils -lxcontainer -lxformats -lymw16
@@ -8,6 +8,7 @@ psrfold_fil_SOURCES=predictor.cpp dedispersionliteU.cpp archivelite.cpp gridsear
 psrfold_fil2_SOURCES=predictor.cpp archivelite.cpp gridsearch.cpp archivewriter.cpp psrfold_fil2.cpp
 filtool_SOURCES=filtool.cpp filmaker.cpp
 dmffdot_SOURCES=predictor.cpp dmffdot.cpp archivelite.cpp gridsearch.cpp pulsarplot.cpp archivewriter.cpp
+chop8_SOURCES=chop8.cpp
 
 psrfold_fil_SOURCES+=pulsarplot.cpp
 psrfold_fil2_SOURCES+=pulsarplot.cpp
