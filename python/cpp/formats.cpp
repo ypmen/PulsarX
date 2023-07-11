@@ -397,9 +397,51 @@ PYBIND11_MODULE(formats, m)
 		.def("free", &Filterbank::free)
 		.def("close", &Filterbank::close)
 		.def("read_header", &Filterbank::read_header)
+		.def("write_header", &Filterbank::write_header)
 		.def("read_data", static_cast<bool (Filterbank::*)()>(&Filterbank::read_data))
 		.def("read_data", static_cast<bool (Filterbank::*)(long int, long int)>(&Filterbank::read_data))
 		.def("read_data", static_cast<bool (Filterbank::*)(long int)>(&Filterbank::read_data))
+		.def("get_spectra_uint8", [](Filterbank &m, size_t ispec, size_t nspec){
+			fseek(m.fptr, m.header_size + ispec * m.nifs * m.nchans * sizeof(unsigned char), SEEK_SET);
+
+			size_t size = nspec * m.nifs * m.nchans;
+
+			unsigned char * data = new unsigned char [size];
+			fread(data, 1, sizeof(unsigned char) * size, m.fptr);
+
+			py::capsule free_when_done(data, [](void *f){
+				unsigned char *data = reinterpret_cast<unsigned char *>(f);
+				delete [] data;
+				});
+
+			return py::array_t<unsigned char>(
+				std::vector<size_t>{nspec, (size_t)m.nifs, (size_t)m.nchans},
+				std::vector<size_t>{m.nifs * m.nchans * sizeof(unsigned char), m.nchans * sizeof(unsigned char), sizeof(unsigned char)},
+				data,
+				free_when_done);
+		})
+		.def("get_spectra_float32", [](Filterbank &m, size_t ispec, size_t nspec){
+			fseek(m.fptr, m.header_size + ispec * m.nifs * m.nchans * sizeof(float), SEEK_SET);
+
+			size_t size = nspec * m.nifs * m.nchans;
+
+			float * data = new float [size];
+			fread(data, 1, sizeof(float) * size, m.fptr);
+
+			py::capsule free_when_done(data, [](void *f){
+				float *data = reinterpret_cast<float *>(f);
+				delete [] data;
+				});
+
+			return py::array_t<float>(
+				std::vector<size_t>{nspec, (size_t)m.nifs, (size_t)m.nchans},
+				std::vector<size_t>{m.nifs * m.nchans * sizeof(float), m.nchans * sizeof(float), sizeof(float)},
+				data,
+				free_when_done);
+		})
+		.def("write_data", [](Filterbank &m, py::array_t<unsigned char> &data){
+			fwrite(data.data(), 1, sizeof(unsigned char) * data.size(), m.fptr);
+		})
 		.def("update_rawdatafile", [](Filterbank &m, const std::string &rawdatafile){
 			std::strcpy(m.rawdatafile, rawdatafile.c_str());
 		})
