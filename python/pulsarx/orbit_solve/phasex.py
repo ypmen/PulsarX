@@ -309,7 +309,10 @@ def main():
 		else:
 			p_best, chisq_best_test, p_best_fit, chisq_best_fit = optimize_orbit(f0)
 
-	np.savetxt('best.txt', p_best)
+		np.savetxt('best.txt', p_best)
+	else:
+		p_best = np.loadtxt('best.txt')
+
 	plot(vTb_arr_test, p_best, vpherr_test, vobs_ssb_arr_test, α, δ)
 	plt.savefig('best.png')
 
