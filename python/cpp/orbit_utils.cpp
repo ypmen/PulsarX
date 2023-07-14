@@ -150,6 +150,63 @@ py::array_t<double> compute_roemer_delay(py::array_t<double> &vT, double asini_c
 		free_when_done);
 }
 
+py::array_t<double> compute_roemer_delay0(py::array_t<double> &vT, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
+{
+	auto array_T = vT.unchecked<1>();
+	size_t size = array_T.size();
+
+	double *vroemer_delay = new double[size];
+
+	double sqrt_1_ee = std::sqrt(1. - e * e);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		double T = array_T(i);
+		// calculate fractional orbit
+		double orbit = (T - T0) / Pb;
+		double norbit = std::floor(orbit);
+		double forbit = orbit - norbit;
+
+		// calculate eccentric anomaly
+		double phase = 2. * M_PI * forbit;
+		double E = phase + e * std::sin(phase) / std::sqrt(1. - 2. * e * std::cos(phase) + e * e);
+		double dE = 1.;
+		size_t nstep = 0;
+		while (std::abs(dE) > 1e-14 && nstep++ < 8)
+		{
+			dE = (phase - (E - e * std::sin(E))) / (1. - e * std::cos(E));
+			E += dE;
+		}
+
+		double sin_E = std::sin(E);
+		double cos_E = std::cos(E);
+
+		// calculate omega
+		double omega = omega0 + omega_dot / (365.25 / Pb) * (norbit + forbit);
+
+		// calculate v/c, a/c
+		double sin_omega = std::sin(omega);
+		double cos_omega = std::cos(omega);
+
+		double temp = 2 * M_PI / (Pb * 86400. * (1. - e * cos_E));
+
+		double roemer_delay = asini_c * ((cos_E - e) * sin_omega + sqrt_1_ee * sin_E * cos_omega);
+
+		vroemer_delay[i] = roemer_delay;
+	}
+
+	py::capsule free_when_done(vroemer_delay, [](void *f)
+									 {
+            double *vroemer_delay = reinterpret_cast<double *>(f);
+            delete [] vroemer_delay; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size},
+		std::vector<size_t>{sizeof(double)},
+		vroemer_delay,
+		free_when_done);
+}
+
 double compute_roemer_delay2(double T, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {
 	double sqrt_1_ee = std::sqrt(1. - e * e);
@@ -360,6 +417,88 @@ py::array_t<double> compute_f0_f1(py::array_t<double> &vT, double f0, double asi
 		std::vector<size_t>{size, 2},
 		std::vector<size_t>{2 * sizeof(double), sizeof(double)},
 		vf0_f1,
+		free_when_done);
+}
+
+py::array_t<double> compute_roemer_delay0(py::array_t<double> &vT, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
+{
+	auto array_T = vT.unchecked<1>();
+	size_t size = array_T.size();
+
+	double *vroemer_delay = new double[size];
+
+	__m256d avx_Pb = _mm256_set_pd(Pb, Pb, Pb, Pb);
+	__m256d avx_T0 = _mm256_set_pd(T0, T0, T0, T0);
+	double sqrt_1_ee = std::sqrt(1. - e * e);
+
+	__m256d avx_threshold = _mm256_set_pd(1e-14, 1e-14, 1e-14, 1e-14);
+
+	size_t aligned_size = (int)std::ceil(size / 4.) * 4;
+
+	double *aligned_roemer_delay = (double *)aligned_alloc(32, aligned_size * sizeof(double));
+
+	double *aligned_T = (double *)aligned_alloc(32, aligned_size * sizeof(double));
+	for (size_t i = 0; i < size; i++)
+	{
+		aligned_T[i] = array_T(i);
+	}
+
+	for (size_t i = 0; i < size; i += 4)
+	{
+		__m256d avx_T = _mm256_load_pd(aligned_T + i);
+
+		// calculate fractional orbit
+		__m256d avx_orbit = _mm256_div_pd(_mm256_sub_pd(avx_T, avx_T0), avx_Pb);
+		__m256d avx_norbit = _mm256_floor_pd(avx_orbit);
+		__m256d avx_forbit = _mm256_sub_pd(avx_orbit, avx_norbit);
+
+		// calculate eccentric anomaly
+		__m256d avx_phase = 2. * M_PI * avx_forbit;
+		__m256d avx_E = avx_phase + e * _ZGVdN4v_sin(avx_phase) / _mm256_sqrt_pd(1. - 2. * e * _ZGVdN4v_cos(avx_phase) + e * e);
+		__m256d avx_dE = _mm256_set_pd(1., 1., 1., 1.);
+		size_t nstep = 0;
+		while (haddd(_mm256_or_pd(_mm256_cmp_pd(avx_dE, -avx_threshold, 1), _mm256_cmp_pd(avx_dE, avx_threshold, 14))) && nstep++ < 8)
+		{
+			avx_dE = (avx_phase - (avx_E - e * _ZGVdN4v_sin(avx_E))) / (1. - e * _ZGVdN4v_cos(avx_E));
+			avx_E += avx_dE;
+		}
+
+		__m256d avx_sin_E = _ZGVdN4v_sin(avx_E);
+		__m256d avx_cos_E = _ZGVdN4v_cos(avx_E);
+
+		// calculate omega
+		__m256d avx_omega = omega0 + omega_dot / (365.25 / Pb) * (avx_norbit + avx_forbit);
+
+		// calculate v/c, a/c
+		__m256d avx_sin_omega = _ZGVdN4v_sin(avx_omega);
+		__m256d avx_cos_omega = _ZGVdN4v_cos(avx_omega);
+
+		__m256d avx_temp = 2 * M_PI / (Pb * 86400. * (1. - e * avx_cos_E));
+
+		__m256d avx_roemer_delay = asini_c * ((avx_cos_E - e) * avx_sin_omega + sqrt_1_ee * avx_sin_E * avx_cos_omega);
+
+		avx_roemer_delay = avx_roemer_delay;
+
+		_mm256_store_pd(aligned_roemer_delay + i, avx_roemer_delay);
+	}
+
+	for (size_t i = 0; i < size; i++)
+	{
+		vroemer_delay[i] = aligned_roemer_delay[i];
+	}
+
+	free(aligned_T);
+	free(aligned_roemer_delay);
+
+	py::capsule free_when_done(vroemer_delay, [](void *f)
+									 {
+            double *vroemer_delay = reinterpret_cast<double *>(f);
+            delete [] vroemer_delay; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size},
+		std::vector<size_t>{sizeof(double)},
+		vroemer_delay,
 		free_when_done);
 }
 
@@ -722,7 +861,7 @@ PYBIND11_MODULE(orbit_utils, m)
 		"calculate f0,f1 with the orbital parameters");
 
 	m.def(
-		"compute_roemer_delay", &compute_roemer_delay,
+		"compute_roemer_delay", &compute_roemer_delay0,
 		"calculate roemer_delay with the orbital parameters");
 
 	m.def(
