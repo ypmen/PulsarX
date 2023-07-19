@@ -101,6 +101,10 @@ namespace Pulsar
 		vector<double> profile;
 		vector<float> mxsnr_ffdot; 
 		vector<float> vsnr_dm;
+		std::vector<double> means;
+		std::vector<double> vars;
+		std::vector<double> weights;
+		bool mean_var_ready;
 	/**
 	 * @brief derived parameters
 	 * 

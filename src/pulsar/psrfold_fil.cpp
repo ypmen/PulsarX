@@ -564,7 +564,9 @@ int main(int argc, const char *argv[])
 			}
 			dedisp.get_subdata(subdata, k%GROUPSIZE);
 
-			if (vm.count("dspsr"))
+			if (vm.count("presto"))
+				folder[k].runPresto(subdata);
+			else if (vm.count("dspsr"))
 				folder[k].runDspsr(subdata);
 			else
 				folder[k].runTRLSM(subdata);

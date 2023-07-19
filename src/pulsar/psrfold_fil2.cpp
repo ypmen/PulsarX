@@ -575,7 +575,9 @@ int main(int argc, const char *argv[])
 				{
 					BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
 
-					if (vm.count("dspsr"))
+					if (vm.count("presto"))
+						folder[k].runPresto(subdata);
+					else if (vm.count("dspsr"))
 						folder[k].runDspsr(subdata);
 					else
 						folder[k].runTRLSM(subdata);	
@@ -596,7 +598,9 @@ int main(int argc, const char *argv[])
 				{
 					BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
 
-					if (vm.count("dspsr"))
+					if (vm.count("presto"))
+						folder[k].runPresto(subdatas[thread_id]);
+					else if (vm.count("dspsr"))
 						folder[k].runDspsr(subdatas[thread_id]);
 					else
 						folder[k].runTRLSM(subdatas[thread_id]);

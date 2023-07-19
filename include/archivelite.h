@@ -31,6 +31,8 @@ namespace Pulsar
 			npol = 0;
 			nchan = 0;
 			nbin = 0;
+
+			mean_var_ready = false;
 		}
 		IntegrationLite(const IntegrationLite &integ)
 		{
@@ -41,6 +43,10 @@ namespace Pulsar
 			nchan = integ.nchan;
 			nbin = integ.nbin;
 			data = integ.data;
+
+			means = integ.means;
+			vars = integ.vars;
+			mean_var_ready = integ.mean_var_ready;
 		}
 		IntegrationLite & operator=(const IntegrationLite &integ)
 		{
@@ -51,6 +57,10 @@ namespace Pulsar
 			nchan = integ.nchan;
 			nbin = integ.nbin;
 			data = integ.data;
+
+			means = integ.means;
+			vars = integ.vars;
+			mean_var_ready = integ.mean_var_ready;
 
 			return *this;
 		}
@@ -73,6 +83,9 @@ namespace Pulsar
 		int nbin;
 
 		vector<float> data;
+		std::vector<double> means;
+		std::vector<double> vars;
+		bool mean_var_ready;
 	};
 
 	class ArchiveLite
@@ -175,6 +188,9 @@ namespace Pulsar
 		vector<IntegrationLite> profiles;
 		MJD sub_mjd;
 		IntegrationLite sub_int;
+		std::vector<double> means;
+		std::vector<double> vars;
+		bool mean_var_ready;
 	private:
 		double fref;
 		int iblock;

@@ -66,6 +66,10 @@ namespace Pulsar
 						databuffer.buffer[i*nsubband+j] = buffersub[idm*ndump*nsubband+i*nsubband+j];
 					}
 				}
+				
+				databuffer.means = means;
+				databuffer.vars = vars;
+				databuffer.mean_var_ready = mean_var_ready;
 
 				databuffer.counter += ndump;
 			}
@@ -88,6 +92,9 @@ namespace Pulsar
 		vector<float> bufferT;
 		vector<double> frequencies_sub;
 		vector<float> buffersub;
+		std::vector<double> means;
+		std::vector<double> vars;
+		bool mean_var_ready;
 	public:
 		static double dmdelay(double dm, double fh, double fl)
 		{
