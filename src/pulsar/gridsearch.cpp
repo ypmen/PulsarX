@@ -481,11 +481,14 @@ void GridSearch::get_snr_width(double c)
 	}
 	else
 	{
+		get_mean_var2<std::vector<double>::iterator>(profile.begin(), nbin, tmp_mean, tmp_var);
+
+		tmp_var = 0.;
 		for (long int k=0; k<nsubint; k++)
 		{
 			for (long int j=0; j<nchan; j++)
 			{
-				tmp_mean += means[k * nchan + j] * weights[k * nchan + j];
+				// tmp_mean += means[k * nchan + j] * weights[k * nchan + j];
 				tmp_var += vars[k * nchan + j] * weights[k * nchan + j];
 			}
 		}
@@ -582,7 +585,9 @@ void GridSearch::get_rms()
 			}
 			else
 			{
-				tmp_mean = means[k * nchan + j] * weights[k * nchan + j];
+				get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+
+				// tmp_mean = means[k * nchan + j] * weights[k * nchan + j];
 				tmp_var = vars[k * nchan + j] * weights[k * nchan + j];
 			}
 
@@ -639,7 +644,9 @@ void GridSearch::normalize()
 			}
 			else
 			{
-				tmp_mean = means[k * nchan + j];
+				get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+				
+				// tmp_mean = means[k * nchan + j];
 				tmp_var = vars[k * nchan + j];
 			}
 

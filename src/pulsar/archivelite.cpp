@@ -474,10 +474,11 @@ bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
 
 	if (databuffer.mean_var_ready)
 	{
+		double factor = databuffer.tsamp * nbin * f;
 		for (long int j=0; j<databuffer.nchans; j++)
 		{
-			means[j] += databuffer.means[j] * (databuffer.nsamples / nbin);
-			vars[j] += databuffer.vars[j] * (databuffer.nsamples / nbin);
+			means[j] += databuffer.means[j] * (databuffer.nsamples / nbin) * factor;
+			vars[j] += databuffer.vars[j] * (databuffer.nsamples / nbin) * factor * factor;
 		}
 		mean_var_ready = databuffer.mean_var_ready;
 	}

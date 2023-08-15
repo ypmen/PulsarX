@@ -940,11 +940,7 @@ int main(int argc, const char *argv[])
 
 		double c = 1;
 		double a = 0.96, b = 1.806;
-		double psi = 1. / (gridsearch[k].f0 * gridsearch[k].nbin * tsamp);
-		if (vm.count("presto"))
-			c = a * psi * std::pow((1. + std::pow(psi, b)), -1./b);
-		else
-			c = 1.;
+		
 		gridsearch[k].get_snr_width(c);
 		gridsearch[k].get_error(obsinfo);
 
