@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV HOME /home/pulsarx
 
 ENV LD_LIBRARY_PATH=$HOME/software/lib:/usr/local/lib:$LD_LIBRARY_PATH
-ENV YMW16_DIR=$HOME/software/PulsarX/src/ymw16
+ENV YMW16_DIR=$HOME/software/XLibs/src/ymw16
 ENV PATH=$PATH:$HOME/software/bin:$HOME/.local/bin
 ENV OMP_NUM_THREADS=1
 ENV PSRCAT_FILE=/home/pulsarx/software/psrcat_tar/psrcat.db
@@ -98,6 +98,8 @@ RUN source makeit && cp psrcat $HOME/software/bin
 WORKDIR $HOME/software
 #install PlotX
 RUN git clone https://github.com/ypmen/PlotX.git
+#install XLibs
+RUN git clone https://github.com/ypmen/XLibs.git
 #install PulsarX
 RUN git clone https://github.com/ypmen/PulsarX.git
 #install BasebandX
@@ -111,6 +113,12 @@ RUN ./configure --prefix=$HOME/software
 RUN make && make install
 RUN make clean
 
+WORKDIR $HOME/software/XLibs
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software
+RUN make && make install
+RUN make clean
+
 WORKDIR $HOME/software/PulsarX
 RUN ./bootstrap
 RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/sofa/20200721/c/src -L$HOME/software/lib" CPPFLAGS="-I$HOME/software/sofa/20200721/c/src -I$HOME/software/include"
@@ -119,7 +127,7 @@ RUN make clean
 
 WORKDIR $HOME/software/BasebandX
 RUN ./bootstrap
-RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3"
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/lib" CPPFLAGS="-I$HOME/software/include"
 RUN make && make install
 RUN make clean
 
