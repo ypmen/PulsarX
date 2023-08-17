@@ -115,7 +115,7 @@ RUN make clean
 
 WORKDIR $HOME/software/XLibs
 RUN ./bootstrap
-RUN ./configure --prefix=$HOME/software
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/sofa/20200721/c/src" CPPFLAGS="-I$HOME/software/sofa/20200721/c/src"
 RUN make && make install
 RUN make clean
 
