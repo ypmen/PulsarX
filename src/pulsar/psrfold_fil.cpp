@@ -301,6 +301,7 @@ int main(int argc, const char *argv[])
 
 	reader->skip_start = nstart;
 	reader->skip_end = ntotal - nend;
+	reader->skip_head();
 
 	Patch patch;
 	patch.filltype = vm["fillPatch"].as<string>();

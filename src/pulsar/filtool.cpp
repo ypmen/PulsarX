@@ -224,6 +224,9 @@ int main(int argc, const char *argv[])
 	// handle input data
 	long int nstart = jump[0]/tsamp;
 	long int nend = ntotal-jump[1]/tsamp;
+	reader->skip_start = nstart;
+	reader->skip_end = ntotal - nend;
+	reader->skip_head();
 
 	while (!reader->is_end)
 	{
