@@ -114,9 +114,9 @@ int main(int argc, const char *argv[])
 			("widthPatch", value<float>()->default_value(0.4), "Width threshold (s) of patch for bad data")
 			("fillPatch", value<std::string>()->default_value("none"), "Fill the bad data by [none, mean, rand] in patch")
 			("fill", value<string>()->default_value("rand"), "Fill the zapped samples by [mean, rand]")
-			("render", "Using new folding algorithm (deprecated, used by default)")
+			("render", "Using new folding algorithm (default)")
 			("dspsr", "Using dspsr folding algorithm")
-			("presto", "Using presto folding algorithm (used by default)")
+			("presto", "Using presto folding algorithm (in test phase, will be default)")
 #ifdef HAVE_PLOTX
 			("plotx", "Using PlotX for plotting")
 #endif
