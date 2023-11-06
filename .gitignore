@@ -15,6 +15,7 @@ src/pulsar/psrfold_fil
 src/pulsar/psrfold_fil2
 src/pulsar/filtool
 src/pulsar/dmffdot
+src/pulsar/chop8
 src/ymw16/ymw16
 src/ymw16/ymw16_ne
 .vscode

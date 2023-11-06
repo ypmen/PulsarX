@@ -116,9 +116,9 @@ int main(int argc, const char *argv[])
 			("widthPatch", value<float>()->default_value(0.4), "Width threshold (s) of patch for bad data")
 			("fillPatch", value<std::string>()->default_value("none"), "Fill the bad data by [none, mean, rand] in patch")
 			("fill", value<string>()->default_value("rand"), "Fill the zapped samples by [mean, rand]")
-			("render", "Using new folding algorithm (deprecated, used by default)")
+			("render", "Using new folding algorithm (default)")
 			("dspsr", "Using dspsr folding algorithm")
-			("presto", "Using presto folding algorithm (used by default)")
+			("presto", "Using presto folding algorithm (in test phase, will be default)")
 #ifdef HAVE_PLOTX
 			("plotx", "Using PlotX for plotting")
 #endif
@@ -321,6 +321,7 @@ int main(int argc, const char *argv[])
 
 	reader->skip_start = nstart;
 	reader->skip_end = ntotal - nend;
+	reader->skip_head();
 
 	Patch patch;
 	patch.filltype = vm["fillPatch"].as<string>();
@@ -579,7 +580,9 @@ int main(int argc, const char *argv[])
 				{
 					BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
 
-					if (vm.count("dspsr"))
+					if (vm.count("presto"))
+						folder[k].runPresto(subdata);
+					else if (vm.count("dspsr"))
 						folder[k].runDspsr(subdata);
 					else
 						folder[k].runTRLSM(subdata);	
@@ -600,7 +603,9 @@ int main(int argc, const char *argv[])
 				{
 					BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
 
-					if (vm.count("dspsr"))
+					if (vm.count("presto"))
+						folder[k].runPresto(subdatas[thread_id]);
+					else if (vm.count("dspsr"))
 						folder[k].runDspsr(subdatas[thread_id]);
 					else
 						folder[k].runTRLSM(subdatas[thread_id]);
@@ -974,11 +979,7 @@ int main(int argc, const char *argv[])
 
 		double c = 1;
 		double a = 0.96, b = 1.806;
-		double psi = 1. / (gridsearch[k].f0 * gridsearch[k].nbin * tsamp);
-		if (vm.count("presto"))
-			c = a * psi * std::pow((1. + std::pow(psi, b)), -1./b);
-		else
-			c = 1.;
+		
 		gridsearch[k].get_snr_width(c);
 		gridsearch[k].get_error(obsinfo);
 

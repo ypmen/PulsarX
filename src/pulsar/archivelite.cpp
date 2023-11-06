@@ -41,6 +41,7 @@ ArchiveLite::ArchiveLite()
 
 	fref = 1000.;
 	use_t2pred = false;
+	mean_var_ready = false;
 }
 
 ArchiveLite::ArchiveLite(const ArchiveLite &arch)
@@ -66,6 +67,9 @@ ArchiveLite::ArchiveLite(const ArchiveLite &arch)
 
 	fref = arch.fref;
 	use_t2pred = arch.use_t2pred;
+	means = arch.means;
+	vars = arch.vars;
+	mean_var_ready = arch.mean_var_ready;
 }
 
 ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
@@ -91,6 +95,9 @@ ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
 
 	fref = arch.fref;
 	use_t2pred = arch.use_t2pred;
+	means = arch.means;
+	vars = arch.vars;
+	mean_var_ready = arch.mean_var_ready;
 
 	return *this;
 }
@@ -110,6 +117,9 @@ void ArchiveLite::resize(int np, int nc, int nb)
 void ArchiveLite::prepare(DataBuffer<float> &databuffer)
 {
 	frequencies = databuffer.frequencies;
+
+	means.resize(frequencies.size(), 0.);
+	vars.resize(frequencies.size(), 0.);
 
 	if (use_t2pred)
 	{
@@ -155,7 +165,7 @@ bool ArchiveLite::runDspsr(DataBuffer<float> &databuffer)
 	vector<int> binplan(databuffer.nsamples);
 	for (long int i=iblock*databuffer.nsamples; i<(iblock+1)*databuffer.nsamples; i++)
 	{
-		if (i%NSBLK == 0)
+		if (i%NSBLK == 0 or i==iblock*databuffer.nsamples)
 		{
 			phi = get_phase(sub_mjd+i*databuffer.tsamp, ref_epoch);
 			f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
@@ -242,7 +252,7 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 
 	for (long int i=iblock*databuffer.nsamples; i<(iblock+1)*databuffer.nsamples; i++)
 	{
-		if (i%NSBLK == 0)
+		if (i%NSBLK == 0 or i==iblock*databuffer.nsamples)
 		{
 			phi = get_phase(sub_mjd+(i-0.5)*databuffer.tsamp, ref_epoch);
 			f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
@@ -386,7 +396,7 @@ bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
 
 	for (long int i=iblock*databuffer.nsamples; i<(iblock+1)*databuffer.nsamples; i++)
 	{
-		if (i%NSBLK == 0)
+		if (i%NSBLK == 0 or i==iblock*databuffer.nsamples)
 		{
 			phi = get_phase(sub_mjd+(i-0.5)*databuffer.tsamp, ref_epoch);
 			f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
@@ -417,9 +427,6 @@ bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
 
 			long int l=low_phin%nbin;
 			l = l<0 ? l+nbin:l;
-			// {
-			// 	mxWTW[l*nbin+l] += vWli0*vWli0;
-			// }
 
 			for (long int j=0; j<databuffer.nchans; j++)
 			{       
@@ -437,11 +444,6 @@ bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
 			l = l<0 ? l+nbin:l;
 			long int m = high_phin%nbin;
 			m = m<0 ? m+nbin:m;
-
-			// mxWTW[l*nbin+l] += vWli0*vWli0;
-			// mxWTW[l*nbin+m] += vWli0*vWli1;
-			// mxWTW[m*nbin+l] += vWli1*vWli0;
-			// mxWTW[m*nbin+m] += vWli1*vWli1;
 
 			for (long int j=0; j<databuffer.nchans; j++)
 			{
@@ -463,14 +465,6 @@ bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
 				binplan[l] = binplan[l]<0 ? binplan[l]+nbin:binplan[l];
 			}
 
-			// for (long int l=0; l<nphi; l++)
-			// {
-			// 	for (long int m=0; m<nphi; m++)
-			// 	{
-			// 		mxWTW[binplan[l]*nbin+binplan[m]] += vWli[l]*vWli[m];
-			// 	}
-			// }
-
 			for (long int l=0; l<nphi; l++)
 			{
 				for (long int j=0; j<databuffer.nchans; j++)
@@ -481,26 +475,37 @@ bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
 		}
 	}
 
+	if (databuffer.mean_var_ready)
+	{
+		double factor = databuffer.tsamp * nbin * f;
+		for (long int j=0; j<databuffer.nchans; j++)
+		{
+			means[j] += databuffer.means[j] * (databuffer.nsamples / nbin) * factor;
+			vars[j] += databuffer.vars[j] * (databuffer.nsamples / nbin) * factor * factor;
+		}
+		mean_var_ready = databuffer.mean_var_ready;
+	}
+
 	if (++iblock == nblock)
 	{
-		// for (long int l=0; l<nbin; l++)
-		// {
-		// 	for (long int m=0; m<nbin; m++)
-		// 	{
-		// 		mxWTW[l*nbin+m] /= (nblock*databuffer.nsamples*databuffer.tsamp*sub_int.ffold);
-		// 	}
-		// 	mxWTW[l*nbin+l] += 1;
-		// }
-
 		transpose_pad<float>(&sub_int.data[0], &vWTd_T[0], nbin, npol*nchan);
 		
 		sub_mjd += sub_int.tsubint;
 
+		if (mean_var_ready)
+		{
+			sub_int.means = means;
+			sub_int.vars = vars;
+			sub_int.mean_var_ready = mean_var_ready;
+		}
+
 		profiles.push_back(sub_int);
 
 		iblock = 0;
-		// fill(mxWTW.begin(), mxWTW.end(), 0.);
 		fill(vWTd_T.begin(), vWTd_T.end(), 0.);
+
+		std::fill(means.begin(), means.end(), 0.);
+		std::fill(vars.begin(), vars.end(), 0.);
 	}
 
 	return true;

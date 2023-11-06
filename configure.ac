@@ -5,7 +5,7 @@ AC_PREREQ([2.69])
 AC_INIT([PulsarX], [0.0], [ypmen@mpifr-bonn.mpg.de])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
-AC_CONFIG_SRCDIR([include/filterbank.h])
+AC_CONFIG_SRCDIR([include/gridsearch.h])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([foreign])
 
@@ -54,5 +54,5 @@ AC_TYPE_SIZE_T
 AC_FUNC_MKTIME
 AC_CHECK_FUNCS([floor gettimeofday memset strchr])
 
-AC_CONFIG_FILES([Makefile src/Makefile src/container/Makefile src/formats/Makefile src/utils/Makefile src/module/Makefile src/ymw16/Makefile src/pulsar/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/pulsar/Makefile])
 AC_OUTPUT

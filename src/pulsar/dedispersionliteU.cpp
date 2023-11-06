@@ -23,6 +23,8 @@ DedispersionLiteU::DedispersionLiteU()
 	tsamp = 0.;
 	ndump = 0;
 	nsamples = 0;
+
+	mean_var_ready = false;
 }
 
 DedispersionLiteU::~DedispersionLiteU(){}
@@ -39,6 +41,9 @@ void DedispersionLiteU::prepare(DataBuffer<float> &databuffer)
 	int nch = ceil(nchans*1./nsubband);
 	nsubband = ceil(nchans*1./nch);
 	frequencies_sub.resize(nsubband, 0.);
+
+	means.resize(nsubband, 0.);
+	vars.resize(nsubband, 0.);
 
 	vector<int> fcnt(nsubband, 0);
 	for (long int j=0; j<nchans; j++)
@@ -121,6 +126,19 @@ void DedispersionLiteU::prerun(DataBuffer<float> &databuffer)
 	bufferT.resize(nchans*nsamples, 0.);
 
 	transpose_pad<float>(&bufferT[0], &buffer[0], nsamples, nchans);
+
+	if (databuffer.mean_var_ready)
+	{
+		int nch = ceil(nchans*1./nsubband);
+		std::fill(means.begin(), means.end(), 0.);
+		std::fill(vars.begin(), vars.end(), 0.);
+		for (long int j=0; j<nchans; j++)
+		{
+			means[j/nch] += databuffer.weights[j] * databuffer.means[j];
+			vars[j/nch] += databuffer.weights[j] * databuffer.vars[j];
+		}
+		mean_var_ready = databuffer.mean_var_ready;
+	}
 
 	counter += ndump;
 }

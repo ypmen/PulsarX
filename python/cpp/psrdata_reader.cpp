@@ -78,12 +78,12 @@ PYBIND11_MODULE(psrdata_reader, m)
 		.def(py::init<>())
 		.def("check", &FilterbankReader::check)
 		.def("read_header", &FilterbankReader::read_header)
-		.def("read_data", &FilterbankReader::read_data);
+		.def("read_data", static_cast<size_t (FilterbankReader::*)(DataBuffer<float> &, size_t, bool)>(&FilterbankReader::read_data));
 
 	py::class_<PsrfitsReader, PSRDataReader>(m, "PsrfitsReader")
 		.def("check", &PsrfitsReader::check)
 		.def("read_header", &PsrfitsReader::read_header)
-		.def("read_data", &PsrfitsReader::read_data);
+		.def("read_data", static_cast<size_t (PsrfitsReader::*)(DataBuffer<float> &, size_t, bool)>(&PsrfitsReader::read_data));
 
 	py::class_<FilterbankWriter>(m, "FilterbankWriter")
 		.def(py::init<>())

@@ -118,17 +118,17 @@ def format_val_err(val, err, style="plain", low=-5., high=6.):
 	if style == "sci" and (np.abs(val) < 10**low or np.abs(val) > 10**high):
 		n = 0
 		if val != 0.:
-			n = np.int(np.floor(np.log10(np.abs(val))))
+			n = np.int_(np.floor(np.log10(np.abs(val))))
 			val *= 10**(-n)
 			err *= 10**(-n)
 			
 			if err > 1.:
 				return f"{val:.0f}({err:.0f})e{n}"
 			else:
-				n = np.int(-np.floor(np.log10(err))+1)
+				n = np.int_(-np.floor(np.log10(err))+1)
 				return f"{val:.{n}f}({err*10**n:.0f})e{n}"
 		else:
-			n = np.int(np.floor(np.log10(np.abs(err))))
+			n = np.int_(np.floor(np.log10(np.abs(err))))
 			val *= 10**(-n)
 			err *= 10**(-n)
 			return f"{val:.0f}({err:.0f})e{n}"
@@ -137,10 +137,10 @@ def format_val_err(val, err, style="plain", low=-5., high=6.):
 			return f"{val:.0f}({err:.0f})"
 		else:
 			if (err < np.abs(val) and err != 0.) or val == 0.:
-				n = np.int(-np.floor(np.log10(err))+1)
+				n = np.int_(-np.floor(np.log10(err))+1)
 				return f"{val:.{n}f}({err*10**n:.0f})"
 			else:
-				n = np.int(-np.floor(np.log10(np.abs(err)))+1)
+				n = np.int_(-np.floor(np.log10(np.abs(err)))+1)
 				return f"{val:.{n}f}({err*10**n:.0f})"
 
 def circular_transform(samples):

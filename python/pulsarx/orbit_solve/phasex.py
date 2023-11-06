@@ -164,6 +164,23 @@ def dec2δ(dec):
 		d,m,s = dec.split(':')
 	return sn*(float(d)/360.+float(m)/21600.+float(s)/1296000.)*360.*np.pi/180.
 
+def α2ra(α):
+	hms = α / np.pi * 180. / 15.
+	h = int(hms)
+	m = int((hms - h) * 60.)
+	s = (hms - h - m / 60.) * 3600.
+	return f"{h:02d}:{m:02d}:{s}"
+
+def δ2dec(δ):
+	sign = ""
+	if δ < 0.:
+		sign = "-"
+	dms = np.abs(δ) / np.pi * 180.
+	d = int(dms)
+	m = int((dms - d) * 60.)
+	s = (dms - d - m / 60.) * 3600.
+	return f"{sign}{d:02d}:{m:02d}:{s}"
+
 α = ra2α(ra)
 δ = dec2δ(dec)
 
@@ -309,7 +326,12 @@ def main():
 		else:
 			p_best, chisq_best_test, p_best_fit, chisq_best_fit = optimize_orbit(f0)
 
-	np.savetxt('best.txt', p_best)
+		log.info(f"ouput parfile\nRAJ\t{α2ra(α + p_best[2])}\nDECJ\t{δ2dec(δ + p_best[3])}\nF0\t{p_best[0]}\nF1\t{p_best[1]}\nA1\t{p_best[4]}\nPB\t{p_best[5]}\nT0\t{p_best[6]+vTbmean}\nECC\t{p_best[7]}\nOM\t{p_best[8]/np.pi*180.}\nOMDOT\t{p_best[9]/np.pi*180.}")
+
+		np.savetxt('best.txt', p_best)
+	else:
+		p_best = np.loadtxt('best.txt')
+
 	plot(vTb_arr_test, p_best, vpherr_test, vobs_ssb_arr_test, α, δ)
 	plt.savefig('best.png')
 

@@ -62,6 +62,8 @@ GridSearch::GridSearch()
 	err_p2 = 0.;
 	err_dm = 0.;
 	err_acc = 0.;
+
+	mean_var_ready = false;
 }
 
 GridSearch::GridSearch(const GridSearch &gridsearch)
@@ -101,6 +103,11 @@ GridSearch::GridSearch(const GridSearch &gridsearch)
 	profile = gridsearch.profile;
 	mxsnr_ffdot = gridsearch.mxsnr_ffdot;
 	vsnr_dm = gridsearch.vsnr_dm;
+
+	means = gridsearch.means;
+	vars = gridsearch.vars;
+	weights = gridsearch.weights;
+	mean_var_ready = gridsearch.mean_var_ready;
 
 	snr = gridsearch.snr;
 	width = gridsearch.width;
@@ -156,6 +163,11 @@ GridSearch & GridSearch::operator=(const GridSearch &gridsearch)
 	mxsnr_ffdot = gridsearch.mxsnr_ffdot;
 	vsnr_dm = gridsearch.vsnr_dm;
 
+	means = gridsearch.means;
+	vars = gridsearch.vars;
+	weights = gridsearch.weights;
+	mean_var_ready = gridsearch.mean_var_ready;
+
 	snr = gridsearch.snr;
 	width = gridsearch.width;
 	p0 = gridsearch.p0;
@@ -192,6 +204,10 @@ void GridSearch::prepare(ArchiveLite &arch)
 	tsuboff.resize(nsubint, 0.);
 	profiles.resize(nsubint*nchan*nbin, 0.);
 
+	means.resize(nsubint*nchan, 0.);
+	vars.resize(nsubint*nchan, 0.);
+	weights.resize(nsubint*nchan, 1.);
+
 	double tcentre = (arch.ref_epoch-arch.start_mjd).to_second();
 
 	int npol = arch.npol;
@@ -204,6 +220,13 @@ void GridSearch::prepare(ArchiveLite &arch)
 		{
 			for (long int j=0; j<nchan; j++)
 			{
+				if (arch.mean_var_ready)
+				{
+					means[l * nchan + j] += arch.profiles[l].means[k * nchan + j];
+					vars[l * nchan + j] += arch.profiles[l].vars[k * nchan + j];
+					mean_var_ready = arch.mean_var_ready;
+				}
+
 				for (long int i=0; i<nbin; i++)
 				{
 				   profiles[l*nchan*nbin+j*nbin+i] += arch.profiles[l].data[k*nchan*nbin+j*nbin+i];
@@ -490,7 +513,24 @@ void GridSearch::get_snr_width(double c)
 	double tmp_mean = 0.;
 	double tmp_var = 0.;
 
-	get_mean_var2<std::vector<double>::iterator>(profile.begin(), nbin, tmp_mean, tmp_var);
+	if (!mean_var_ready)
+	{
+		get_mean_var2<std::vector<double>::iterator>(profile.begin(), nbin, tmp_mean, tmp_var);
+	}
+	else
+	{
+		get_mean_var2<std::vector<double>::iterator>(profile.begin(), nbin, tmp_mean, tmp_var);
+
+		tmp_var = 0.;
+		for (long int k=0; k<nsubint; k++)
+		{
+			for (long int j=0; j<nchan; j++)
+			{
+				// tmp_mean += means[k * nchan + j] * weights[k * nchan + j];
+				tmp_var += vars[k * nchan + j] * weights[k * nchan + j];
+			}
+		}
+	}
 
 	tmp_var = tmp_var==0. ? 1.:tmp_var;
 
@@ -577,7 +617,17 @@ void GridSearch::get_rms()
 			double tmp_mean = 0.;
 			double tmp_var = 0.;
 
-			get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+			if (!mean_var_ready)
+			{
+				get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+			}
+			else
+			{
+				get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+
+				// tmp_mean = means[k * nchan + j] * weights[k * nchan + j];
+				tmp_var = vars[k * nchan + j] * weights[k * nchan + j];
+			}
 
 			mean += tmp_mean;
 			var += tmp_var;
@@ -626,7 +676,20 @@ void GridSearch::normalize()
 			double tmp_mean = 0.;
 			double tmp_var = 0.;
 
-			get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+			if (!mean_var_ready)
+			{
+				get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+			}
+			else
+			{
+				get_mean_var<std::vector<float>::iterator>(profiles.begin()+k*nchan*nbin+j*nbin, nbin, tmp_mean, tmp_var);
+				
+				// tmp_mean = means[k * nchan + j];
+				tmp_var = vars[k * nchan + j];
+			}
+
+			means[k * nchan + j] = 0.;
+			vars[k * nchan + j] = tmp_var==0? 0:1.;
 
 			tmp_var = tmp_var==0? 1:tmp_var;
 			tmp_var = std::sqrt(tmp_var);
@@ -1004,14 +1067,14 @@ void GridSearch::clfd3()
 	float vmin_mean = Q1_mean-clfd_q*R_mean;
 	float vmax_mean = Q3_mean+clfd_q*R_mean;
 
-	std::vector<float> weights(nchan, 1.);
+	std::vector<float> weights_tmp(nchan, 1.);
 	for (long int j=0; j<nchan; j++)
 	{
 		if ((fvardiff[j]>vmax_vardiff or fmeandiff[j]>vmax_meandiff) and
 				(fvar[j]<vmin_var or fvar[j]>vmax_var or fmean[j]<vmin_mean or fmean[j]>vmax_mean)
 			)
 		{
-			weights[j] = 0.;
+			weights_tmp[j] = 0.;
 		}
 	}
 
@@ -1019,9 +1082,10 @@ void GridSearch::clfd3()
 	{
 		for (long int j=0; j<nchan; j++)
 		{
+			weights[k * nchan + j] = weights_tmp[j];
 			for (long int i=0; i<nbin; i++)
 			{
-				profiles[k*nchan*nbin+j*nbin+i] *= weights[j];
+				profiles[k*nchan*nbin+j*nbin+i] *= weights_tmp[j];
 			}
 		}
 	}
@@ -1031,7 +1095,7 @@ void GridSearch::zap()
 {
 	if (zaplist.empty()) return;
 
-	std::vector<float> weights(nchan, 1.);
+	std::vector<float> weights_tmp(nchan, 1.);
 
 	for (long int j=0; j<nchan; j++)
 	{
@@ -1039,7 +1103,7 @@ void GridSearch::zap()
 		{
 			if (frequencies[j]>=(*k).first and frequencies[j]<=(*k).second)
 			{
-				weights[j] = 0.;
+				weights_tmp[j] = 0.;
 			}
 		}
 	}
@@ -1051,9 +1115,10 @@ void GridSearch::zap()
 #endif
 		for (long int j=0; j<nchan; j++)
 		{
+			weights[k * nchan + j] = weights_tmp[j];
 			for (long int i=0; i<nbin; i++)
 			{
-				profiles[k*nchan*nbin+j*nbin+i] *= weights[j];
+				profiles[k*nchan*nbin+j*nbin+i] *= weights_tmp[j];
 			}
 		}
 	}
