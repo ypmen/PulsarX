@@ -28,7 +28,6 @@ using namespace boost::program_options;
 unsigned int num_threads;
 
 #define NSBLK 65536
-#define FAST 1
 
 int main(int argc, const char *argv[])
 {
@@ -72,6 +71,7 @@ int main(int argc, const char *argv[])
 			("wts", "Apply DAT_WTS")
 			("scloffs", "Apply DAT_SCL and DAT_OFFS")
 			("zero_off", "Apply ZERO_OFF")
+			("mask", "save rfi mask")
 			("cont", "Input files are contiguous")
 			("psrfits", "Input psrfits format data")
 			("input,f", value<std::vector<std::string>>()->multitoken()->composing(), "Input files");
@@ -246,8 +246,29 @@ int main(int argc, const char *argv[])
 		//databuf.open();
 	}
 
-				
 	databuf.close();
+
+	if (vm.count("mask"))
+	{
+		Filterbank maskfil;
+		reader->get_filterbank_template(maskfil);
+		maskfil.filename = rootname + "_mask.fil";
+		std::strcpy(maskfil.source_name, source_name.c_str());
+		maskfil.telescope_id = telescope_id;
+		maskfil.src_raj = src_raj;
+		maskfil.src_dej = src_dej;
+		maskfil.ibeam = ibeam;
+		maskfil.nbits = 8;
+		maskfil.tsamp = ndump * tsamp;
+
+		maskfil.write_header();
+		for (auto tmpmask=prep.mask.begin(); tmpmask!=prep.mask.end(); ++tmpmask)
+		{
+			fwrite(tmpmask->data(), 1, sizeof(unsigned char) * tmpmask->size(), maskfil.fptr);
+		}
+
+		maskfil.close();
+	}
 
 	return 0;
 }
