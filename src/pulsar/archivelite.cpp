@@ -162,7 +162,7 @@ bool ArchiveLite::runDspsr(DataBuffer<float> &databuffer)
 	vector<int> binplan(databuffer.nsamples);
 	for (long int i=iblock*databuffer.nsamples; i<(iblock+1)*databuffer.nsamples; i++)
 	{
-		if (i%NSBLK == 0)
+		if (i%NSBLK == 0 or i==iblock*databuffer.nsamples)
 		{
 			phi = get_phase(sub_mjd+i*databuffer.tsamp, ref_epoch);
 			f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
@@ -249,7 +249,7 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 
 	for (long int i=iblock*databuffer.nsamples; i<(iblock+1)*databuffer.nsamples; i++)
 	{
-		if (i%NSBLK == 0)
+		if (i%NSBLK == 0 or i==iblock*databuffer.nsamples)
 		{
 			phi = get_phase(sub_mjd+(i-0.5)*databuffer.tsamp, ref_epoch);
 			f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
@@ -393,7 +393,7 @@ bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
 
 	for (long int i=iblock*databuffer.nsamples; i<(iblock+1)*databuffer.nsamples; i++)
 	{
-		if (i%NSBLK == 0)
+		if (i%NSBLK == 0 or i==iblock*databuffer.nsamples)
 		{
 			phi = get_phase(sub_mjd+(i-0.5)*databuffer.tsamp, ref_epoch);
 			f = get_ffold(sub_mjd+(i+NSBLK*0.5-0.5)*databuffer.tsamp, ref_epoch);
