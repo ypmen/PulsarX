@@ -54,9 +54,7 @@ int main(int argc, char *argv[])
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
 			("zap", value<std::vector<double>>()->multitoken()->zero_tokens()->composing(), "Zap channels, e.g. --zap 1000 1100 1200 1300")
 			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
-#ifdef HAVE_PLOTX
-			("plotx", "Using PlotX for plotting")
-#endif
+			("plotx", "Using PlotX for plotting (default; not used any more)")
 			("rootname,o", value<std::string>()->default_value("J0000-00"), "Output rootname")
 			("input,f", value<std::vector<std::string>>()->multitoken()->composing(), "Input files");
 
@@ -623,7 +621,7 @@ int main(int argc, char *argv[])
 			obsinfo["Basename"] = basename;
 
 			Pulsar::PulsarPlot psrplot;
-			psrplot.plot(arch, gridsearch, obsinfo, 1, rootname, vm.count("plotx"));
+			psrplot.plot(arch, gridsearch, obsinfo, 1, rootname, true);
 		}
 	}
 
