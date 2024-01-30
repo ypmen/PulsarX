@@ -27,7 +27,7 @@ AC_CHECK_LIB([fftw3f], [fftwf_malloc], [], [echo "library not found!";exit -1])
 AC_CHECK_LIB([fftw3f_threads], [fftwf_init_threads], [], [echo "library not found!";exit -1])
 AC_CHECK_LIB([lapack], [dgesv_], [], [echo "library not found!";exit -1])
 
-X_LIB_PLOTX([echo "library found"], [echo "library not found!"])
+X_LIB_PLOTX([echo "library found"], [echo "library not found!";exit -1])
 X_LIB_SOFA([echo "library found"], [echo "library not found!"])
 
 LIBS="$LIBS -lgfortran -lm -lquadmath -lX11"
@@ -36,9 +36,6 @@ AX_CHECK_CUDA
 AC_OPENMP
 AX_CHECK_X86_FEATURES
 AX_PYTHON
-
-X_PYTHON_MODULE(["matplotlib"], [echo "python module found"], [echo "python module not found"; exit -1])
-X_PYTHON_MODULE(["numpy"], [echo "python module found"], [echo "python module not found"; exit -1])
 
 CFLAGS="$CFLAGS $OPENMP_CFLAGS"
 CXXFLAGS="$CXXFLAGS $OPENMP_CFLAGS"
