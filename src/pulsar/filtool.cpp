@@ -54,6 +54,7 @@ int main(int argc, const char *argv[])
 			("dec", value<string>()->default_value("00:00:00"), "DEC (ddmmss.s)")
 			("ibeam,i", value<int>()->default_value(1), "Beam number")
 			("telescope", value<std::string>()->default_value("Fake"), "Telescope name")
+			("outref", value<std::string>(), "Reference baseline data")
 			("baseline", value<std::vector<float>>()->multitoken()->default_value(std::vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
 			("rfi,z", value<std::vector<std::string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
@@ -147,6 +148,8 @@ int main(int argc, const char *argv[])
 	reader->check();
 	reader->read_header();
 
+	long double tstart = reader->start_mjd.to_day();
+
 	string source_name = reader->source_name;
 	string s_telescope = reader->telescope;
 	int ibeam = reader->beam.empty() ? 0 : std::stoi(reader->beam);
@@ -188,6 +191,31 @@ int main(int argc, const char *argv[])
 
 	long int ndump = (int)(vm["seglen"].as<float>()/tsamp)/td_lcm/2*td_lcm*2;
 
+	// read zero dm data
+	std::vector<float> outref;
+	long double tstart_zero = 0.;
+	double tsamp_zero = 0.;
+	if (vm.count("outref"))
+	{
+		Filterbank fil(vm["outref"].as<std::string>());
+		fil.read_header();
+		fil.read_data();
+
+		assert(fil.nchans == 1);
+
+		tsamp_zero = fil.tsamp;
+		tstart_zero = fil.tstart;
+		outref.resize(fil.nsamples, 0.);
+		for (size_t i=0; i<outref.size(); i++)
+		{
+			outref[i] = ((float *)fil.data)[i];
+		}
+
+		fil.close();
+
+		//assert(tsamp_zero == tsamp);
+	}
+
 	DataBuffer<float> databuf(ndump, nchans);
 	databuf.closable = false;
 	databuf.tsamp = tsamp;
@@ -207,6 +235,52 @@ int main(int argc, const char *argv[])
 	prep.filltype = vm["fill"].as<string>();
 	prep.prepare(databuf);
 
+	// handle input data
+	long int nstart = jump[0]/tsamp;
+	long int nend = ntotal-jump[1]/tsamp;
+	reader->skip_start = nstart;
+	reader->skip_end = ntotal - nend;
+	reader->skip_head();
+
+	float ndiv = reader->tsamp / tsamp_zero;
+
+	int td_ref = std::round(prep.td * reader->tsamp / tsamp_zero);
+
+	std::vector<float> outref_ds(outref.size()/td_ref, 0.); 
+	if (vm.count("outref"))
+	{
+		// align start sample
+		if (tstart_zero > tstart + nstart * tsamp / 86400.)
+		{
+			reader->skip_start = std::round((tstart_zero - tstart) * 86400. / tsamp);
+			reader->skip_head();
+		}
+		else
+		{
+			size_t zero_offset = std::round((tstart + nstart * tsamp / 86400. - tstart_zero) * 86400. / tsamp_zero);
+			for (size_t i=zero_offset; i<outref.size(); i++)
+			{
+				outref[i-zero_offset] = outref[i];
+			}
+		}
+
+		// align end sample
+		if (tstart_zero + outref.size() * tsamp_zero / 86400. < tstart + ntotal * tsamp / 86400.)
+		{
+			reader->skip_end = std::round(((tstart + ntotal * tsamp / 86400.) - (tstart_zero + outref.size() * tsamp_zero / 86400.)) * 86400. / tsamp);
+		}
+
+		for (size_t k=0; k<td_ref; k++)
+		{
+			for (size_t i=0; i<outref.size()/td_ref; i++)
+			{
+				outref_ds[i] += outref[i * td_ref + k];
+			}
+		}
+	}
+
+	std::vector<float> bswidth = vm["baseline"].as<std::vector<float>>();
+
 	long int noutfil = filmakers.size();
 	for (long int k=0; k<noutfil; k++)
 	{
@@ -218,15 +292,16 @@ int main(int argc, const char *argv[])
 		filmakers[k].src_dej = src_dej;
 		filmakers[k].telescope_id = telescope_id;
 		filmakers[k].filltype = vm["fill"].as<string>();
+
+		filmakers[k].bswidth = bswidth[1];
+
+		if (vm.count("outref"))
+		{
+			filmakers[k].outref = outref_ds;
+		}
+
 		filmakers[k].prepare(prep);
 	}
-
-	// handle input data
-	long int nstart = jump[0]/tsamp;
-	long int nend = ntotal-jump[1]/tsamp;
-	reader->skip_start = nstart;
-	reader->skip_end = ntotal - nend;
-	reader->skip_head();
 
 	while (!reader->is_end)
 	{

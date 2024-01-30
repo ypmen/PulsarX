@@ -17,6 +17,8 @@ src/pulsar/filtool
 src/pulsar/dmffdot
 src/pulsar/chop8
 src/pulsar/pulsar_injector
+src/pulsar/extract_baseline
+src/pulsar/histof
 src/ymw16/ymw16
 src/ymw16/ymw16_ne
 .vscode
