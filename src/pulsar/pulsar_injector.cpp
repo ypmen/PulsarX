@@ -187,6 +187,7 @@ int main(const int argc, const char *argv[])
 			("snr", value<double>()->default_value(100), "S/N")
 			("spi", value<double>()->default_value(0), "Spectra index")
 			("psr", value<std::string>(), "Parameter file of injected pulsars [DM F0 F1 Width S/N]")
+			("single", "Inject multiple pulsars in a single filterbank")
 			("baseline", value<float>()->default_value(0.01), "The scale of baseline remove (s)")
 			("zapthre", value<float>()->default_value(3), "Threshold in IQR for zapping channels")
 			("seglen,l", value<float>()->default_value(1), "Time length per segment (s)")
@@ -308,20 +309,39 @@ int main(const int argc, const char *argv[])
 	BOOST_LOG_TRIVIAL(info)<<"writing filterbank header...";
 	Filterbank tmpfil;
 	reader->get_filterbank_template(tmpfil);
-	for (long int k=0; k<npsr; k++)
+	if (vm.count("single"))
 	{
-		tmpfil.filename = rootname + "_" + std::to_string(k+1) + ".fil";
+		tmpfil.filename = rootname + ".fil";
 		tmpfil.tstart = tstart + nstart*tsamp/86400.;
 		tmpfil.write_header();
 		tmpfil.close();
 	}
+	else
+	{
+		for (long int k=0; k<npsr; k++)
+		{
+			tmpfil.filename = rootname + "_" + std::to_string(k+1) + ".fil";
+			tmpfil.tstart = tstart + nstart*tsamp/86400.;
+			tmpfil.write_header();
+			tmpfil.close();
+		}
+	}
 
 	std::vector<std::ofstream> outfils;
-	for (long int k=0; k<npsr; k++)
+	if (vm.count("single"))
 	{
 		ofstream outfil;
-		outfil.open(rootname + "_" + std::to_string(k+1) + ".fil", ios::binary|ios::app);
+		outfil.open(rootname + ".fil", ios::binary|ios::app);
 		outfils.push_back(std::move(outfil));
+	}
+	else
+	{
+		for (long int k=0; k<npsr; k++)
+		{
+			ofstream outfil;
+			outfil.open(rootname + "_" + std::to_string(k+1) + ".fil", ios::binary|ios::app);
+			outfils.push_back(std::move(outfil));
+		}
 	}
 
 	long int ndump = (int)(vm["seglen"].as<float>()/tsamp)/td*td;
@@ -333,6 +353,7 @@ int main(const int argc, const char *argv[])
 	double fref = 0.5*(*min_element(databuf.frequencies.begin(), databuf.frequencies.end())+*max_element(databuf.frequencies.begin(), databuf.frequencies.end()));
 
 	std::vector<unsigned char> tempdata(ndump*nchans, 0);
+	std::vector<float> tempdataf(ndump*nchans, 0);
 #ifdef __AVX2__
 	std::vector<float, boost::alignment::aligned_allocator<float, 32>> injectdata(ndump*nchans, 0.);
 #else
@@ -388,14 +409,42 @@ int main(const int argc, const char *argv[])
 			{
 				Af[jj] = alpha*normf[jj]*(1.+std::sqrt(databuf.vars[jj]));
 			}
+			if (vm.count("single"))
+			{
+				for (long int ii=0; ii<ndump; ii++)
+				{
+					for (long int jj=0; jj<nchans; jj++)
+					{
+						tempdataf[ii*nchans+jj] += Af[jj]*injectdata[ii*nchans+jj];
+					}
+				}
+			}
+			else
+			{
+				for (long int ii=0; ii<ndump; ii++)
+				{
+					for (long int jj=0; jj<nchans; jj++)
+					{
+						tempdata[ii*nchans+jj] = std::round(databuf.buffer[ii*nchans+jj] + (Af[jj]*injectdata[ii*nchans+jj])+distribution(generator));
+					}
+				}
+
+				outfils[ipsr].write((char *)tempdata.data(), sizeof(unsigned char)*ndump*nchans);
+			}
+		}
+
+		if (vm.count("single"))
+		{
 			for (long int ii=0; ii<ndump; ii++)
 			{
 				for (long int jj=0; jj<nchans; jj++)
 				{
-					tempdata[ii*nchans+jj] = std::round(databuf.buffer[ii*nchans+jj] + (Af[jj]*injectdata[ii*nchans+jj])+distribution(generator));
+					tempdata[ii*nchans+jj] = std::round(databuf.buffer[ii*nchans+jj] + tempdataf[ii*nchans+jj] + distribution(generator));
 				}
 			}
-			outfils[ipsr].write((char *)tempdata.data(), sizeof(unsigned char)*ndump*nchans);
+
+			outfils[0].write((char *)tempdata.data(), sizeof(unsigned char)*ndump*nchans);
+			std::fill(tempdataf.begin(), tempdataf.end(), 0.);
 		}
 
 		std::fill(injectdata.begin(), injectdata.end(), 0);
