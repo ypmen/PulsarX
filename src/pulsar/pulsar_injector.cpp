@@ -20,9 +20,10 @@
 #include <boost/program_options.hpp>
 #include "logging.h"
 #include "dedisperse.h"
-#include "preprocess.h"
 #include "filterbank.h"
 #include "filterbankwriter.h"
+#include "psrfitsreader.h"
+#include "filterbankreader.h"
 #include "mjd.h"
 #include "utils.h"
 
@@ -275,43 +276,29 @@ int main(const int argc, const char *argv[])
 		fil[i].filename = fnames[i];
 	}
 
-	std::vector<MJD> tstarts;
-	std::vector<MJD> tends;
-	long int ntotal = 0;
-	for (long int i=0; i<nfil; i++)
-	{
-		fil[i].read_header();
-		ntotal += fil[i].nsamples;
-		MJD tstart(fil[i].tstart);
-		tstarts.push_back(tstart);
-		tends.push_back(tstart+fil[i].nsamples*fil[i].tsamp);
-	}
-	std::vector<size_t> idx = argsort(tstarts);
-	for (long int i=0; i<nfil-1; i++)
-	{
-		if (abs((tends[idx[i]]-tstarts[idx[i+1]]).to_second())>0.5*fil[idx[i]].tsamp)
-		{
-			if (contiguous)
-			{
-				BOOST_LOG_TRIVIAL(warning)<<"time not contiguous"<<std::endl;
-			}
-			else
-			{
-				BOOST_LOG_TRIVIAL(error)<<"time not contiguous"<<std::endl;
-				exit(-1);
-			}
-		}
-	}
+	PSRDataReader * reader = new FilterbankReader;
+
+	reader->fnames = fnames;
+	reader->sumif = true;
+	reader->contiguous = contiguous;
+	reader->verbose = verbose;
+	reader->apply_scloffs = false;
+	reader->apply_wts = false;
+	reader->apply_zero_off = false;
+	reader->check();
+	reader->read_header();
 
 	int td = 1;
 	int fd = 1;
 
-	long int nchans = fil[idx[0]].nchans;
-	double tsamp = fil[idx[0]].tsamp;
-	int nifs = fil[idx[0]].nifs;
+	long int nchans = reader->nchans;
+	double tsamp = reader->tsamp;
+	int nifs = reader->nifs;
+	long int ntotal = reader->nsamples;
+	long double tstart = reader->start_mjd.to_day();
 
-	MJD start_epoch((long double)fil[idx[0]].tstart);
-	MJD ref_epoch((long double)fil[idx[0]].tstart+ntotal*tsamp*0.5/86400.);
+	MJD start_epoch((long double)tstart);
+	MJD ref_epoch((long double)tstart+ntotal*tsamp*0.5/86400.);
 
 	short *buffer = new short [nchans];
 
@@ -319,11 +306,12 @@ int main(const int argc, const char *argv[])
 	long int nend = ntotal-jump[1]/tsamp;
 
 	BOOST_LOG_TRIVIAL(info)<<"writing filterbank header...";
-	Filterbank tmpfil=fil[idx[0]];
+	Filterbank tmpfil;
+	reader->get_filterbank_template(tmpfil);
 	for (long int k=0; k<npsr; k++)
 	{
 		tmpfil.filename = rootname + "_" + std::to_string(k+1) + ".fil";
-		tmpfil.tstart = fil[idx[0]].tstart + nstart*tsamp/86400.;
+		tmpfil.tstart = tstart + nstart*tsamp/86400.;
 		tmpfil.write_header();
 		tmpfil.close();
 	}
@@ -338,9 +326,9 @@ int main(const int argc, const char *argv[])
 
 	long int ndump = (int)(vm["seglen"].as<float>()/tsamp)/td*td;
 
-	DataBuffer<short> databuf(ndump, nchans);
+	DataBuffer<float> databuf(ndump, nchans);
 	databuf.tsamp = tsamp;
-	memcpy(&databuf.frequencies[0], fil[0].frequency_table, sizeof(double)*nchans);
+	databuf.frequencies = reader->frequencies;
 
 	double fref = 0.5*(*min_element(databuf.frequencies.begin(), databuf.frequencies.end())+*max_element(databuf.frequencies.begin(), databuf.frequencies.end()));
 
@@ -350,13 +338,6 @@ int main(const int argc, const char *argv[])
 #else
 	std::vector<float> injectdata(ndump*nchans, 0.);
 #endif
-
-	Preprocess prep;
-	prep.td = 1;
-	prep.fd = 1;
-	prep.width = vm["baseline"].as<float>();
-	prep.thresig = vm["zapthre"].as<float>();
-	prep.prepare(databuf);
 
 	int sumif = nifs>2? 2:nifs;
 
@@ -371,108 +352,53 @@ int main(const int argc, const char *argv[])
 
 	BOOST_LOG_TRIVIAL(info)<<"injecting data...";
 
-	long int ntot = 0;
-	long int ntot2 = 0;
-	long int count = 0;
-	long int bcnt1 = 0;
-	long int bcnt2 = 0;
-	for (long int idxn=0; idxn<nfil; idxn++)
+	size_t count = 0;
+	while (!reader->is_end)
 	{
-		long int n = idx[idxn];
-		long int nseg = ceil(1.*fil[0].nsamples/NSBLK);
-		long int ns_filn = 0;
-		for (long int s=0; s<nseg; s++)
+		if (reader->read_data(databuf, ndump) != ndump) break;
+		databuf.counter += ndump;
+
+		databuf.get_mean_rms();
+
+		count = reader->get_count();
+		
+		double offset = (long double)(count-ndump)*(long double)tsamp;
+		MJD tmp_epoch = start_epoch + offset;
+		double factor1 = sqrt(4*0.989939)/(0.842732*sqrt(2.*M_PI));
+		double sum2 = 0.;
+		for (long int jj=0; jj<nchans; jj++)
 		{
-			if (verbose)
-			{
-				std::cerr<<"\r\rfinish "<<std::setprecision(2)<<std::fixed<<tsamp*count<<" seconds ";
-				std::cerr<<"("<<100.*count/ntotal<<"%)";
-			}
-
-			fil[n].read_data(NSBLK);
-#ifdef EIGHTBIT
-			unsigned char *pcur = (unsigned char *)(fil[n].data);
-#endif
-			for (long int i=0; i<NSBLK; i++)
-			{
-				count++;
-				if (count-1<nstart or count-1>nend)
-				{
-					if (++ns_filn == fil[n].nsamples)
-					{
-						goto next;
-					}
-					pcur += nifs*nchans;
-					continue;
-				}
-					
-				memset(buffer, 0, sizeof(short)*nchans);
-				long int m = 0;
-				for (long int k=0; k<sumif; k++)
-				{
-					for (long int j=0; j<nchans; j++)
-					{
-						buffer[j] += pcur[m++];
-					}
-				}
-
-				memcpy(&databuf.buffer[0]+bcnt1*nchans, buffer, sizeof(short)*1*nchans);
-				databuf.counter ++;
-				bcnt1++;
-				ntot++;
-
-				if (ntot%ndump == 0)
-				{
-					prep.get_stat(databuf);
-					
-					double offset = (long double)(count-ndump)*(long double)tsamp;
-					MJD tmp_epoch = start_epoch + offset;
-					double factor1 = sqrt(4*0.989939)/(0.842732*sqrt(2.*M_PI));
-					double sum2 = 0.;
-					for (long int jj=0; jj<nchans; jj++)
-					{
-						sum2 += prep.chstd[jj]*prep.chstd[jj];
-					}
-					double fmin = *std::min_element(databuf.frequencies.begin(), databuf.frequencies.end());
-					for (long int ipsr=0; ipsr<npsr; ipsr++)
-					{
-						spectra_ppdot(injectdata, ndump, tsamp, databuf.frequencies, vphasewidth[ipsr], tmp_epoch, ref_epoch, fref, vdm[ipsr], vF0[ipsr], vF1[ipsr], 0.);
-						std::vector<double> normf(nchans, 1.);
-						double sum1 = 0.;
-						for (long int jj=0; jj<nchans; jj++)
-						{
-							normf[jj] = std::pow(databuf.frequencies[jj]/fmin, -vspectraindex[ipsr]);
-							sum1 += prep.chstd[jj]*normf[jj];
-						}
-						double factor2 = sum1/std::sqrt(sum2);
-						double alpha = vsnr[ipsr]/(factor1*factor2*std::sqrt(ntotal*vphasewidth[ipsr]));
-						std::vector<double> Af(nchans, 0.);
-						for (long int jj=0; jj<nchans; jj++)
-						{
-							Af[jj] = alpha*normf[jj]*(1.+prep.chstd[jj]);
-						}
-						for (long int ii=0; ii<ndump; ii++)
-						{
-							for (long int jj=0; jj<nchans; jj++)
-							{
-								tempdata[ii*nchans+jj] = std::round(databuf.buffer[ii*nchans+jj] + (Af[jj]*injectdata[ii*nchans+jj])+distribution(generator));
-							}
-						}
-						outfils[ipsr].write((char *)tempdata.data(), sizeof(unsigned char)*ndump*nchans);
-					}
-					bcnt1 = 0;
-					std::fill(injectdata.begin(), injectdata.end(), 0);
-				}
-				
-				if (++ns_filn == fil[n].nsamples)
-				{
-					goto next;
-				}
-				pcur += nifs*nchans;
-			}
+			sum2 += databuf.vars[jj];
 		}
-		next:
-		fil[n].free();
+		double fmin = *std::min_element(databuf.frequencies.begin(), databuf.frequencies.end());
+		for (long int ipsr=0; ipsr<npsr; ipsr++)
+		{
+			spectra_ppdot(injectdata, ndump, tsamp, databuf.frequencies, vphasewidth[ipsr], tmp_epoch, ref_epoch, fref, vdm[ipsr], vF0[ipsr], vF1[ipsr], 0.);
+			std::vector<double> normf(nchans, 1.);
+			double sum1 = 0.;
+			for (long int jj=0; jj<nchans; jj++)
+			{
+				normf[jj] = std::pow(databuf.frequencies[jj]/fmin, -vspectraindex[ipsr]);
+				sum1 += std::sqrt(databuf.vars[jj])*normf[jj];
+			}
+			double factor2 = sum1/std::sqrt(sum2);
+			double alpha = vsnr[ipsr]/(factor1*factor2*std::sqrt(ntotal*vphasewidth[ipsr]));
+			std::vector<double> Af(nchans, 0.);
+			for (long int jj=0; jj<nchans; jj++)
+			{
+				Af[jj] = alpha*normf[jj]*(1.+std::sqrt(databuf.vars[jj]));
+			}
+			for (long int ii=0; ii<ndump; ii++)
+			{
+				for (long int jj=0; jj<nchans; jj++)
+				{
+					tempdata[ii*nchans+jj] = std::round(databuf.buffer[ii*nchans+jj] + (Af[jj]*injectdata[ii*nchans+jj])+distribution(generator));
+				}
+			}
+			outfils[ipsr].write((char *)tempdata.data(), sizeof(unsigned char)*ndump*nchans);
+		}
+
+		std::fill(injectdata.begin(), injectdata.end(), 0);
 	}
 
 	if (verbose)
