@@ -3,7 +3,9 @@
 PulsarX is a toolset for pulsar searching, including RFI mitigation, dedispersion, folding, optimization and accelerate search (under development). Psrfits and filterbank are both supported.
 
 ## Requirements:
-- To generate figures, python,matplotlib,numpy or PlotX should be installed.
+- boost > 1.56
+- PlotX (https://github.com/ypmen/PlotX)
+- XLibs (https://github.com/ypmen/XLibs)
 - To calculate GL and GB, sofa library (https://www.iausofa.org/2020_0721_C/sofa_c-20200721.tar.gz) should be installed.
 - To calculate YMW16 DM and distance, environment variable YMW16_DIR should be set.
 
