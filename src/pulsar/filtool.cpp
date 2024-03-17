@@ -205,6 +205,7 @@ int main(int argc, const char *argv[])
 	prep.fd = fd;
 	prep.thresig = vm["zapthre"].as<float>();
 	prep.filltype = vm["fill"].as<string>();
+	prep.zaplist = filmakers[0].zaplist;
 	prep.prepare(databuf);
 
 	long int noutfil = filmakers.size();
