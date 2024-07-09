@@ -16,6 +16,7 @@
 #include "databuffer.h"
 #include "patch.h"
 #include "preprocesslite.h"
+#include "flip.h"
 #include "filmaker.h"
 #include "filterbank.h"
 #include "mjd.h"
@@ -66,6 +67,7 @@ int main(int argc, const char *argv[])
 			("widthPatch", value<float>()->default_value(0.4), "Width threshold (s) of patch for bad data")
 			("fillPatch", value<std::string>()->default_value("none"), "Fill the bad data by [none, mean, rand] in patch")
 			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
+			("flip", "Reverse the frequency order")
 			("source_name,s", value<std::string>()->default_value("J0000-00"), "Source name")
 			("rootname,o", value<std::string>()->default_value("J0000-00"), "Output rootname")
 			("wts", "Apply DAT_WTS")
@@ -200,6 +202,12 @@ int main(int argc, const char *argv[])
 	patch.prepare(databuf);
 	patch.close();
 
+	Flip flip;
+	if (vm.count("flip"))
+	{
+		flip.prepare(databuf);
+	}
+
 	PreprocessLite prep;
 	prep.td = td;
 	prep.fd = fd;
@@ -236,6 +244,7 @@ int main(int argc, const char *argv[])
 		databuf.counter += ndump;
 
 		DataBuffer<float> *data = patch.filter(databuf);
+		if (vm.count("flip")) data = flip.filter(*data);
 		data = prep.run(*data);
 
 		for (long int ioutfil=0; ioutfil<noutfil; ioutfil++)
