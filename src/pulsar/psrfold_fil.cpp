@@ -549,7 +549,7 @@ int main(int argc, const char *argv[])
 	 */
 	int ngroup = dmsegs.size();
 
-	int nleft = dedisp.offset/dedisp.ndump;
+	long int nleft = dedisp.offset/dedisp.ndump;
 	for (long int l=0; l<nleft; l++)
 	{
 		rfi.open();

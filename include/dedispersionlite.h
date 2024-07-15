@@ -75,15 +75,15 @@ namespace Pulsar
 			databuffer.counter += ndump;
 		}
 	public:
-		int nsubband;
+		long int nsubband;
 		vector<double> vdm;
 	public:
 		long int counter;
 		long int offset;
-		int nchans;
+		long int nchans;
 		double tsamp;
-		int ndump;
-		int nsamples;
+		long int ndump;
+		long int nsamples;
 		vector<double> frequencies;
 		vector<long int> delayn;
 		vector<float> buffer;
