@@ -29,6 +29,7 @@ namespace Pulsar
 		void runFFdot();
 		void runDM();
 		bool bestprofiles();
+		bool correct_delays();
 		void dumpFFdot(const string &rootname)
 		{
 			ofstream outfile;

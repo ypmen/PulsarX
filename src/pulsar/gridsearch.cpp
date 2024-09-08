@@ -432,6 +432,65 @@ bool GridSearch::bestprofiles()
 	return true;
 }
 
+bool GridSearch::correct_delays()
+{
+	if (!dmsearch and !ffdotsearch) return false;
+
+	double fmin = 1e6;
+	double fmax = 0.;
+	for (long int j=0; j<nchan; j++)
+	{
+		fmax = frequencies[j]>fmax? frequencies[j]:fmax;
+		fmin = frequencies[j]<fmin? frequencies[j]:fmin;
+	}
+
+	int maxdelayn = -1;
+	for (long int k=0; k<nsubint; k++)
+	{
+		int tdelayn = round((bestdf0*tsuboff[k]+0.5*bestdf1*tsuboff[k]*tsuboff[k])*nbin);
+		for (long int j=0; j<nchan; j++)
+		{
+			int fdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, frequencies[j])*(f0+bestdf0+(f1+bestdf1)*tsuboff[k])*nbin);
+			int delayn = (tdelayn-fdelayn)%nbin;
+			maxdelayn = abs(delayn) > maxdelayn ? abs(delayn) : maxdelayn;
+		}
+	}
+
+	vector<float> profiles2(nsubint*nchan*nbin, 0.);
+
+	for (long int k=0; k<nsubint; k++)
+	{
+		int tdelayn = round((bestdf0*tsuboff[k]+0.5*bestdf1*tsuboff[k]*tsuboff[k])*nbin);
+		for (long int j=0; j<nchan; j++)
+		{
+			int fdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, frequencies[j])*(f0+bestdf0+(f1+bestdf1)*tsuboff[k])*nbin);
+			
+			int delayn = (tdelayn-fdelayn)%nbin;
+			if (delayn<0) delayn += nbin;
+			for (long int i=0; i<delayn; i++)
+			{
+				profiles2[k*nchan*nbin+j*nbin+i] = profiles[k*nchan*nbin+j*nbin+(i-delayn+nbin)];
+			}
+			for (long int i=delayn; i<nbin; i++)
+			{
+				profiles2[k*nchan*nbin+j*nbin+i] = profiles[k*nchan*nbin+j*nbin+(i-delayn)];
+			}
+		}
+	}
+
+	profiles = profiles2;
+
+	dm += bestddm;
+	f0 += bestdf0;
+	f1 += bestdf1;
+
+	bestddm = 0.;
+	bestdf0 = 0;
+	bestdf1 = 0.;
+
+	return true;
+}
+
 float GridSearch::get_chisq(vector<float> &pro)
 {  
 	if (pro.empty()) return 0.;

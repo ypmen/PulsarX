@@ -734,7 +734,7 @@ int main(int argc, const char *argv[])
 		gridsearch[k].dm = 0.;
 		gridsearch[k].bestddm = folder[k].dm;
 		gridsearch[k].dmsearch = true;
-		gridsearch[k].bestprofiles();
+		gridsearch[k].correct_delays();
 		gridsearch[k].dmsearch = false;
 
 		if (!nosearch)
