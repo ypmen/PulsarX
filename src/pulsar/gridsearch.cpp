@@ -22,9 +22,11 @@ GridSearch::GridSearch()
 	dmsearch = false;
 	f0 = 0.;
 	f1 = 0.;
+	f2 = 0.;
 	dm = 0.;
 	bestdf0 = 0.;
 	bestdf1 = 0.;
+	bestdf2 = 0.;
 	bestddm = 0.;
 	df0start = 0.;
 	df0step = 0.;
@@ -32,6 +34,9 @@ GridSearch::GridSearch()
 	df1start = 0.;
 	df1step = 0.;
 	ndf1 = 0;
+	df2start = 0.;
+	df2step = 0.;
+	ndf2 = 0;
 	ddmstart = 0.;
 	ddmstep = 0.;
 	nddm = 0;
@@ -47,11 +52,14 @@ GridSearch::GridSearch()
 	width = 0.;
 	p0 = 0.;
 	p1 = 0.;
+	p2 = 0.;
 	acc = 0.;
 	err_f0 = 0.;
 	err_f1 = 0.;
+	err_f2 = 0.;
 	err_p0 = 0.;
 	err_p1 = 0.;
+	err_p2 = 0.;
 	err_dm = 0.;
 	err_acc = 0.;
 
@@ -64,9 +72,11 @@ GridSearch::GridSearch(const GridSearch &gridsearch)
 	dmsearch = gridsearch.dmsearch;
 	f0 = gridsearch.f0;
 	f1 = gridsearch.f1;
+	f2 = gridsearch.f2;
 	dm = gridsearch.dm;
 	bestdf0 = gridsearch.bestdf0;
 	bestdf1 = gridsearch.bestdf1;
+	bestdf2 = gridsearch.bestdf2;
 	bestddm = gridsearch.bestddm;
 	df0start = gridsearch.df0start;
 	df0step = gridsearch.df0step;
@@ -74,6 +84,9 @@ GridSearch::GridSearch(const GridSearch &gridsearch)
 	df1start = gridsearch.df1start;
 	df1step = gridsearch.df1step;
 	ndf1 = gridsearch.ndf1;
+	df2start = gridsearch.df2start;
+	df2step = gridsearch.df2step;
+	ndf2 = gridsearch.ndf2;
 	ddmstart = gridsearch.ddmstart;
 	ddmstep = gridsearch.ddmstep;
 	nddm = gridsearch.nddm;
@@ -100,11 +113,14 @@ GridSearch::GridSearch(const GridSearch &gridsearch)
 	width = gridsearch.width;
 	p0 = gridsearch.p0;
 	p1 = gridsearch.p1;
+	p2 = gridsearch.p2;
 	acc = gridsearch.acc;
 	err_f0 = gridsearch.err_f0;
 	err_f1 = gridsearch.err_f1;
+	err_f2 = gridsearch.err_f2;
 	err_p0 = gridsearch.err_p0;
 	err_p1 = gridsearch.err_p1;
+	err_p2 = gridsearch.err_p2;
 	err_dm = gridsearch.err_dm;
 	err_acc = gridsearch.err_dm;
 }
@@ -115,9 +131,11 @@ GridSearch & GridSearch::operator=(const GridSearch &gridsearch)
 	dmsearch = gridsearch.dmsearch;
 	f0 = gridsearch.f0;
 	f1 = gridsearch.f1;
+	f2 = gridsearch.f2;
 	dm = gridsearch.dm;
 	bestdf0 = gridsearch.bestdf0;
 	bestdf1 = gridsearch.bestdf1;
+	bestdf2 = gridsearch.bestdf2;
 	bestddm = gridsearch.bestddm;
 	df0start = gridsearch.df0start;
 	df0step = gridsearch.df0step;
@@ -125,6 +143,9 @@ GridSearch & GridSearch::operator=(const GridSearch &gridsearch)
 	df1start = gridsearch.df1start;
 	df1step = gridsearch.df1step;
 	ndf1 = gridsearch.ndf1;
+	df2start = gridsearch.df2start;
+	df2step = gridsearch.df2step;
+	ndf2 = gridsearch.ndf2;
 	ddmstart = gridsearch.ddmstart;
 	ddmstep = gridsearch.ddmstep;
 	nddm = gridsearch.nddm;
@@ -151,11 +172,14 @@ GridSearch & GridSearch::operator=(const GridSearch &gridsearch)
 	width = gridsearch.width;
 	p0 = gridsearch.p0;
 	p1 = gridsearch.p1;
+	p2 = gridsearch.p2;
 	acc = gridsearch.acc;
 	err_f0 = gridsearch.err_f0;
 	err_f1 = gridsearch.err_f1;
+	err_f2 = gridsearch.err_f2;
 	err_p0 = gridsearch.err_p0;
 	err_p1 = gridsearch.err_p1;
+	err_p2 = gridsearch.err_p2;
 	err_dm = gridsearch.err_dm;
 	err_acc = gridsearch.err_dm;
 
@@ -168,6 +192,7 @@ void GridSearch::prepare(ArchiveLite &arch)
 {
 	f0 = arch.f0;
 	f1 = arch.f1;
+	f2 = arch.f2;
 	dm = arch.dm;
 
 	nsubint = arch.profiles.size();
@@ -240,50 +265,60 @@ void GridSearch::runFFdot()
 		}
 	}
 
-	mxsnr_ffdot.resize(ndf1*ndf0, 0.);
+	mxsnr_ffdot.resize(ndf2*ndf1*ndf0, 0.);
 
+	int if2 = -1;
 	int if1 = -1;
 	int if0 = -1;
 	float maxsnr = 0.;
-	for (long int k1=0; k1<ndf1; k1++)
+	
+	for (long int k2=0; k2<ndf2; k2++)
 	{
-		double df1 = df1start + k1*df1step;
-		for (long int k0=0; k0<ndf0; k0++)
+		double df2 = df2start + k2*df2step;
+
+		for (long int k1=0; k1<ndf1; k1++)
 		{
-			double df0 = df0start + k0*df0step;
+			double df1 = df1start + k1*df1step;
 
-			vector<float> pro(nbin, 0.);
-			float *pmxtph = &mxtph[0];
-			for (long int j=0; j<nsubint; j++)
+			for (long int k0=0; k0<ndf0; k0++)
 			{
-				int delayn = round((df0*tsuboff[j]+0.5*df1*tsuboff[j]*tsuboff[j])*nbin);
-				delayn %= nbin;
-				if (delayn<0) delayn += nbin;
-				float *pd = pmxtph-delayn+nbin;
-				for (long int i=0; i<delayn; i++)
-				{
-					pro[i] += pd[i];
-				}
-				pd = pmxtph-delayn;
-				for (long int i=delayn; i<nbin; i++)
-				{
-					pro[i] += pd[i];
-				}
+				double df0 = df0start + k0*df0step;
 				
-				pmxtph += nbin;
-			}
+				vector<float> pro(nbin, 0.);
+				float *pmxtph = &mxtph[0];
+				for (long int j=0; j<nsubint; j++)
+				{
+					int delayn = round((df0*tsuboff[j]+0.5*df1*tsuboff[j]*tsuboff[j]+df2*tsuboff[j]*tsuboff[j]*tsuboff[j]/6.)*nbin);
+					delayn %= nbin;
+					if (delayn<0) delayn += nbin;
+					float *pd = pmxtph-delayn+nbin;
+					for (long int i=0; i<delayn; i++)
+					{
+						pro[i] += pd[i];
+					}
+					pd = pmxtph-delayn;
+					for (long int i=delayn; i<nbin; i++)
+					{
+						pro[i] += pd[i];
+					}
+					
+					pmxtph += nbin;
+				}
 
-			mxsnr_ffdot[k1*ndf0+k0] = get_chisq(pro);
+				mxsnr_ffdot[k2*ndf1*ndf0+k1*ndf0+k0] = get_chisq(pro);
 
-			if (mxsnr_ffdot[k1*ndf0+k0] > maxsnr)
-			{
-				maxsnr = mxsnr_ffdot[k1*ndf0+k0];
-				if1 = k1;
-				if0 = k0;
+				if (mxsnr_ffdot[k2*ndf1*ndf0+k1*ndf0+k0] > maxsnr)
+				{
+					maxsnr = mxsnr_ffdot[k2*ndf1*ndf0+k1*ndf0+k0];
+					if2 = k2;
+					if1 = k1;
+					if0 = k0;
+				}
 			}
 		}
 	}
 
+	bestdf2 = df2start + if2*df2step;
 	bestdf1 = df1start + if1*df1step;
 	bestdf0 = df0start + if0*df0step;
 }
@@ -379,10 +414,10 @@ bool GridSearch::bestprofiles()
 	int maxdelayn = -1;
 	for (long int k=0; k<nsubint; k++)
 	{
-		int tdelayn = round((bestdf0*tsuboff[k]+0.5*bestdf1*tsuboff[k]*tsuboff[k])*nbin);
+		int tdelayn = round((bestdf0*tsuboff[k]+0.5*bestdf1*tsuboff[k]*tsuboff[k]+bestdf2*tsuboff[k]*tsuboff[k]*tsuboff[k]/6.)*nbin);
 		for (long int j=0; j<nchan; j++)
 		{
-			int fdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, frequencies[j])*(f0+bestdf0+(f1+bestdf1)*tsuboff[k])*nbin);
+			int fdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, frequencies[j])*(f0+bestdf0+(f1+bestdf1)*tsuboff[k]+0.5*(f2+bestdf2)*tsuboff[k]*tsuboff[k])*nbin);
 			int delayn = (tdelayn-fdelayn)%nbin;
 			maxdelayn = abs(delayn) > maxdelayn ? abs(delayn) : maxdelayn;
 		}
@@ -393,6 +428,7 @@ bool GridSearch::bestprofiles()
 		bestddm = 0.;
 		bestdf0 = 0;
 		bestdf1 = 0.;
+		bestdf2 = 0.;
 
 		return true;
 	}
@@ -401,10 +437,10 @@ bool GridSearch::bestprofiles()
 
 	for (long int k=0; k<nsubint; k++)
 	{
-		int tdelayn = round((bestdf0*tsuboff[k]+0.5*bestdf1*tsuboff[k]*tsuboff[k])*nbin);
+		int tdelayn = round((bestdf0*tsuboff[k]+0.5*bestdf1*tsuboff[k]*tsuboff[k]+bestdf2*tsuboff[k]*tsuboff[k]*tsuboff[k]/6.)*nbin);
 		for (long int j=0; j<nchan; j++)
 		{
-			int fdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, frequencies[j])*(f0+bestdf0+(f1+bestdf1)*tsuboff[k])*nbin);
+			int fdelayn = round(DedispersionLite::dmdelay(bestddm, fmax, frequencies[j])*(f0+bestdf0+(f1+bestdf1)*tsuboff[k]+0.5*(f2+bestdf2)*tsuboff[k]*tsuboff[k])*nbin);
 			
 			int delayn = (tdelayn-fdelayn)%nbin;
 			if (delayn<0) delayn += nbin;
@@ -424,10 +460,12 @@ bool GridSearch::bestprofiles()
 	dm += bestddm;
 	f0 += bestdf0;
 	f1 += bestdf1;
+	f2 += bestdf2;
 
 	bestddm = 0.;
 	bestdf0 = 0;
 	bestdf1 = 0.;
+	bestdf2 = 0.;
 
 	return true;
 }

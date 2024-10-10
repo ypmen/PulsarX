@@ -53,9 +53,9 @@ inffiles = glob.glob(globinf)
 candfiles = glob.glob(globaccel)
 # Check to see if this is from a short search
 if len(re.findall("_[0-9][0-9][0-9]M_" , inffiles[0])):
-    dmstrs = [x.split("DM")[-1].split("_")[0] for x in candfiles]
+	dmstrs = [x.split("DM")[-1].split("_")[0] for x in candfiles]
 else:
-    dmstrs = [x.split("DM")[-1].split(".inf")[0] for x in inffiles]
+	dmstrs = [x.split("DM")[-1].split(".inf")[0] for x in inffiles]
 dms = list(map(float, dmstrs))
 dms.sort()
 dmstrs = ["%.2f"%x for x in dms]
@@ -65,21 +65,29 @@ cands = sifting.read_candidates(candfiles)
 
 # Remove candidates that are duplicated in other ACCEL files
 if len(cands):
-    cands = sifting.remove_duplicate_candidates(cands)
+	cands = sifting.remove_duplicate_candidates(cands)
 
 # Remove candidates with DM problems
 if len(cands):
-    cands = sifting.remove_DM_problems(cands, min_num_DMs, dmstrs, low_DM_cutoff)
+	cands = sifting.remove_DM_problems(cands, min_num_DMs, dmstrs, low_DM_cutoff)
 
 # Remove candidates that are harmonically related to each other
 # Note:  this includes only a small set of harmonics
 if len(cands):
-    cands = sifting.remove_harmonics(cands)
+	cands = sifting.remove_harmonics(cands)
 
 # Write candidates to STDOUT
 if len(cands):
-    cands.sort(key=attrgetter('sigma'), reverse=True)
-    print("#id   dm acc  F0 F1 S/N", file=sys.stderr)
-    for k,cand in enumerate(cands):
-        print("%d\t%.3f\t%.15f\t%.15f\t%.15f\t%.2f" % (k+1, cand.DM, 0., cand.f, cand.z/cand.T/cand.T, cand.snr), file=sys.stderr)
-    #sifting.write_candlist(cands)
+	cands.sort(key=attrgetter('sigma'), reverse=True)
+	print("#id   dm acc  F0 F1 F2 S/N", file=sys.stderr)
+	for k,cand in enumerate(cands):
+		z0 = cand.z - 0.5 * cand.w
+		r0 = cand.r - 0.5 * z0 - cand.w / 6.
+		f = r0 / cand.T
+		fd = z0 / (cand.T * cand.T)
+		fdd = cand.w / (cand.T * cand.T * cand.T)
+		f0 = f + fd * (cand.T / 2.) + 0.5 * fdd * (cand.T / 2.)**2
+		f1 = fd + fdd * (cand.T / 2.)
+		f2 = fdd
+		print("%d\t%.3f\t%.15f\t%.15f\t%.15f\t%.15f\t%.2f" % (k+1, cand.DM, 0., f0, f1, f2, cand.snr), file=sys.stderr)
+	#sifting.write_candlist(cands)

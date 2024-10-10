@@ -28,6 +28,7 @@ ArchiveLite::ArchiveLite()
 	sub_mjd = 0.;
 	f0 = 0.;
 	f1 = 0.;
+	f2 = 0.;
 	acc = 0.;
 	dm = 0.;
 	snr = 0.;
@@ -49,6 +50,7 @@ ArchiveLite::ArchiveLite(const ArchiveLite &arch)
 	ref_epoch = arch.ref_epoch;
 	f0 = arch.f0;
 	f1 = arch.f1;
+	f2 = arch.f2;
 	acc = arch.acc;
 	dm = arch.dm;
 	snr = arch.snr;
@@ -76,6 +78,7 @@ ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
 	ref_epoch = arch.ref_epoch;
 	f0 = arch.f0;
 	f1 = arch.f1;
+	f2 = arch.f2;
 	acc = arch.acc;
 	dm = arch.dm;
 	snr = arch.snr;

@@ -75,6 +75,9 @@ namespace Pulsar
 		double df1start;
 		double df1step;
 		int ndf1;
+		double df2start;
+		double df2step;
+		int ndf2;
 		double ddmstart;
 		double ddmstep;
 		int nddm;
@@ -84,9 +87,11 @@ namespace Pulsar
 	public:
 		double f0;
 		double f1;
+		double f2;
 		double dm;
 		double bestdf0;
 		double bestdf1;
+		double bestdf2;
 		double bestddm;
 		bool ffdotsearch;
 		bool dmsearch;
@@ -100,7 +105,7 @@ namespace Pulsar
 		vector<double> frequencies;
 		vector<float> profiles;
 		vector<double> profile;
-		vector<float> mxsnr_ffdot; 
+		vector<float> mxsnr_ffdot;
 		vector<float> vsnr_dm;
 		std::vector<double> means;
 		std::vector<double> vars;
@@ -116,11 +121,14 @@ namespace Pulsar
 		std::vector<int> pulsespan;
 		double p0;
 		double p1;
+		double p2;
 		double acc;
 		double err_f0;
 		double err_f1;
+		double err_f2;
 		double err_p0;
 		double err_p1;
+		double err_p2;
 		double err_dm;
 		double err_acc;
 	};
