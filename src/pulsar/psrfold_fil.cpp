@@ -450,7 +450,7 @@ int main(int argc, const char *argv[])
 
 	for (long int k=0; k<ncand; k++)
 	{
-		folder[k].start_mjd = reader->start_mjd+(ceil(1.*dedisp.offset/dedisp.ndump)*dedisp.ndump-dedisp.offset)*dedisp.tsamp*td;
+		folder[k].start_mjd = reader->start_mjd + nstart * tsamp +(ceil(1.*dedisp.offset/dedisp.ndump)*dedisp.ndump-dedisp.offset)*dedisp.tsamp*td;
 		if (vm.count("pepoch"))
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else

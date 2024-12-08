@@ -494,7 +494,7 @@ int main(int argc, const char *argv[])
 		tsamps[k] = dedisp.get_tsamp(folder[k].dm);
 		ids[k] = dedisp.get_id(folder[k].dm);
 
-		folder[k].start_mjd = reader->start_mjd + (ceil(1. * offsets[k] / ndumps[k]) * ndumps[k] - offsets[k]) * tsamps[k];
+		folder[k].start_mjd = reader->start_mjd + nstart * tsamp + (ceil(1. * offsets[k] / ndumps[k]) * ndumps[k] - offsets[k]) * tsamps[k];
 		if (vm.count("pepoch"))
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else
