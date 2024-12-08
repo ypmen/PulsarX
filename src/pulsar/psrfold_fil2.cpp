@@ -1033,6 +1033,7 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 			fdr.f0 = stod(parameters[3]);
 			fdr.f1 = stod(parameters[4]);
 			fdr.snr = stod(parameters[5]);
+			fdr.nbin = vm["nbin"].as<int>();
 
 			for (long int k=0; k<vp0.size(); k++)
 			{
@@ -1074,6 +1075,8 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 			}
 
 			dmlist.push_back(fdr.dm);
+
+			fdr.nbin = vm["nbin"].as<int>();
 
 			for (long int k=0; k<vp0.size(); k++)
 			{

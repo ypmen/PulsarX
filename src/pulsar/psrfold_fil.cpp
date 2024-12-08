@@ -946,6 +946,7 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 			fdr.f0 = stod(parameters[3]);
 			fdr.f1 = stod(parameters[4]);
 			fdr.snr = stod(parameters[5]);
+			fdr.nbin = vm["nbin"].as<int>();
 
 			for (long int k=0; k<vp0.size(); k++)
 			{
@@ -998,6 +999,8 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 				}
 			}
 			dmseg.push_back(fdr.dm);
+
+			fdr.nbin = vm["nbin"].as<int>();
 
 			for (long int k=0; k<vp0.size(); k++)
 			{
