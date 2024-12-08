@@ -1089,6 +1089,15 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 	}
 	else
 	{
+		for (long int k=0; k<vp0.size(); k++)
+		{
+			if (fdr.f0 <= 1./vp0[idx[k]])
+			{
+				fdr.nbin = vnbin[idx[k]];
+				break;
+			}
+		}
+		
 		folder.push_back(fdr);
 	}
 }

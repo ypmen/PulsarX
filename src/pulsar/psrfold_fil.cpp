@@ -1025,6 +1025,15 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 	}
 	else
 	{
+		for (long int k=0; k<vp0.size(); k++)
+		{
+			if (fdr.f0 <= 1./vp0[idx[k]])
+			{
+				fdr.nbin = vnbin[idx[k]];
+				break;
+			}
+		}
+
 		dmsegs.push_back(dmseg);
 		folder.push_back(fdr);
 	}
