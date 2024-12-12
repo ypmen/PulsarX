@@ -431,7 +431,7 @@ void PulsarPlot::get_dm_chisq_curve(std::vector<float> &vchisq, const std::vecto
 #endif
 		for (long int j=0; j<nchan; j++)
 		{
-			float delay = f0*4.148741601e3*ddm*(1./(frequencies[j]*frequencies[j])-1./(fc*fc));
+			float delay = f0*CONST_DM*ddm*(1./(frequencies[j]*frequencies[j])-1./(fc*fc));
 
 #ifndef __AVX2__
 			for (long int i=0; i<nbin; i++)

@@ -611,7 +611,7 @@ void GridSearch::get_error(std::map<std::string, std::string> &obsinfo)
 	double toaerr = width/(pow(M_PI, 0.25)*snr);
 	err_f0 = sqrt(12)*toaerr*f0/obslen;
 	err_f1 = sqrt(320)*toaerr*f0/(obslen*obslen);
-	err_dm = 1./4.148741601e3*(frequencies[0]*frequencies.back())/sqrt((frequencies[0]/frequencies.back()+frequencies.back()/frequencies[0]+1)/3.-1)*toaerr;
+	err_dm = 1./CONST_DM*(frequencies[0]*frequencies.back())/sqrt((frequencies[0]/frequencies.back()+frequencies.back()/frequencies[0]+1)/3.-1)*toaerr;
 	
 	if (abs(f1)<err_f1/1000) f1 = 0.;
 	

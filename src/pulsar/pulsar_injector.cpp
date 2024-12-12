@@ -26,6 +26,7 @@
 #include "filterbankreader.h"
 #include "mjd.h"
 #include "utils.h"
+#include "constants.h"
 
 using namespace boost::program_options;
 
@@ -60,8 +61,7 @@ inline double get_phase_ppdot(double t, double p, double pdot)
 
 inline double dmdelay(double dm, double fh, double fl)
 {
-	//return 4.148741601e3*dm*(1./(fl*fl)-1./(fh*fh));
-	return 4149.38*dm*(1./(fl*fl)-1./(fh*fh));
+	return dispersion_delay(dm, fh, fl);
 }
 
 /**
