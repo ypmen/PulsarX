@@ -34,4 +34,4 @@ PulsarX is a toolset for pulsar searching, including RFI mitigation, dedispersio
 Please cite https://arxiv.org/abs/2309.02544, if you are using PulsarX.
 
 ## Acknowledgement
-Thanks for very helpful suggestions and bug reports from Ewan Barr, Colin Clark, Emma Carli, Shalini Sengupta, Vivek Venkatraman Krishnan,  Miquel Colom i Bernadich, Prajwal Padmanabh and TRAPUM project.
+Thanks for very helpful suggestions and bug reports from Ewan Barr, Colin Clark, Emma Carli, Shalini Sengupta, Vivek Venkatraman Krishnan,  Miquel Colom i Bernadich, Prajwal Padmanabh, Vishnu Balakrishnan, Ralph Eatough, Fazal Kareem and TRAPUM project.

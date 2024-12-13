@@ -28,7 +28,7 @@ PulsarPlot::PulsarPlot(){}
 
 PulsarPlot::~PulsarPlot(){}
 
-void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx)
+void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx, bool save2fits)
 {
 	string basename;
 	if (obsinfo.find("Basename") == obsinfo.end())
@@ -412,6 +412,11 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 	fig.push(ax8);
 
 	fig.save(figname+"/PNG");
+
+	if (save2fits)
+	{
+		fig.savepx(basename + ".px");
+	}
 }
 
 void PulsarPlot::get_dm_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vddm, const std::vector<double> &frequencies, double f0, double boxphw, int nbin)

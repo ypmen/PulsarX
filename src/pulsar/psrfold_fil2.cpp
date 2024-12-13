@@ -118,6 +118,7 @@ int main(int argc, const char *argv[])
 			("dspsr", "Using dspsr folding algorithm")
 			("presto", "Using presto folding algorithm (in test phase, will be default)")
 			("plotx", "Using PlotX for plotting (default; not used any more)")
+			("saveimage", "Save images to fits")
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("wts", "Apply DAT_WTS")
 			("scloffs", "Apply DAT_SCL and DAT_OFFS")
@@ -977,7 +978,7 @@ int main(int argc, const char *argv[])
 
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
 			Pulsar::PulsarPlot psrplot;
-			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true);
+			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true, vm.count("saveimage"));
 		}
 	}
 
