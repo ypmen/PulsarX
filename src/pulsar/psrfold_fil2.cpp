@@ -120,6 +120,7 @@ int main(int argc, const char *argv[])
 			("dspsr", "Using dspsr folding algorithm")
 			("presto", "Using presto folding algorithm (in test phase, will be default)")
 			("plotx", "Using PlotX for plotting (default; not used any more)")
+			("saveimage", "Save images to fits")
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("wts", "Apply DAT_WTS")
 			("scloffs", "Apply DAT_SCL and DAT_OFFS")
@@ -498,7 +499,7 @@ int main(int argc, const char *argv[])
 		tsamps[k] = dedisp.get_tsamp(folder[k].dm);
 		ids[k] = dedisp.get_id(folder[k].dm);
 
-		folder[k].start_mjd = reader->start_mjd + (ceil(1. * offsets[k] / ndumps[k]) * ndumps[k] - offsets[k]) * tsamps[k];
+		folder[k].start_mjd = reader->start_mjd + nstart * tsamp + (ceil(1. * offsets[k] / ndumps[k]) * ndumps[k] - offsets[k]) * tsamps[k];
 		if (vm.count("pepoch"))
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else
@@ -1018,7 +1019,7 @@ int main(int argc, const char *argv[])
 
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
 			Pulsar::PulsarPlot psrplot;
-			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true);
+			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true, vm.count("saveimage"));
 		}
 	}
 
@@ -1076,6 +1077,7 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 			fdr.f1 = stod(parameters[4]);
 			fdr.f2 = stod(parameters[5]);
 			fdr.snr = stod(parameters[6]);
+			fdr.nbin = vm["nbin"].as<int>();
 
 			for (long int k=0; k<vp0.size(); k++)
 			{
@@ -1118,6 +1120,8 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 
 			dmlist.push_back(fdr.dm);
 
+			fdr.nbin = vm["nbin"].as<int>();
+
 			for (long int k=0; k<vp0.size(); k++)
 			{
 				if (f0 <= 1./vp0[idx[k]])
@@ -1132,6 +1136,15 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 	}
 	else
 	{
+		for (long int k=0; k<vp0.size(); k++)
+		{
+			if (fdr.f0 <= 1./vp0[idx[k]])
+			{
+				fdr.nbin = vnbin[idx[k]];
+				break;
+			}
+		}
+		
 		folder.push_back(fdr);
 	}
 }

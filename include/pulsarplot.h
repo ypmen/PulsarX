@@ -22,7 +22,7 @@ namespace Pulsar
 	public:
 		PulsarPlot();
 		~PulsarPlot();
-		void plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx=false);        
+		void plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx=false, bool save2fits=false);        
 	public:
 		static void get_dm_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vddm, const std::vector<double> &frequencies, double f0, double boxphw, int nbin);
 		static void get_f0_chisq_curve(std::vector<float> &vchisq, const std::vector<float> &vdf0, const std::vector<double> &tsuboff, double f0, double boxphw, int nbin);

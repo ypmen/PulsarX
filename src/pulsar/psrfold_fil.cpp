@@ -118,6 +118,7 @@ int main(int argc, const char *argv[])
 			("dspsr", "Using dspsr folding algorithm")
 			("presto", "Using presto folding algorithm (in test phase, will be default)")
 			("plotx", "Using PlotX for plotting (default; not used any more)")
+			("saveimage", "Save images to fits")
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("wts", "Apply DAT_WTS")
 			("scloffs", "Apply DAT_SCL and DAT_OFFS")
@@ -454,7 +455,7 @@ int main(int argc, const char *argv[])
 
 	for (long int k=0; k<ncand; k++)
 	{
-		folder[k].start_mjd = reader->start_mjd+(ceil(1.*dedisp.offset/dedisp.ndump)*dedisp.ndump-dedisp.offset)*dedisp.tsamp*td;
+		folder[k].start_mjd = reader->start_mjd + nstart * tsamp +(ceil(1.*dedisp.offset/dedisp.ndump)*dedisp.ndump-dedisp.offset)*dedisp.tsamp*td;
 		if (vm.count("pepoch"))
 			folder[k].ref_epoch = MJD(vm["pepoch"].as<double>());
 		else
@@ -928,7 +929,7 @@ int main(int argc, const char *argv[])
 
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
 			Pulsar::PulsarPlot psrplot;
-			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true);
+			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true, vm.count("saveimage"));
 		}
 	}
 
@@ -989,6 +990,7 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 			fdr.f1 = stod(parameters[4]);
 			fdr.f2 = stod(parameters[5]);
 			fdr.snr = stod(parameters[6]);
+			fdr.nbin = vm["nbin"].as<int>();
 
 			for (long int k=0; k<vp0.size(); k++)
 			{
@@ -1042,6 +1044,8 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 			}
 			dmseg.push_back(fdr.dm);
 
+			fdr.nbin = vm["nbin"].as<int>();
+
 			for (long int k=0; k<vp0.size(); k++)
 			{
 				if (f0 <= 1./vp0[idx[k]])
@@ -1068,6 +1072,15 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 	}
 	else
 	{
+		for (long int k=0; k<vp0.size(); k++)
+		{
+			if (fdr.f0 <= 1./vp0[idx[k]])
+			{
+				fdr.nbin = vnbin[idx[k]];
+				break;
+			}
+		}
+
 		dmsegs.push_back(dmseg);
 		folder.push_back(fdr);
 	}

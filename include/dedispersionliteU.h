@@ -12,6 +12,7 @@
 #include <fstream>
 
 #include "databuffer.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -98,7 +99,7 @@ namespace Pulsar
 	public:
 		static double dmdelay(double dm, double fh, double fl)
 		{
-			return 4.148741601e3*dm*(1./(fl*fl)-1./(fh*fh));
+			return dispersion_delay(dm, fh, fl);
 		}
 	};
 }
