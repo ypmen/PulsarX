@@ -948,7 +948,10 @@ int main(int argc, const char *argv[])
 	outfile<<"#GB "<<obsinfo["GB"]<<endl;
 	outfile<<"#MaxDM_YMW16 "<<obsinfo["MaxDM_YMW16"]<<endl;
 	outfile<<"#Pepoch "<<s_pepoch_in_candfile<<endl;
-	outfile<<"#id	dm_old	dm_new	dm_err	dist_ymw16	f0_old	f0_new	f0_err	f1_old	f1_new	f1_err	f2_old	f2_new	f2_err	acc_old	acc_new	acc_err	S/N	S/N_new"<<endl;
+	if (f2search)
+		outfile<<"#id	dm_old	dm_new	dm_err	dist_ymw16	f0_old	f0_new	f0_err	f1_old	f1_new	f1_err	f2_old	f2_new	f2_err	acc_old	acc_new	acc_err	S/N	S/N_new"<<endl;
+	else
+		outfile<<"#id       dm_old      dm_new      dm_err		dist_ymw16     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
 
 	for (long int k=0; k<ncand; k++)
 	{
@@ -1004,9 +1007,12 @@ int main(int argc, const char *argv[])
 		outfile<<setprecision(15)<<folder[k].f1<<"\t\t";
 		outfile<<setprecision(15)<<f1_in_candfile<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_f1<<"\t\t";
-		outfile<<setprecision(15)<<folder[k].f2<<"\t\t";
-		outfile<<setprecision(15)<<f2_in_candfile<<"\t\t";
-		outfile<<setprecision(15)<<gridsearch[k].err_f2<<"\t\t";
+		if (f2search)
+		{
+			outfile<<setprecision(15)<<folder[k].f2<<"\t\t";
+			outfile<<setprecision(15)<<f2_in_candfile<<"\t\t";
+			outfile<<setprecision(15)<<gridsearch[k].err_f2<<"\t\t";
+		}
 		outfile<<setprecision(15)<<-folder[k].f1/folder[k].f0*CONST_C<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].acc<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_acc<<"\t\t";
