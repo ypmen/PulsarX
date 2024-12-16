@@ -394,6 +394,10 @@ int main(int argc, char *argv[])
 			gridsearch.ndf1 = 1;
 		}
 
+		gridsearch.df2start = 0.;
+		gridsearch.df2step = 0.;
+		gridsearch.ndf2 = 1;
+
 		gridsearch.clfd_q = vm["clfd"].as<double>();
 		gridsearch.zaplist = zaplist;
 
