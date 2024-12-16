@@ -114,9 +114,9 @@ int main(int argc, const char *argv[])
 			("widthPatch", value<float>()->default_value(0.4), "Width threshold (s) of patch for bad data")
 			("fillPatch", value<std::string>()->default_value("none"), "Fill the bad data by [none, mean, rand] in patch")
 			("fill", value<string>()->default_value("rand"), "Fill the zapped samples by [mean, rand]")
-			("render", "Using new folding algorithm (default)")
+			("render", "Using new folding algorithm")
 			("dspsr", "Using dspsr folding algorithm")
-			("presto", "Using presto folding algorithm (in test phase, will be default)")
+			("presto", "Using presto folding algorithm (default)")
 			("plotx", "Using PlotX for plotting (default; not used any more)")
 			("saveimage", "Save images to fits")
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
@@ -531,12 +531,12 @@ int main(int argc, const char *argv[])
 			{
 				BOOST_LOG_TRIVIAL(debug)<<"fold cand "<<k;
 
-				if (vm.count("presto"))
-					folder[k].runPresto(subdata);
+				if (vm.count("render"))
+					folder[k].runTRLSM(subdata);
 				else if (vm.count("dspsr"))
 					folder[k].runDspsr(subdata);
 				else
-					folder[k].runTRLSM(subdata);
+					folder[k].runPresto(subdata);
 			}
 		}
 
@@ -568,12 +568,12 @@ int main(int argc, const char *argv[])
 			}
 			dedisp.get_subdata(subdata, k%GROUPSIZE);
 
-			if (vm.count("presto"))
-				folder[k].runPresto(subdata);
+			if (vm.count("render"))
+				folder[k].runTRLSM(subdata);
 			else if (vm.count("dspsr"))
 				folder[k].runDspsr(subdata);
 			else
-				folder[k].runTRLSM(subdata);
+				folder[k].runPresto(subdata);
 		}
 		dedisp.postrun();
 	}
