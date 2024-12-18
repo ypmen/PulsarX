@@ -781,7 +781,7 @@ void GridSearch::normalize()
 			}
 			else
 			{
-				tmp_mean = means[k * nchan + j];
+				//tmp_mean = means[k * nchan + j];
 				tmp_var = vars[k * nchan + j];
 			}
 
