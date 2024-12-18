@@ -745,16 +745,15 @@ int main(int argc, const char *argv[])
 		gridsearch[k].clfd_q = vm["clfd"].as<double>();
 		gridsearch[k].bandcorr = vm["bandcorr"].as<double>();
 
-		gridsearch[k].prepare(folder[k]);
-		folder[k].close();
-
-		BOOST_LOG_TRIVIAL(info)<<"dedisperse with the inital dm firstly "<<folder[k].dm;
-
 		gridsearch[k].dm = 0.;
 		gridsearch[k].bestddm = folder[k].dm;
 		gridsearch[k].dmsearch = true;
-		gridsearch[k].correct_delays();
+
+		gridsearch[k].prepare(folder[k]);
 		gridsearch[k].dmsearch = false;
+		folder[k].close();
+
+		BOOST_LOG_TRIVIAL(info)<<"dedisperse with the inital dm firstly "<<folder[k].dm;
 
 		if (!nosearch)
 		{

@@ -237,7 +237,9 @@ void GridSearch::prepare(ArchiveLite &arch)
 	
 	if (!zaplist.empty())
 		zap();
-	
+
+	correct_delays();
+
 	//subints_normalize();
 	if (f0*arch.profiles[0].tsubint >= 1)
 		normalize();
