@@ -532,7 +532,7 @@ void ArchiveLite::read_archive(const std::string &fname)
 	else
 		f1 = 0.;
 	acc = 0.;
-	dm = arch.primary.chan_dm;
+	dm = arch.subint.dm;
 	snr = 0;
 
 	nbin = arch.subint.nbin;
