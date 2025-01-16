@@ -1076,12 +1076,23 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 
 			dmlist.push_back(stod(parameters[1]));
 
-			fdr.dm = stod(parameters[1]);
-			fdr.acc = stod(parameters[2]);
-			fdr.f0 = stod(parameters[3]);
-			fdr.f1 = stod(parameters[4]);
-			fdr.f2 = stod(parameters[5]);
-			fdr.snr = stod(parameters[6]);
+			if (parameters.size() == 6)
+			{
+				fdr.dm = stod(parameters[1]);
+				fdr.acc = stod(parameters[2]);
+				fdr.f0 = stod(parameters[3]);
+				fdr.f1 = stod(parameters[4]);
+				fdr.snr = stod(parameters[5]);
+			}
+			else if (parameters.size() == 7)
+			{
+				fdr.dm = stod(parameters[1]);
+				fdr.acc = stod(parameters[2]);
+				fdr.f0 = stod(parameters[3]);
+				fdr.f1 = stod(parameters[4]);
+				fdr.f2 = stod(parameters[5]);
+				fdr.snr = stod(parameters[6]);
+			}
 			fdr.nbin = vm["nbin"].as<int>();
 
 			for (long int k=0; k<vp0.size(); k++)
