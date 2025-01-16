@@ -626,13 +626,13 @@ int main(int argc, const char *argv[])
 	 * 
 	 */
 
-	std::vector<int> nlefts(ncand, 0);
+	std::vector<long int> nlefts(ncand, 0);
 	for (long int k=0; k<ncand; k++)
 	{
 		nlefts[k] = dedisp.get_offset(folder[k].dm)/dedisp.get_ndump(folder[k].dm);
 	}
 
-	int nleft_max = *std::max_element(nlefts.begin(), nlefts.end());
+	long int nleft_max = *std::max_element(nlefts.begin(), nlefts.end());
 
 	for (long int l=0; l<nleft_max; l++)
 	{
