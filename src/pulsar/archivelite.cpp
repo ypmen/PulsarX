@@ -33,6 +33,8 @@ ArchiveLite::ArchiveLite()
 	dm = 0.;
 	snr = 0.;
 	nblock = 1;
+	dedispersed = true;
+
 	nbin = 0;
 	nchan = 0;
 	npol = 0;
@@ -55,6 +57,7 @@ ArchiveLite::ArchiveLite(const ArchiveLite &arch)
 	dm = arch.dm;
 	snr = arch.snr;
 	nblock = arch.nblock;
+	dedispersed = arch.dedispersed;
 	nbin = arch.nbin;
 	nchan = arch.nchan;
 	npol = arch.npol;
@@ -83,6 +86,7 @@ ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
 	dm = arch.dm;
 	snr = arch.snr;
 	nblock = arch.nblock;
+	dedispersed = arch.dedispersed;
 	nbin = arch.nbin;
 	nchan = arch.nchan;
 	npol = arch.npol;

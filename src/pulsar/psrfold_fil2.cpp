@@ -507,6 +507,7 @@ int main(int argc, const char *argv[])
 		folder[k].resize(1, tmpsubdata.nchans, folder[k].nbin);
 		folder[k].nblock = nblock;
 		folder[k].prepare(tmpsubdata);
+		folder[k].dedispersed = false;
 	}
 
 	BOOST_LOG_TRIVIAL(info)<<"start folding...";
@@ -745,12 +746,19 @@ int main(int argc, const char *argv[])
 		gridsearch[k].clfd_q = vm["clfd"].as<double>();
 		gridsearch[k].bandcorr = vm["bandcorr"].as<double>();
 
-		gridsearch[k].dm = 0.;
-		gridsearch[k].bestddm = folder[k].dm;
-		gridsearch[k].dmsearch = true;
+		if (!folder[k].dedispersed)
+		{
+			gridsearch[k].bestddm = folder[k].dm;
+			gridsearch[k].dmsearch = true;
 
-		gridsearch[k].prepare(folder[k]);
-		gridsearch[k].dmsearch = false;
+			gridsearch[k].prepare(folder[k]);
+			gridsearch[k].dmsearch = false;
+		}
+		else
+		{
+			gridsearch[k].prepare(folder[k]);
+		}
+
 		folder[k].close();
 
 		BOOST_LOG_TRIVIAL(info)<<"dedisperse with the inital dm firstly "<<folder[k].dm;

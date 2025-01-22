@@ -198,6 +198,7 @@ namespace Pulsar
 		long int nblock;
 		bool use_t2pred;
 		Predictors pred;
+		bool dedispersed;
 	public:
 		int nbin;
 		int nchan;

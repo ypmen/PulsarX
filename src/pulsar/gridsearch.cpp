@@ -193,7 +193,10 @@ void GridSearch::prepare(ArchiveLite &arch)
 	f0 = arch.f0;
 	f1 = arch.f1;
 	f2 = arch.f2;
-	dm = arch.dm;
+	if (arch.dedispersed)
+		dm = arch.dm;
+	else
+		dm = 0.;
 
 	nsubint = arch.profiles.size();
 	nchan = arch.nchan;
