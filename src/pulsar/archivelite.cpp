@@ -351,16 +351,34 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 		}
 	}
 
+	if (databuffer.mean_var_ready)
+	{
+		double factor = databuffer.tsamp * nbin * f;
+		for (long int j=0; j<databuffer.nchans; j++)
+		{
+			means[j] += databuffer.means[j] * (databuffer.nsamples / nbin) * factor;
+			vars[j] += databuffer.vars[j] * (databuffer.nsamples / nbin) * factor * factor;
+		}
+		mean_var_ready = databuffer.mean_var_ready;
+	}
+
 	if (++iblock == nblock)
 	{
+		float gain = 0.;
 		for (long int l=0; l<nbin; l++)
 		{
 			for (long int m=0; m<nbin; m++)
 			{
 				mxWTW[l*nbin+m] /= (nblock*databuffer.nsamples*databuffer.tsamp*sub_int.ffold);
+
+				gain += mxWTW[l*nbin+m];
 			}
 			mxWTW[l*nbin+l] += 1;
+
+			gain += 1.;
 		}
+
+		gain /= nbin;
 
 		transpose_pad<float>(&sub_int.data[0], &vWTd_T[0], nbin, npol*nchan);
 
@@ -371,13 +389,25 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 
 		sgesv_(&n, &nrhs, &mxWTW[0], &n, &ipiv[0], &sub_int.data[0], &n, &info);
 		
+		std::for_each(sub_int.data.begin(), sub_int.data.end(), [gain](float& x) {x *= gain;});
+
 		sub_mjd += sub_int.tsubint;
+
+		if (mean_var_ready)
+		{
+			sub_int.means = means;
+			sub_int.vars = vars;
+			sub_int.mean_var_ready = mean_var_ready;
+		}
 
 		profiles.push_back(sub_int);
 
 		iblock = 0;
 		fill(mxWTW.begin(), mxWTW.end(), 0.);
 		fill(vWTd_T.begin(), vWTd_T.end(), 0.);
+
+		std::fill(means.begin(), means.end(), 0.);
+		std::fill(vars.begin(), vars.end(), 0.);
 	}
 
 	return true;
