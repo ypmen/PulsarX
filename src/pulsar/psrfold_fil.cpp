@@ -119,6 +119,7 @@ int main(int argc, const char *argv[])
 			("dspsr", "Using dspsr folding algorithm")
 			("presto", "Using presto folding algorithm (default)")
 			("plotx", "Using PlotX for plotting (default; not used any more)")
+			("output_width", "Output boxcar width (s)")
 			("saveimage", "Save images to fits")
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("wts", "Apply DAT_WTS")
@@ -858,10 +859,18 @@ int main(int argc, const char *argv[])
 	outfile<<"#GB "<<obsinfo["GB"]<<endl;
 	outfile<<"#MaxDM_YMW16 "<<obsinfo["MaxDM_YMW16"]<<endl;
 	outfile<<"#Pepoch "<<s_pepoch_in_candfile<<endl;
+
+	outfile<<"#id	dm_old	dm_new	dm_err	dist_ymw16	f0_old	f0_new	f0_err	f1_old	f1_new	f1_err";
+
 	if (f2search)
-		outfile<<"#id	dm_old	dm_new	dm_err	dist_ymw16	f0_old	f0_new	f0_err	f1_old	f1_new	f1_err	f2_old	f2_new	f2_err	acc_old	acc_new	acc_err	S/N	S/N_new"<<endl;
-	else
-		outfile<<"#id       dm_old      dm_new      dm_err		dist_ymw16     f0_old     f0_new        f0_err      f1_old     f1_new       f1_err      acc_old        acc_new      acc_err      S/N        S/N_new"<<endl;
+		outfile<<" f2_old	f2_new	f2_err";
+
+	outfile<<" acc_old	acc_new	acc_err	S/N	S/N_new";
+
+	if (vm.count("output_width"))
+		outfile<<" boxcar_width";
+	
+	outfile<<std::endl;
 
 	for (long int k=0; k<ncand; k++)
 	{
@@ -928,7 +937,11 @@ int main(int argc, const char *argv[])
 		outfile<<setprecision(15)<<gridsearch[k].acc<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_acc<<"\t\t";
 		outfile<<fixed<<setprecision(5)<<folder[k].snr<<"\t\t";
-		outfile<<fixed<<setprecision(5)<<gridsearch[k].snr<<endl;
+		outfile<<fixed<<setprecision(5)<<gridsearch[k].snr;
+		if (vm.count("output_width"))
+			outfile<<"\t\t"<<fixed<<setprecision(5)<<gridsearch[k].width<<endl;
+
+		outfile<<std::endl;
 
 		if (!noplot)
 		{
