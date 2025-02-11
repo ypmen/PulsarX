@@ -101,6 +101,7 @@ int main(int argc, const char *argv[])
 			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
 			("ra", value<string>()->default_value("00:00:00"), "RA (hhmmss.s)")
 			("dec", value<string>()->default_value("00:00:00"), "DEC (ddmmss.s)")
+			("cdm", value<double>()->default_value(0), "Coherent dedispersion DM (pc/cc)")
 			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
 			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
 			("bandcorr", value<double>()->default_value(10), "CLFD correlation bandwidth threshold to differentiate RFI and real signal (MHz)")
@@ -1045,6 +1046,7 @@ int main(int argc, const char *argv[])
 			BOOST_LOG_TRIVIAL(info)<<"generate png for cand "<<k<<"...";
 
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
+			obsinfo["Coherent_DM"] = to_string(vm["cdm"].as<double>());
 			Pulsar::PulsarPlot psrplot;
 			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true, vm.count("saveimage"));
 		}

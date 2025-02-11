@@ -263,7 +263,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 	double fcentre = std::stod(obsinfo["Fcentre"]);
 	double bandwidth = std::stod(obsinfo["Bandwidth"]);
 	int nchans = std::stoi(obsinfo["Nchan"]);
-	double dmsmear_phase = abs(DedispersionLite::dmdelay(dm, fcentre-0.5*bandwidth, fcentre+0.5*bandwidth))/nchans*f0;
+	double dmsmear_phase = abs(DedispersionLite::dmdelay(dm-std::stod(obsinfo["Coherent_DM"]), fcentre-0.5*bandwidth, fcentre+0.5*bandwidth))/nchans*f0;
 
 	std::string fontsize_label = "0.7";
 	std::string fontsize_ticklabel = "0.7";
