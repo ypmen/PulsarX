@@ -508,7 +508,7 @@ int main(int argc, const char *argv[])
 		folder[k].resize(1, tmpsubdata.nchans, folder[k].nbin);
 		folder[k].nblock = nblock;
 		folder[k].prepare(tmpsubdata);
-		folder[k].dedispersed = false;
+		folder[k].dedispersed = true;
 	}
 
 	BOOST_LOG_TRIVIAL(info)<<"start folding...";
@@ -575,7 +575,7 @@ int main(int argc, const char *argv[])
 			{
 				size_t k = *b;
 
-				dedisp.get_subdata(folder[k].dm, subdata);
+				dedisp.get_subdata(folder[k].dm, subdata, true);
 				
 				if (dedisp.get_counter(folder[k].dm) >= offsets[k] + ndumps[k])
 				{
@@ -598,7 +598,7 @@ int main(int argc, const char *argv[])
 
 				int thread_id = omp_get_thread_num();
 
-				dedisp.get_subdata(folder[k].dm, subdatas[thread_id]);
+				dedisp.get_subdata(folder[k].dm, subdatas[thread_id], true);
 				
 				if (dedisp.get_counter(folder[k].dm) >= offsets[k] + ndumps[k])
 				{
@@ -653,7 +653,7 @@ int main(int argc, const char *argv[])
 			{
 				size_t k = *b;
 
-				dedisp.get_subdata(folder[k].dm, subdata);
+				dedisp.get_subdata(folder[k].dm, subdata, true);
 
 				if (nlefts[k]-- > 0)
 				{
