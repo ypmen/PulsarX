@@ -14,6 +14,7 @@
 
 #include "dedispersionlite.h"
 #include "predictor.h"
+#include "kepler.h"
 #include "mjd.h"
 
 using namespace std;
@@ -33,36 +34,6 @@ namespace Pulsar
 			nbin = 0;
 
 			mean_var_ready = false;
-		}
-		IntegrationLite(const IntegrationLite &integ)
-		{
-			ffold = integ.ffold;
-			tsubint = integ.tsubint;
-			offs_sub = integ.offs_sub;
-			npol = integ.npol;
-			nchan = integ.nchan;
-			nbin = integ.nbin;
-			data = integ.data;
-
-			means = integ.means;
-			vars = integ.vars;
-			mean_var_ready = integ.mean_var_ready;
-		}
-		IntegrationLite & operator=(const IntegrationLite &integ)
-		{
-			ffold = integ.ffold;
-			tsubint = integ.tsubint;
-			offs_sub = integ.offs_sub;
-			npol = integ.npol;
-			nchan = integ.nchan;
-			nbin = integ.nbin;
-			data = integ.data;
-
-			means = integ.means;
-			vars = integ.vars;
-			mean_var_ready = integ.mean_var_ready;
-
-			return *this;
 		}
 		~IntegrationLite(){}
 		void resize(int np, int nc, int nb)
@@ -92,8 +63,6 @@ namespace Pulsar
 	{
 	public:
 		ArchiveLite();
-		ArchiveLite(const ArchiveLite &arch);
-		ArchiveLite & operator=(const ArchiveLite &arch);
 		~ArchiveLite();
 		void close()
 		{
@@ -123,30 +92,38 @@ namespace Pulsar
 	private:
 		double get_phase(MJD mjd, MJD &mjdref)
 		{
-			if (!use_t2pred)
+			if (use_t2pred)
+			{
+				return pred.get_fphase(mjd.to_day(), fref);
+			}
+			else if (use_kepler)
+			{
+				return orb.get_fphase(mjd.to_day(), mjdref.to_day());
+			}
+			else
 			{
 				long double t = (mjd-mjdref).to_second();
 				double phi = f0*t + 0.5*f1*t*t + f2*t*t*t/6.;
 				phi -= floor(phi);
 				return phi;
 			}
-			else
-			{
-				return pred.get_fphase(mjd.to_day(), fref);
-			}
 		}
 		double get_ffold(MJD mjd, MJD &mjdref)
 		{
-			if (!use_t2pred)
+			if (use_t2pred)
+			{
+				double pfold = pred.get_pfold(mjd.to_day(), fref);
+				return 1./pfold;
+			}
+			else if (use_kepler)
+			{
+				return orb.get_ffold(mjd.to_day());
+			}
+			else
 			{
 				long double t = (mjd-mjdref).to_second();
 				double f = f0 + f1*t + 0.5*f2*t;
 				return f;
-			}
-			else
-			{
-				double pfold = pred.get_pfold(mjd.to_day(), fref);
-				return 1./pfold;
 			}
 		}
 		MJD get_epoch(MJD &start_time, MJD &end_time, MJD &ref_epoch)
@@ -198,6 +175,8 @@ namespace Pulsar
 		long int nblock;
 		bool use_t2pred;
 		Predictors pred;
+		bool use_kepler;
+		Kepler orb;
 		bool dedispersed;
 	public:
 		int nbin;

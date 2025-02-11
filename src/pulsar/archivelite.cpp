@@ -43,67 +43,8 @@ ArchiveLite::ArchiveLite()
 
 	fref = 1000.;
 	use_t2pred = false;
+	use_kepler = false;
 	mean_var_ready = false;
-}
-
-ArchiveLite::ArchiveLite(const ArchiveLite &arch)
-{
-	start_mjd = arch.start_mjd;
-	ref_epoch = arch.ref_epoch;
-	f0 = arch.f0;
-	f1 = arch.f1;
-	f2 = arch.f2;
-	acc = arch.acc;
-	dm = arch.dm;
-	snr = arch.snr;
-	nblock = arch.nblock;
-	dedispersed = arch.dedispersed;
-	nbin = arch.nbin;
-	nchan = arch.nchan;
-	npol = arch.npol;
-	tbin = arch.tbin;
-	frequencies = arch.frequencies;    
-	profiles = arch.profiles;
-	sub_mjd = arch.sub_mjd;
-	sub_int = arch.sub_int;
-	iblock = arch.iblock;
-
-	fref = arch.fref;
-	use_t2pred = arch.use_t2pred;
-	means = arch.means;
-	vars = arch.vars;
-	mean_var_ready = arch.mean_var_ready;
-}
-
-ArchiveLite & ArchiveLite::operator=(const ArchiveLite &arch)
-{
-	start_mjd = arch.start_mjd;
-	ref_epoch = arch.ref_epoch;
-	f0 = arch.f0;
-	f1 = arch.f1;
-	f2 = arch.f2;
-	acc = arch.acc;
-	dm = arch.dm;
-	snr = arch.snr;
-	nblock = arch.nblock;
-	dedispersed = arch.dedispersed;
-	nbin = arch.nbin;
-	nchan = arch.nchan;
-	npol = arch.npol;
-	tbin = arch.tbin;
-	frequencies = arch.frequencies;    
-	profiles = arch.profiles;
-	sub_mjd = arch.sub_mjd;
-	sub_int = arch.sub_int;
-	iblock = arch.iblock;
-
-	fref = arch.fref;
-	use_t2pred = arch.use_t2pred;
-	means = arch.means;
-	vars = arch.vars;
-	mean_var_ready = arch.mean_var_ready;
-
-	return *this;
 }
 
 ArchiveLite::~ArchiveLite(){}
@@ -130,6 +71,11 @@ void ArchiveLite::prepare(DataBuffer<float> &databuffer)
 		fref = 0.5*(*min_element(frequencies.begin(), frequencies.end())+*max_element(frequencies.begin(), frequencies.end()));
 		f0 = 1./pred.get_pfold(ref_epoch.to_day(), fref);
 		f1 = pred.get_fdfold(ref_epoch.to_day(), fref);
+	}
+	else if (use_kepler)
+	{
+		f0 = orb.get_ffold(ref_epoch.to_day());
+		f1 = orb.get_fdfold(ref_epoch.to_day());
 	}
 
 	sub_mjd = start_mjd + 0.5*databuffer.tsamp;
