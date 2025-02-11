@@ -76,6 +76,7 @@ int main(int argc, const char *argv[])
 			("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("f2", value<double>()->default_value(0), "F2 (Hz/s/s)")
 			("acc", value<double>()->default_value(0), "Acceleration (m/s/s)")
+			("kepler,k", value<vector<double>>()->multitoken(), "Five kepler parameters [PB (d), A1 (ls), phi (rad), OM (rad), ECC]")
 			("pepoch", value<double>(), "F0/F1/F2/acc epoch (MJD)")
 			("scale", value<int>()->default_value(1), "F0,F1,F2,dm search range scale in phase")
 			("nosearch", "Do not search dm,f0,f1,f2")
@@ -1055,6 +1056,18 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 	fdr.acc = vm["acc"].as<double>();
 	fdr.nbin = vm["nbin"].as<int>();
 
+	if (vm.count("kepler"))
+	{
+		std::vector<double> temp = vm["kepler"].as<std::vector<double>>();
+
+		std::vector<double> kepler_params;
+		kepler_params.push_back(vm["f0"].as<double>());
+		kepler_params.insert(kepler_params.end(), temp.begin(), temp.end());
+
+		fdr.orb = Pulsar::Kepler(kepler_params);
+		fdr.use_kepler = true;
+	}
+
 	std::vector<float> vp0;
 	std::vector<int> vnbin;
 	std::vector<float> nbinplan = vm["nbinplan"].as<std::vector<float>>();
@@ -1101,6 +1114,28 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 				fdr.f2 = stod(parameters[5]);
 				fdr.snr = stod(parameters[6]);
 			}
+			else if (parameters.size() == 12)
+			{
+				fdr.dm = stod(parameters[1]);
+				fdr.acc = stod(parameters[2]);
+				fdr.f1 = stod(parameters[4]);
+				fdr.f2 = stod(parameters[5]);
+				
+				std::vector<double> kepler_params{
+					stod(parameters[3]),
+					stod(parameters[6]),
+					stod(parameters[7]),
+					stod(parameters[8]),
+					stod(parameters[9]),
+					stod(parameters[10])
+				};
+
+				fdr.orb = Pulsar::Kepler(kepler_params);
+				fdr.use_kepler = true;
+
+				fdr.snr = stod(parameters[11]);
+			}
+			
 			fdr.nbin = vm["nbin"].as<int>();
 
 			for (long int k=0; k<vp0.size(); k++)
