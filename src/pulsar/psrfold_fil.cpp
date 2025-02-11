@@ -597,6 +597,15 @@ int main(int argc, const char *argv[])
 	for (long int k=0; k<ncand; k++)
 	{
 		Pulsar::GridSearch gs;
+		gs.scale = scale;
+		gs.tint = tint;
+		gs.nodmsearch = nodmsearch;
+		gs.nof0search = nof0search;
+		gs.nof1search = nof1search;
+		gs.f2search = f2search;
+		gs.nosearch = nosearch;
+		gs.clfd_q = vm["clfd"].as<double>();
+		gs.bandcorr = vm["bandcorr"].as<double>();
 		gridsearch.push_back(gs);
 	}
 
@@ -605,188 +614,9 @@ int main(int argc, const char *argv[])
 #endif
 	for (long int k=0; k<ncand; k++)
 	{
-		double dm = folder[k].dm;
-		double f0 = folder[k].f0;
-		double f1 = folder[k].f1;
-		double f2 = folder[k].f2;
-
-		if (!nodmsearch)
-		{
-			gridsearch[k].ddmstart = -scale*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-			gridsearch[k].ddmstep = 1./scale*abs(gridsearch[k].ddmstart/folder[k].nbin);
-			gridsearch[k].nddm = 2*abs(scale)*folder[k].nbin;
-		}
-		else
-		{
-			gridsearch[k].ddmstart = 0.;
-			gridsearch[k].ddmstep = 0.;
-			gridsearch[k].nddm = 1;
-		}
-
-		if (!nof0search)
-		{
-			gridsearch[k].df0start = -scale*1./tint;
-			gridsearch[k].df0step = 1./scale*abs(gridsearch[k].df0start/folder[k].nbin);
-			gridsearch[k].ndf0 = 2*abs(scale)*folder[k].nbin;
-		}
-		else
-		{
-			gridsearch[k].df0start = 0.;
-			gridsearch[k].df0step = 0.;
-			gridsearch[k].ndf0 = 1;
-		}
-		
-		if (!nof1search)
-		{
-			gridsearch[k].df1start = -scale*2./(tint*tint);
-			gridsearch[k].df1step = 1./scale*abs(gridsearch[k].df1start/folder[k].nbin);
-			gridsearch[k].ndf1 = 2*abs(scale)*folder[k].nbin;
-		}
-		else
-		{
-			gridsearch[k].df1start = 0.;
-			gridsearch[k].df1step = 0.;
-			gridsearch[k].ndf1 = 1;
-		}
-
-		if (f2search)
-		{
-			gridsearch[k].df2start = -scale*4*6./(tint*tint*tint);
-			gridsearch[k].df2step = 1./scale*abs(gridsearch[k].df2start/folder[k].nbin);
-			gridsearch[k].ndf2 = 2*abs(scale)*folder[k].nbin;
-		}
-		else
-		{
-			gridsearch[k].df2start = 0.;
-			gridsearch[k].df2step = 0.;
-			gridsearch[k].ndf2 = 1;
-		}
-
-		gridsearch[k].clfd_q = vm["clfd"].as<double>();
-		gridsearch[k].bandcorr = vm["bandcorr"].as<double>();
-
 		gridsearch[k].prepare(folder[k]);
 		folder[k].close();
-
-		if (!nosearch)
-		{
-			BOOST_LOG_TRIVIAL(info)<<"cand "<<k<<": initial dm(pc/cc)="<<gridsearch[k].dm<<", f0(Hz)="<<gridsearch[k].f0<<", f1(Hz/s)="<<gridsearch[k].f1<<", f2(Hz/s/s)="<<gridsearch[k].f2;
-			BOOST_LOG_TRIVIAL(info)<<"search scale in phase is "<<scale<<std::endl
-			<<"dm search range: delta dm start="<<gridsearch[k].ddmstart<<", dm step="<<gridsearch[k].ddmstep<<", number of dm="<<gridsearch[k].nddm<<std::endl
-			<<"f0 search range: delta f0 start="<<gridsearch[k].df0start<<", f0 step="<<gridsearch[k].df0step<<", number of f0="<<gridsearch[k].ndf0<<std::endl
-			<<"f1 search range: delta f1 start="<<gridsearch[k].df1start<<", f1 step="<<gridsearch[k].df1step<<", number of f1="<<gridsearch[k].ndf1<<std::endl
-			<<"f2 search range: delta f2 start="<<gridsearch[k].df2start<<", f2 step="<<gridsearch[k].df2step<<", number of f2="<<gridsearch[k].ndf2<<std::endl;
-
-			double dm0 = gridsearch[k].dm;
-			double f00 = gridsearch[k].f0;
-			double f10 = gridsearch[k].f1;
-			double f20 = gridsearch[k].f2;
-			double dm1 = gridsearch[k].dm + 2*gridsearch[k].ddmstep;
-			double f01 = gridsearch[k].f0 + 2*gridsearch[k].df0step;
-			double f11 = gridsearch[k].f1 + 2*gridsearch[k].df1step;
-			double f21 = gridsearch[k].f2 + 2*gridsearch[k].df2step;
-			int cont = 0;
-			while ((abs(dm0-dm1)>gridsearch[k].ddmstep or abs(f00-f01)>gridsearch[k].df0step or abs(f10-f11)>gridsearch[k].df1step or abs(f20-f21)>gridsearch[k].df2step) and cont<8)
-			{
-				dm0 = gridsearch[k].dm;
-				f00 = gridsearch[k].f0;
-				f10 = gridsearch[k].f1;
-				f20 = gridsearch[k].f2;
-
-				if (!nof0search || !nof1search || f2search)
-				{
-					gridsearch[k].runFFdot();
-					gridsearch[k].bestprofiles();
-				}
-				if (!nodmsearch)
-				{
-					gridsearch[k].runDM();
-					gridsearch[k].bestprofiles();
-				}
-
-				dm1 = gridsearch[k].dm;
-				f01 = gridsearch[k].f0;
-				f11 = gridsearch[k].f1;
-				f21 = gridsearch[k].f2;
-
-				cont++;
-				BOOST_LOG_TRIVIAL(debug)<<"iteration "<<cont<<": dm(pc/cc)="<<gridsearch[k].dm<<", f0(Hz)="<<gridsearch[k].f0<<", f1(Hz/s)="<<gridsearch[k].f1<<", f2(Hz/s)="<<gridsearch[k].f2;
-			}
-		}
-
-		/**
-		 * @brief recalculate the mxsbr_ffdot and vsnr_dm with scale = 3 for plotting
-		 * 
-		 */
-
-		dm = gridsearch[k].dm;
-		f0 = gridsearch[k].f0;
-		f1 = gridsearch[k].f1;
-		f2 = gridsearch[k].f2;
-
-		if (!nodmsearch)
-		{
-			double ddmstart = -3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-			gridsearch[k].ddmstep = 1./3*abs(ddmstart/folder[k].nbin);
-			int nddm = 2*3*folder[k].nbin;
-
-			gridsearch[k].ddmstart = std::max(-3*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin), -dm);
-			gridsearch[k].nddm = (ddmstart+gridsearch[k].ddmstep*nddm-gridsearch[k].ddmstart)/gridsearch[k].ddmstep;
-		}
-		else
-		{
-			gridsearch[k].ddmstart = 0.;
-			gridsearch[k].ddmstep = 0.;
-			gridsearch[k].nddm = 1;
-		}
-
-		if (!nof0search)
-		{
-			gridsearch[k].df0start = -3*1./tint;
-			gridsearch[k].df0step = 1./3*abs(gridsearch[k].df0start/folder[k].nbin);
-			gridsearch[k].ndf0 = 2*3*folder[k].nbin;
-		}
-		else
-		{
-			gridsearch[k].df0start = 0.;
-			gridsearch[k].df0step = 0.;
-			gridsearch[k].ndf0 = 1;
-		}
-
-		if (!nof1search)
-		{
-			gridsearch[k].df1start = -3*2./(tint*tint);
-			gridsearch[k].df1step = 1./3*abs(gridsearch[k].df1start/folder[k].nbin);
-			gridsearch[k].ndf1 = 2*3*folder[k].nbin;
-		}
-		else
-		{
-			gridsearch[k].df1start = 0.;
-			gridsearch[k].df1step = 0.;
-			gridsearch[k].ndf1 = 1.;
-		}
-
-		if (f2search)
-		{
-			gridsearch[k].df2start = -scale*4*6./(tint*tint*tint);
-			gridsearch[k].df2step = 1./scale*abs(gridsearch[k].df2start/folder[k].nbin);
-			gridsearch[k].ndf2 = 2*abs(scale)*folder[k].nbin;
-		}
-		else
-		{
-			gridsearch[k].df2start = 0.;
-			gridsearch[k].df2step = 0.;
-			gridsearch[k].ndf2 = 1;
-		}
-
-		if (!nosearch)
-		{
-			if (!nof0search || !nof1search)
-				gridsearch[k].runFFdot();
-			
-			if (!nodmsearch)
-				gridsearch[k].runDM();
-		}
+		gridsearch[k].run(k);
 	}
 
 	/** form obsinfo*/

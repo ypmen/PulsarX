@@ -22,10 +22,9 @@ namespace Pulsar
 	{
 	public:
 		GridSearch();
-		GridSearch(const GridSearch &gridsearch);
-		GridSearch & operator=(const GridSearch &gridsearch);
 		~GridSearch();
 		void prepare(ArchiveLite &arch);
+		void run(int k);
 		void runFFdot();
 		void runDM();
 		bool bestprofiles();
@@ -81,6 +80,13 @@ namespace Pulsar
 		double ddmstart;
 		double ddmstep;
 		int nddm;
+		bool nodmsearch;
+		bool nof0search;
+		bool nof1search;
+		bool f2search;
+		bool nosearch;
+		int scale;
+		double tint;
 		double clfd_q;
 		double bandcorr;
 		std::vector<std::pair<double, double>> zaplist;
