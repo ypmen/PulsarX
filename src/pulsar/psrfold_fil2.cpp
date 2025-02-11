@@ -1034,7 +1034,7 @@ int main(int argc, const char *argv[])
 		outfile<<setprecision(15)<<gridsearch[k].acc<<"\t\t";
 		outfile<<setprecision(15)<<gridsearch[k].err_acc<<"\t\t";
 		outfile<<fixed<<setprecision(5)<<folder[k].snr<<"\t\t";
-		outfile<<fixed<<setprecision(5)<<gridsearch[k].snr<<endl;
+		outfile<<fixed<<setprecision(5)<<gridsearch[k].snr;
 		if (vm.count("output_width"))
 			outfile<<"\t\t"<<fixed<<setprecision(5)<<gridsearch[k].width<<endl;
 
