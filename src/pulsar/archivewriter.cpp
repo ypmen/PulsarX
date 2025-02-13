@@ -103,7 +103,7 @@ void ArchiveWriter::prepare(Pulsar::ArchiveLite &arch, Pulsar::GridSearch &grid)
 
 	fits.primary.chan_dm = dm;
 	fits.primary.obsfreq = 0.5 * (frequencies.back() + frequencies.front());
-	fits.primary.obsbw = (frequencies.back() - frequencies.front()) / (frequencies.size() - 1) * frequencies.size();
+	fits.primary.obsbw = frequencies.size() == 1 ? 0. : (frequencies.back() - frequencies.front()) / (frequencies.size() - 1) * frequencies.size();
 	fits.primary.obsnchan = frequencies.size();
 
 	fits.filename = "!" + rootname + ".ar";
