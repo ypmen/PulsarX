@@ -55,6 +55,7 @@ int main(int argc, const char *argv[])
 			("threads,t", value<unsigned int>()->default_value(1), "Number of threads")
 			("jump,j", value<vector<double>>()->multitoken()->default_value(vector<double>{0, 0}, "0, 0"), "Time jump at the beginning and end (s)")
 			("frac", value<vector<double>>()->multitoken()->default_value(vector<double>{0, 1}, "0, 1"), "Reading data between start and end fraction")
+			("dm", value<double>()->default_value(0), "DM (pc/cc)")
 			("f0", value<double>()->default_value(0), "F0 (Hz)")
 			("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("f2", value<double>()->default_value(0), "F2 (Hz/s/s)")
@@ -542,6 +543,7 @@ void produce(variables_map &vm, vector<Pulsar::ArchiveLite> &folder)
 	Pulsar::ArchiveLite fdr;
 
 	/** archive */
+	fdr.dm = vm["dm"].as<double>();
 	fdr.f0 = vm["f0"].as<double>();
 	fdr.f1 = vm["f1"].as<double>();
 	fdr.f2 = vm["f2"].as<double>();
