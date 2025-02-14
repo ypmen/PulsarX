@@ -27,6 +27,7 @@
 #include "archivelite.h"
 #include "presto.h"
 #include "databuffer.h"
+#include "equalize.h"
 #include "mjd.h"
 #include "utils.h"
 #include "constants.h"
@@ -298,6 +299,9 @@ int main(int argc, const char *argv[])
 		folder[k].dedispersed = true;
 	}
 
+	Equalize eq;
+	eq.prepare(subdata);
+
 	BOOST_LOG_TRIVIAL(info)<<"start folding...";
 	
 	while (!reader.is_end)
@@ -305,6 +309,10 @@ int main(int argc, const char *argv[])
 		if (reader.read_data(subdata.buffer, ndump) != ndump) break;
 
 		subdata.counter += ndump;
+		subdata.equalized = false;
+
+		subdata.get_mean_rms();
+		eq.filter(subdata);
 
 #pragma omp parallel for num_threads(num_threads)
 		for (int k=0; k<ncand; k++)
