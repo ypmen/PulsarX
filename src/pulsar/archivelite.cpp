@@ -409,7 +409,7 @@ bool ArchiveLite::runPresto(DataBuffer<float> &databuffer)
 			l = l<0 ? l+nbin:l;
 
 			for (long int j=0; j<databuffer.nchans; j++)
-			{       
+			{
 				vWTd_T[l*databuffer.nchans+j] += vWli0*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
 			}
 		}
