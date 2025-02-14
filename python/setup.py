@@ -9,18 +9,18 @@ ext_modules = [
         sources=["cpp/filtools.cpp",
         ],
         extra_compile_args=["-O3", "-mavx2", "-mfma"],
-        library_dirs=["../../lib/", "../../sofa/20200721/c/src"],
+        library_dirs=["../../lib/"],
         libraries=["xcontainer", "xmodule", "xutils", "ymw16", "sofa_c", "boost_log", "fftw3f_threads", "fftw3f", "fftw3_threads", "fftw3"],
-        include_dirs=["../../include", "../include", "../", "../../sofa/20200721/c/src"]
+        include_dirs=["../../include", "../include", "../"]
     ),
     Pybind11Extension(
         "psrdata_reader",
         sources=["cpp/psrdata_reader.cpp",
 	],
 	extra_compile_args=["-O3", "-mavx2", "-mfma"],
-	library_dirs=["../../lib/", "../../sofa/20200721/c/src"],
+	library_dirs=["../../lib/"],
 	libraries=["xcontainer", "xformats", "xmodule", "xutils", "cfitsio", "ymw16", "sofa_c", "boost_log", "fftw3f_threads", "fftw3f", "fftw3_threads", "fftw3"],
-	include_dirs=["../../include", "../include", "../", "../../sofa/20200721/c/src"]
+	include_dirs=["../../include", "../include", "../"]
     ),
     Pybind11Extension(
         "orbit_utils",
