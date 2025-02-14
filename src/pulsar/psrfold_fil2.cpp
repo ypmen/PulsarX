@@ -77,7 +77,7 @@ int main(int argc, const char *argv[])
 			("f2", value<double>()->default_value(0), "F2 (Hz/s/s)")
 			("acc", value<double>()->default_value(0), "Acceleration (m/s/s)")
 			("binary", "Fold binary pulsar")
-			("Pb", value<double>(), "The orbital period (day)")
+			("PB", value<double>(), "The orbital period (day)")
 			("A1", value<double>(), "The projected orbital semi-major axis (lt-sec)")
 			("T0", value<double>(), "The time of periastron passage (day)")
 			("ECC", value<double>()->default_value(0.), "The orbital eccentricity")
@@ -898,7 +898,7 @@ void produce(variables_map &vm, std::list<double> &dmlist, vector<Pulsar::Archiv
 	{
 		std::vector<double> kepler_params;
 		kepler_params.push_back(vm["f0"].as<double>());
-		kepler_params.push_back(vm["Pb"].as<double>());
+		kepler_params.push_back(vm["PB"].as<double>());
 		kepler_params.push_back(vm["A1"].as<double>());
 		kepler_params.push_back(vm["T0"].as<double>());
 		kepler_params.push_back(vm["OM"].as<double>()/180.*M_PI);
