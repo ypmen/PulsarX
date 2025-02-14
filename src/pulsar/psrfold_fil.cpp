@@ -74,7 +74,12 @@ int main(int argc, const char *argv[])
 			("f1", value<double>()->default_value(0), "F1 (Hz/s)")
 			("f2", value<double>()->default_value(0), "F2 (Hz/s/s)")
 			("acc", value<double>()->default_value(0), "Acceleration (m/s/s)")
-			("kepler,k", value<vector<double>>()->multitoken(), "Five kepler parameters [PB (d), A1 (ls), phi (rad), OM (rad), ECC]")
+			("binary", "Fold binary pulsar")
+			("Pb", value<double>(), "The orbital period (day)")
+			("A1", value<double>(), "The projected orbital semi-major axis (lt-sec)")
+			("T0", value<double>(), "The time of periastron passage (day)")
+			("ECC", value<double>()->default_value(0.), "The orbital eccentricity")
+			("OM", value<double>()->default_value(0.), "Longitude of periastron (deg)")
 			("pepoch", value<double>(), "F0/F1/F2/acc epoch (MJD)")
 			("scale", value<int>()->default_value(1), "F0,F1,F2,dm search range scale in phase")
 			("nosearch", "Do not search dm,f0,f1,f2")
@@ -806,13 +811,15 @@ void produce(variables_map &vm, std::vector<std::vector<double>> &dmsegs, vector
 	fdr.acc = vm["acc"].as<double>();
 	fdr.nbin = vm["nbin"].as<int>();
 
-	if (vm.count("kepler"))
+	if (vm.count("binary"))
 	{
-		std::vector<double> temp = vm["kepler"].as<std::vector<double>>();
-
 		std::vector<double> kepler_params;
 		kepler_params.push_back(vm["f0"].as<double>());
-		kepler_params.insert(kepler_params.end(), temp.begin(), temp.end());
+		kepler_params.push_back(vm["Pb"].as<double>());
+		kepler_params.push_back(vm["A1"].as<double>());
+		kepler_params.push_back(vm["T0"].as<double>());
+		kepler_params.push_back(vm["OM"].as<double>()/180.*M_PI);
+		kepler_params.push_back(vm["ECC"].as<double>());
 
 		fdr.orb = Pulsar::Kepler(kepler_params);
 		fdr.use_kepler = true;
