@@ -10,7 +10,7 @@ ext_modules = [
         ],
         extra_compile_args=["-O3", "-mavx2", "-mfma"],
         library_dirs=["../../lib/"],
-        libraries=["xcontainer", "xmodule", "xutils", "ymw16", "sofa_c", "boost_log", "fftw3f_threads", "fftw3f", "fftw3_threads", "fftw3"],
+        libraries=["xcontainer", "xmodule", "xutils", "ymw16", "erfa", "boost_log", "fftw3f_threads", "fftw3f", "fftw3_threads", "fftw3"],
         include_dirs=["../../include", "../include", "../"]
     ),
     Pybind11Extension(
@@ -19,7 +19,7 @@ ext_modules = [
 	],
 	extra_compile_args=["-O3", "-mavx2", "-mfma"],
 	library_dirs=["../../lib/"],
-	libraries=["xcontainer", "xformats", "xmodule", "xutils", "cfitsio", "ymw16", "sofa_c", "boost_log", "fftw3f_threads", "fftw3f", "fftw3_threads", "fftw3"],
+	libraries=["xcontainer", "xformats", "xmodule", "xutils", "cfitsio", "ymw16", "erfa", "boost_log", "fftw3f_threads", "fftw3f", "fftw3_threads", "fftw3"],
 	include_dirs=["../../include", "../include", "../"]
     ),
     Pybind11Extension(

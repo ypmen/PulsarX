@@ -74,7 +74,7 @@ USER pulsarx
 WORKDIR $HOME/software
 RUN git clone https://github.com/liberfa/erfa.git
 WORKDIR $HOME/software/erfa
-RUN ./bootstrap
+RUN ./bootstrap.sh
 RUN ./configure --prefix=$HOME/software
 RUN make -j 8 && make install
 
@@ -116,13 +116,13 @@ RUN make clean
 
 WORKDIR $HOME/software/XLibs
 RUN ./bootstrap
-RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/sofa/20200721/c/src" CPPFLAGS="-I$HOME/software/sofa/20200721/c/src"
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/lib" CPPFLAGS="-I$HOME/software/include"
 RUN make -j 8 && make install
 RUN make clean
 
 WORKDIR $HOME/software/PulsarX
 RUN ./bootstrap
-RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/sofa/20200721/c/src -L$HOME/software/lib" CPPFLAGS="-I$HOME/software/sofa/20200721/c/src -I$HOME/software/include"
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/lib" CPPFLAGS="-I$HOME/software/include"
 RUN make -j 8 && make install
 RUN make clean
 
@@ -134,7 +134,7 @@ RUN make clean
 
 WORKDIR $HOME/software/TransientX
 RUN ./bootstrap
-RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/sofa/20200721/c/src -L$HOME/software/lib" CPPFLAGS="-I$HOME/software/sofa/20200721/c/src -I$HOME/software/include"
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/lib" CPPFLAGS="-I$HOME/software/include"
 RUN make -j 8 && make install
 RUN make clean
 
