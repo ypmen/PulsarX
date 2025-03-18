@@ -298,9 +298,8 @@ int main(int argc, const char *argv[])
 	produce(vm, dmlist, folder);
 
 	double maxdm = *std::max_element(dmlist.begin(), dmlist.end());
-	double fmin = 1e6;
-	double fmax = 0.;
-	reader->get_fmin_fmax(fmin, fmax);
+	double fmax = *std::max_element(reader->frequencies.begin(), reader->frequencies.end());
+	double fmin = *std::min_element(reader->frequencies.begin(), reader->frequencies.end());
 
 	double ddm_init = vm["ddminit"].as<double>();
 	double dm_boost = vm["dmboost"].as<double>();
