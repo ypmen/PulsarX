@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
 			("incoherent", "The beam is incoherent (ifbf). Coherent beam by default (cfbf)")
 			("ra", value<double>()->default_value(0), "RA (hhmmss.s)")
 			("dec", value<double>()->default_value(0), "DEC (ddmmss.s)")
+			("cdm", value<double>()->default_value(0), "Coherent dedispersion DM (pc/cc)")
 			("zap", value<std::vector<double>>()->multitoken()->zero_tokens()->composing(), "Zap channels, e.g. --zap 1000 1100 1200 1300")
 			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
 			("plotx", "Using PlotX for plotting (default; not used any more)")
@@ -355,51 +356,17 @@ int main(int argc, char *argv[])
 
 		/* optimize */
 		Pulsar::GridSearch gridsearch;
-		if (!nodmsearch)
-		{
-			gridsearch.ddmstart = -scale*1./f0/Pulsar::DedispersionLite::dmdelay(1, fmax, fmin);
-			gridsearch.ddmstep = 1./scale*abs(gridsearch.ddmstart/arch.nbin);
-			gridsearch.nddm = 2*abs(scale)*arch.nbin;
-		}
-		else
-		{
-			gridsearch.ddmstart = 0.;
-			gridsearch.ddmstep = 0.;
-			gridsearch.nddm = 1;
-		}
-
-		if (!nof0search)
-		{
-			gridsearch.df0start = -scale*1./tint;
-			gridsearch.df0step = 1./scale*abs(gridsearch.df0start/arch.nbin);
-			gridsearch.ndf0 = 2*abs(scale)*arch.nbin;
-		}
-		else
-		{
-			gridsearch.df0start = 0.;
-			gridsearch.df0step = 0.;
-			gridsearch.ndf0 = 1;
-		}
-		
-		if (!nof1search)
-		{
-			gridsearch.df1start = -scale*2./(tint*tint);
-			gridsearch.df1step = 1./scale*abs(gridsearch.df1start/arch.nbin);
-			gridsearch.ndf1 = 2*abs(scale)*arch.nbin;
-		}
-		else
-		{
-			gridsearch.df1start = 0.;
-			gridsearch.df1step = 0.;
-			gridsearch.ndf1 = 1;
-		}
-
-		gridsearch.df2start = 0.;
-		gridsearch.df2step = 0.;
-		gridsearch.ndf2 = 1;
 
 		gridsearch.clfd_q = vm["clfd"].as<double>();
 		gridsearch.zaplist = zaplist;
+
+		gridsearch.scale = scale;
+		gridsearch.tint = tint;
+		gridsearch.nodmsearch = nodmsearch;
+		gridsearch.nof0search = nof0search;
+		gridsearch.nof1search = nof1search;
+		gridsearch.f2search = false;
+		gridsearch.nosearch = nosearch;
 
 		gridsearch.prepare(arch);
 
@@ -620,6 +587,7 @@ int main(int argc, char *argv[])
 		{
 			BOOST_LOG_TRIVIAL(info)<<"plotting...";
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
+			obsinfo["Coherent_DM"] = to_string(vm["cdm"].as<double>());
 
 			size_t lastindex = fname.find_last_of("."); 
 			std::string basename = fname.substr(0, lastindex);
