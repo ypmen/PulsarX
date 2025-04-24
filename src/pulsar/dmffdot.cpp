@@ -349,6 +349,10 @@ int main(int argc, char *argv[])
 		double f1 = arch.f1;
 		double fcentre = 0.5*(arch.frequencies.front()+arch.frequencies.back());
 		double bandwidth = (arch.frequencies.back()-arch.frequencies.front())/(arch.frequencies.size()-1)*arch.frequencies.size();
+		if (arch.frequencies.size() == 1)
+		{
+			bandwidth = 0.;
+		}
 		double fmax = std::max(fcentre-0.5*bandwidth, fcentre+0.5*bandwidth);
 		double fmin = std::min(fcentre-0.5*bandwidth, fcentre+0.5*bandwidth);
 
