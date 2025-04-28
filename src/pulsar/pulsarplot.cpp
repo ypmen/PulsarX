@@ -244,7 +244,7 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 	s_snr = ss_snr.str();
 
 	std::string s_gl, s_gb;
-#ifdef HAVE_SOFA
+#if defined(HAVE_SOFA) || defined(HAVE_ERFA)
 	s_gl = obsinfo["GL"];
 	s_gb = obsinfo["GB"];
 #endif

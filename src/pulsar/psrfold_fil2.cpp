@@ -743,7 +743,7 @@ int main(int argc, const char *argv[])
 	obsinfo["Nchan"] = to_string(databuf.frequencies.size());
 
 	double gl = 0., gb = 0.;
-#ifdef HAVE_SOFA
+#if defined(HAVE_SOFA) || defined(HAVE_ERFA)
 	get_gl_gb(gl, gb, s_ra, s_dec);
 #endif
 	obsinfo["GL"] = to_string(gl);
