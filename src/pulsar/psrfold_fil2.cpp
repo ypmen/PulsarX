@@ -476,7 +476,7 @@ int main(int argc, const char *argv[])
 		for (long int k=0; k<folder.size(); k++)
 		{
 			double dm_tmp = folder[k].dm;
-			if ((dm_tmp >= dms_tmp) && (dm_tmp < dms_tmp + rfi.nchans * ddm_tmp))
+			if ((dm_tmp >= dms_tmp) && (dm_tmp < dms_tmp + dedisp.nchans * ddm_tmp))
 			{
 				batch.push_back(k);
 			}
