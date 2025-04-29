@@ -319,7 +319,10 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 	PlotX::Axes ax3(0.08, 0.38, 0.08, 0.42);
 	ax3.pcolor(vph, vt, mxtph, "viridis");
 	ax3.set_xlabel("Phase");
-	ax3.set_ylabel("Tint (s)");
+	if (obsinfo.find("Offset") != obsinfo.end())
+		ax3.set_ylabel("Tint + " + obsinfo["Offset"] + " (s)");
+	else
+		ax3.set_ylabel("Tint (s)");
 	ax3.label(true, false, true, false);
 	ax3.set_fontsize_label(fontsize_label);
 	ax3.set_fontsize_ticklabel(fontsize_ticklabel);

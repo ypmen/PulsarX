@@ -737,6 +737,8 @@ int main(int argc, const char *argv[])
 	obsinfo["Filename"] = fnames[reader->idmap[0]];
 	//observation length
 	obsinfo["Obslen"] = to_string(tint);
+	if (reader->skip_start > 0)
+		obsinfo["Offset"] = to_string((int)(reader->skip_start*reader->tsamp));
 	//observation frequency
 	obsinfo["Fcentre"] = to_string(0.5*(databuf.frequencies.front()+databuf.frequencies.back()));
 	obsinfo["Bandwidth"] = to_string((databuf.frequencies.back()-databuf.frequencies.front())/(databuf.frequencies.size()-1)*databuf.frequencies.size());
