@@ -18,6 +18,8 @@
 
 namespace py = pybind11;
 
+#define NOBS_MAX 256
+
 extern "C"
 {
 	void dgels_(char *trans, int *m, int *n, int *nrhs, double *a, int *lda,
@@ -26,7 +28,7 @@ extern "C"
 
 py::array_t<double> lmfit(std::function<py::array_t<double> (py::array_t<double>, py::array_t<double>)> &func, py::array_t<double> &x, py::array_t<double> &y, py::array_t<double> &p0, py::array_t<double> &sigma, py::array_t<double> &diff_step, py::array_t<bool> &if_fit);
 
-//#undef __AVX2__
+#undef __AVX2__
 
 #ifndef __AVX2__
 
@@ -74,6 +76,51 @@ py::array_t<double> compute_f0_f1(py::array_t<double> &vT, double f0, double asi
 
 		double doppler_factor1 = -asini_c * (-sin_omega * sin_E + sqrt_1_ee * cos_omega * cos_E) * temp;
 		double doppler_factor2 = -asini_c * (-e * sin_omega + sin_omega * cos_E + sqrt_1_ee * cos_omega * sin_E) / (e * cos_E - 1.) * std::pow(temp, 2.);
+
+		vf0_f1[i * 2 + 0] = f0 * (1. + doppler_factor1);
+		vf0_f1[i * 2 + 1] = f0 * doppler_factor2;
+	}
+
+	py::capsule free_when_done(vf0_f1, [](void *f)
+									 {
+            double *vf0_f1 = reinterpret_cast<double *>(f);
+            delete [] vf0_f1; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size, 2},
+		std::vector<size_t>{2 * sizeof(double), sizeof(double)},
+		vf0_f1,
+		free_when_done);
+}
+
+py::array_t<double> compute_f0_f1_ell1(py::array_t<double> &vT, double f0, double asini_c, double Pb, double Tasc, double eps1, double eps2)
+{
+	auto array_T = vT.unchecked<1>();
+	size_t size = array_T.size();
+
+	double *vf0_f1 = new double[size * 2];
+
+	for (size_t i = 0; i < size; i++)
+	{
+		double T = array_T(i);
+		// calculate fractional orbit
+		double orbit = (T - Tasc) / Pb;
+		double norbit = std::floor(orbit);
+		double forbit = orbit - norbit;
+
+		// calculate eccentric anomaly
+		double phase = 2. * M_PI * forbit;
+
+		double sin_phase = std::sin(phase);
+		double cos_phase = std::cos(phase);
+		double sin_2phase = 2. * sin_phase * cos_phase;
+		double cos_2phase = cos_phase * cos_phase - sin_phase * sin_phase;
+
+		// calculate v/c, a/c
+		double temp = 2 * M_PI / (Pb * 86400.);
+
+		double doppler_factor1 = -asini_c * (cos_phase + eps2 * cos_2phase + eps1 * sin_2phase) * temp;
+		double doppler_factor2 = -asini_c * (-sin_phase - 2. * eps2 * sin_2phase + 2. * eps1 * cos_2phase) * temp * temp;
 
 		vf0_f1[i * 2 + 0] = f0 * (1. + doppler_factor1);
 		vf0_f1[i * 2 + 1] = f0 * doppler_factor2;
@@ -188,8 +235,6 @@ py::array_t<double> compute_roemer_delay0(py::array_t<double> &vT, double asini_
 		double sin_omega = std::sin(omega);
 		double cos_omega = std::cos(omega);
 
-		double temp = 2 * M_PI / (Pb * 86400. * (1. - e * cos_E));
-
 		double roemer_delay = asini_c * ((cos_E - e) * sin_omega + sqrt_1_ee * sin_E * cos_omega);
 
 		vroemer_delay[i] = roemer_delay;
@@ -205,6 +250,71 @@ py::array_t<double> compute_roemer_delay0(py::array_t<double> &vT, double asini_
 		std::vector<size_t>{sizeof(double)},
 		vroemer_delay,
 		free_when_done);
+}
+
+py::array_t<double> compute_roemer_delay0_ell1(py::array_t<double> &vT, double asini_c, double Pb, double Tasc, double eps1, double eps2)
+{
+	auto array_T = vT.unchecked<1>();
+	size_t size = array_T.size();
+
+	double *vroemer_delay = new double[size];
+
+	for (size_t i = 0; i < size; i++)
+	{
+		double T = array_T(i);
+		// calculate fractional orbit
+		double orbit = (T - Tasc) / Pb;
+		double norbit = std::floor(orbit);
+		double forbit = orbit - norbit;
+
+		// calculate eccentric anomaly
+		double phase = 2. * M_PI * forbit;
+		double sin_phase = std::sin(phase);
+		double cos_phase = std::cos(phase);
+		double sin_2phase = 2. * sin_phase * cos_phase;
+		double cos_2phase = cos_phase * cos_phase - sin_phase * sin_phase;
+
+		double roemer_delay = asini_c * (sin_phase + 0.5 * (eps2 * sin_2phase - eps1 * cos_2phase));
+
+		vroemer_delay[i] = roemer_delay;
+	}
+
+	py::capsule free_when_done(vroemer_delay, [](void *f)
+									 {
+            double *vroemer_delay = reinterpret_cast<double *>(f);
+            delete [] vroemer_delay; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size},
+		std::vector<size_t>{sizeof(double)},
+		vroemer_delay,
+		free_when_done);
+}
+
+double compute_roemer_delay2_ell1(double T, double asini_c, double Pb, double Tasc, double eps1, double eps2)
+{
+	// calculate fractional orbit
+	double orbit = (T - Tasc) / Pb;
+	double norbit = std::floor(orbit);
+	double forbit = orbit - norbit;
+
+	// calculate eccentric anomaly
+	double phase = 2. * M_PI * forbit;
+	double sin_phase = std::sin(phase);
+	double cos_phase = std::cos(phase);
+	double sin_2phase = 2. * sin_phase * cos_phase;
+	double cos_2phase = cos_phase * cos_phase - sin_phase * sin_phase;
+
+	double dre_pre = (sin_phase + 0.5 * (eps2 * sin_2phase - eps1 * cos_2phase));
+	double dre = asini_c * dre_pre;
+	double drep = asini_c * cos_phase;
+	double drepp = -asini_c * cos_phase;
+
+	double n = 2. * M_PI / (Pb * 86400.);
+
+	double doppler_factor1 = -(n * drep - n * n * (drep * drep + 0.5 * dre * drepp));
+
+	return dre * (1. + doppler_factor1);
 }
 
 double compute_roemer_delay2(double T, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
@@ -246,6 +356,7 @@ double compute_roemer_delay2(double T, double asini_c, double Pb, double T0, dou
 	return roemer_delay * (1. + doppler_factor1);
 }
 
+
 py::array_t<double> compute_Te(py::array_t<double> &vTb, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {
 	auto array_Tb = vTb.unchecked<1>();
@@ -271,7 +382,33 @@ py::array_t<double> compute_Te(py::array_t<double> &vTb, double asini_c, double 
 		free_when_done);
 }
 
-py::array_t<double> timing(py::array_t<double> vTb, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
+py::array_t<double> compute_Te_ell1(py::array_t<double> &vTb, double asini_c, double Pb, double Tasc, double eps1, double eps2)
+{
+	auto array_Tb = vTb.unchecked<1>();
+	size_t size = array_Tb.size();
+
+	double *vTe = new double[size];
+
+	for (size_t i = 0; i < size; i++)
+	{
+		double Tb = array_Tb[i];
+		vTe[i] = Tb - compute_roemer_delay2_ell1(Tb, asini_c, Pb, Tasc, eps1, eps2) / 86400.;
+	}
+
+	py::capsule free_when_done(vTe, [](void *f)
+									 {
+            double *vTe = reinterpret_cast<double *>(f);
+            delete [] vTe; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size},
+		std::vector<size_t>{sizeof(double)},
+		vTe,
+		free_when_done);
+}
+
+
+py::array_t<double> timing(py::array_t<double> vTb, double Tepoch, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {
 	auto array_Tb = vTb.unchecked<1>();
 	size_t size = array_Tb.size();
@@ -285,7 +422,7 @@ py::array_t<double> timing(py::array_t<double> vTb, double f0, double f1, double
 	double phsin = 0., phcos = 0.;
 	for (size_t i = 0; i < size; i++)
 	{
-		double t = (array_Te(i) - T0) * 86400.;
+		double t = (array_Te(i) - Tepoch) * 86400.;
 		vphase[i] = f0 * t + 0.5 * f1 * t * t;
 
 		phsin += std::sin(2. * M_PI * vphase[i]);
@@ -298,6 +435,105 @@ py::array_t<double> timing(py::array_t<double> vTb, double f0, double f1, double
 	{
 		vphase[i] -= phmean;
 		vphase[i] -= std::round(vphase[i]);
+	}
+
+	py::capsule free_when_done(vphase, [](void *f)
+									 {
+            double *vphase = reinterpret_cast<double *>(f);
+            delete [] vphase; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size},
+		std::vector<size_t>{sizeof(double)},
+		vphase,
+		free_when_done);
+}
+
+py::array_t<double> timing_ell1(py::array_t<double> vTb, double Tepoch, double f0, double f1, double asini_c, double Pb, double Tasc, double eps1, double eps2)
+{
+	auto array_Tb = vTb.unchecked<1>();
+	size_t size = array_Tb.size();
+
+	double *vphase = new double[size];
+
+	auto vTe = compute_Te_ell1(vTb, asini_c, Pb, Tasc, eps1, eps2);
+
+	auto array_Te = vTe.unchecked<1>();
+
+	double phsin = 0., phcos = 0.;
+	for (size_t i = 0; i < size; i++)
+	{
+		double t = (array_Te(i) - Tepoch) * 86400.;
+		vphase[i] = f0 * t + 0.5 * f1 * t * t;
+
+		phsin += std::sin(2. * M_PI * vphase[i]);
+		phcos += std::cos(2. * M_PI * vphase[i]);
+	}
+
+	double phmean = std::atan2(phsin / size, phcos / size) / (2. * M_PI);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		vphase[i] -= phmean;
+		vphase[i] -= std::round(vphase[i]);
+	}
+
+	py::capsule free_when_done(vphase, [](void *f)
+									 {
+            double *vphase = reinterpret_cast<double *>(f);
+            delete [] vphase; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size},
+		std::vector<size_t>{sizeof(double)},
+		vphase,
+		free_when_done);
+}
+
+py::array_t<double> timing_raw_ell1(py::array_t<double> vTb, double Tepoch, double phi0, double f0, double f1, double asini_c, double Pb, double Tasc, double eps1, double eps2)
+{
+	auto array_Tb = vTb.unchecked<1>();
+	size_t size = array_Tb.size();
+
+	double *vphase = new double[size];
+
+	auto vTe = compute_Te_ell1(vTb, asini_c, Pb, Tasc, eps1, eps2);
+
+	auto array_Te = vTe.unchecked<1>();
+
+	for (size_t i = 0; i < size; i++)
+	{
+		double t = (array_Te(i) - Tepoch) * 86400.;
+		vphase[i] = phi0 + f0 * t + 0.5 * f1 * t * t;
+	}
+
+	py::capsule free_when_done(vphase, [](void *f)
+									 {
+            double *vphase = reinterpret_cast<double *>(f);
+            delete [] vphase; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size},
+		std::vector<size_t>{sizeof(double)},
+		vphase,
+		free_when_done);
+}
+
+py::array_t<double> timing_for_lmfit3(py::array_t<double> vTb, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
+{
+	auto array_Tb = vTb.unchecked<1>();
+	size_t size = array_Tb.size();
+
+	double *vphase = new double[size];
+
+	auto vTe = compute_Te(vTb, asini_c, Pb, T0, e, omega0, omega_dot);
+
+	auto array_Te = vTe.unchecked<1>();
+
+	for (size_t i = 0; i < size; i++)
+	{
+		double t = (array_Te(i) - T0) * 86400.;
+		vphase[i] = f0 * t + 0.5 * f1 * t * t;
 	}
 
 	py::capsule free_when_done(vphase, [](void *f)
@@ -773,6 +1009,60 @@ py::array_t<double> timing(py::array_t<double> vTb, double f0, double f1, double
 		free_when_done);
 }
 
+py::array_t<double> timing_for_lmfit3(py::array_t<double> vTb, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
+{
+	auto array_Tb = vTb.cast<py::array_t<double>>().unchecked<1>();
+	size_t size = array_Tb.size();
+
+	double *vph = new double[size];
+
+	size_t aligned_size = (int)std::ceil(size / 4.) * 4;
+
+	double *aligned_ph = (double *)aligned_alloc(32, aligned_size * sizeof(double));
+
+	double *aligned_Tb = (double *)aligned_alloc(32, aligned_size * sizeof(double));
+	for (size_t i = 0; i < size; i++)
+	{
+		aligned_Tb[i] = array_Tb(i);
+	}
+
+	for (size_t i = 0; i < (aligned_size - 4); i += 4)
+	{
+		__m256d avx_Tb = _mm256_load_pd(aligned_Tb + i);
+		__m256d avx_Te = avx_compute_Te(avx_Tb, asini_c, Pb, T0, e, omega0, omega_dot);
+
+		__m256d avx_t = (avx_Te - T0) * 86400.;
+		__m256d avx_ph = f0 * avx_t + 0.5 * f1 * avx_t * avx_t;
+
+		_mm256_store_pd(aligned_ph + i, avx_ph);
+	}
+
+	__m256d avx_Tb = _mm256_load_pd(aligned_Tb + (aligned_size - 4));
+	__m256d avx_Te = avx_compute_Te(avx_Tb, asini_c, Pb, T0, e, omega0, omega_dot);
+	__m256d avx_t = (avx_Te - T0) * 86400.;
+	__m256d avx_ph = f0 * avx_t + 0.5 * f1 * avx_t * avx_t;
+	_mm256_store_pd(aligned_ph + (aligned_size - 4), avx_ph);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		vph[i] = aligned_ph[i];
+	}
+
+	free(aligned_Tb);
+	free(aligned_ph);
+
+	py::capsule free_when_done(vph, [](void *f)
+									 {
+            double *vph = reinterpret_cast<double *>(f);
+            delete [] vph; });
+
+	return py::array_t<double>(
+		std::vector<size_t>{size},
+		std::vector<size_t>{sizeof(double)},
+		vph,
+		free_when_done);
+}
+
 #endif
 
 double get_chi2(py::array_t<double> &data)
@@ -798,7 +1088,7 @@ double get_chi2(py::array_t<double> &data)
 	return chi2;
 }
 
-py::array_t<double> correct_ra_dec(py::array_t<double> &vobs_ssb_arr, double a, double b, double da, double db)
+py::array_t<double> correct_ra_dec(py::array_t<double> vobs_ssb_arr, double a, double b, double da, double db)
 {
 	auto obs_ssb_arr = vobs_ssb_arr.unchecked<2>();
 
@@ -821,22 +1111,54 @@ py::array_t<double> correct_ra_dec(py::array_t<double> &vobs_ssb_arr, double a, 
 	return py::array(py::cast(tcorr));
 }
 
-py::array_t<double> timing2(py::array_t<double> vTb, double da, double db, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot, py::array_t<double> &vobs_ssb_arr, double a, double b)
+py::array_t<double> timing2(py::array_t<double> vTb, double da, double db, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot, double Tepoch, py::array_t<double> vobs_ssb_arr, double a, double b)
 {
+	auto array_Tb = vTb.unchecked<1>();
+
 	auto tcorr = correct_ra_dec(vobs_ssb_arr, a, b, da, db);
 
 	std::vector<double> vTb_corr(vTb.size(), 0.);
 	for (size_t i=0; i < vTb.size(); i++)
 	{
-		vTb_corr[i] = vTb.data()[i] + tcorr.data()[i] * 1.1574074074074073e-05;
+		vTb_corr[i] = array_Tb(i) + tcorr.data()[i] * 1.1574074074074073e-05;
 	}
 
-	return timing(py::array(py::cast(vTb_corr)), f0, f1, asini_c, Pb, T0, e, omega0, omega_dot);
+	return timing(py::array(py::cast(vTb_corr)), Tepoch, f0, f1, asini_c, Pb, T0, e, omega0, omega_dot);
 }
 
-py::array_t<double> lmfit2(py::array_t<double> &x, py::array_t<double> &y, py::array_t<double> &p0, py::array_t<double> &sigma, py::array_t<double> &diff_step, py::array_t<bool> &if_fit, py::array_t<double> &vobs_ssb_arr, double a, double b)
+py::array_t<double> timing2_ell1(py::array_t<double> vTb, double da, double db, double f0, double f1, double asini_c, double Pb, double Tasc, double eps1, double eps2, double Tepoch, py::array_t<double> vobs_ssb_arr, double a, double b)
 {
-	std::function<py::array_t<double> (py::array_t<double>, py::array_t<double>)> func = [&vobs_ssb_arr, a, b](py::array_t<double> x, py::array_t<double> p0){
+	auto array_Tb = vTb.unchecked<1>();
+
+	auto tcorr = correct_ra_dec(vobs_ssb_arr, a, b, da, db);
+
+	std::vector<double> vTb_corr(vTb.size(), 0.);
+	for (size_t i=0; i < vTb.size(); i++)
+	{
+		vTb_corr[i] = array_Tb(i) + tcorr.data()[i] * 1.1574074074074073e-05;
+	}
+
+	return timing_ell1(py::array(py::cast(vTb_corr)), Tepoch, f0, f1, asini_c, Pb, Tasc, eps1, eps2);
+}
+
+py::array_t<double> timing2_raw_ell1(py::array_t<double> vTb, double phi0, double da, double db, double f0, double f1, double asini_c, double Pb, double Tasc, double eps1, double eps2, double Tepoch, py::array_t<double> vobs_ssb_arr, double a, double b)
+{
+	auto array_Tb = vTb.unchecked<1>();
+
+	auto tcorr = correct_ra_dec(vobs_ssb_arr, a, b, da, db);
+
+	std::vector<double> vTb_corr(vTb.size(), 0.);
+	for (size_t i=0; i < vTb.size(); i++)
+	{
+		vTb_corr[i] = array_Tb(i) + tcorr.data()[i] * 1.1574074074074073e-05;
+	}
+
+	return timing_raw_ell1(py::array(py::cast(vTb_corr)), Tepoch, phi0, f0, f1, asini_c, Pb, Tasc, eps1, eps2);
+}
+
+py::array_t<double> lmfit2(py::array_t<double> &x, py::array_t<double> &y, py::array_t<double> &p0, py::array_t<double> &sigma, py::array_t<double> &diff_step, py::array_t<bool> &if_fit, double Tepoch, py::array_t<double> &vobs_ssb_arr, double a, double b)
+{
+	std::function<py::array_t<double> (py::array_t<double>, py::array_t<double>)> func = [Tepoch, &vobs_ssb_arr, a, b](py::array_t<double> x, py::array_t<double> p0){
 		double f0 = p0.data()[0];
 		double f1 = p0.data()[1];
 		double da = p0.data()[2];
@@ -848,7 +1170,117 @@ py::array_t<double> lmfit2(py::array_t<double> &x, py::array_t<double> &y, py::a
 		double omega0 = p0.data()[8];
 		double omega_dot = p0.data()[9];
 
-		return timing2(x, da, db, f0, f1, asini_c, Pb, T0, e, omega0, omega_dot, vobs_ssb_arr, a, b);
+		return timing2(x, da, db, f0, f1, asini_c, Pb, T0, e, omega0, omega_dot, Tepoch, vobs_ssb_arr, a, b);
+	};
+
+	return lmfit(func, x, y, p0, sigma, diff_step, if_fit);
+}
+
+py::array_t<double> lmfit2_ell1(py::array_t<double> &x, py::array_t<double> &y, py::array_t<double> &p0, py::array_t<double> &sigma, py::array_t<double> &diff_step, py::array_t<bool> &if_fit, double Tepoch, py::array_t<double> &vobs_ssb_arr, double a, double b)
+{
+	std::function<py::array_t<double> (py::array_t<double>, py::array_t<double>)> func = [Tepoch, &vobs_ssb_arr, a, b](py::array_t<double> x, py::array_t<double> p0){
+		double f0 = p0.data()[0];
+		double f1 = p0.data()[1];
+		double da = p0.data()[2];
+		double db = p0.data()[3];
+		double asini_c = p0.data()[4];
+		double Pb = p0.data()[5];
+		double Tasc = p0.data()[6];
+		double eps1 = p0.data()[7];
+		double eps2 = p0.data()[8];
+		double phi0 = p0.data()[9];
+
+		return timing2_raw_ell1(x, phi0, da, db, f0, f1, asini_c, Pb, Tasc, eps1, eps2, Tepoch, vobs_ssb_arr, a, b);
+	};
+
+	return lmfit(func, x, y, p0, sigma, diff_step, if_fit);
+}
+
+py::array_t<double> timing2_for_lmfit3(py::array_t<double> vTb, double da, double db, double f0, double f1, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot, py::array_t<double> vobs_ssb_arr, double a, double b)
+{
+	auto tcorr = correct_ra_dec(vobs_ssb_arr, a, b, da, db);
+
+	std::vector<double> vTb_corr(vTb.size(), 0.);
+	for (size_t i=0; i < vTb.size(); i++)
+	{
+		vTb_corr[i] = vTb.data()[i] + tcorr.data()[i] * 1.1574074074074073e-05;
+	}
+
+	return timing_for_lmfit3(py::array(py::cast(vTb_corr)), f0, f1, asini_c, Pb, T0, e, omega0, omega_dot);
+}
+
+py::array_t<double> lmfit3(py::array_t<double> &x, py::array_t<double> &y, py::array_t<double> &p0, py::array_t<double> &sigma, py::array_t<double> &diff_step, py::array_t<bool> &if_fit, py::array_t<long int> &groups, py::array_t<double> &vobs_ssb, double a, double b)
+{	
+	std::function<py::array_t<double> (py::array_t<double>, py::array_t<double>)> func = [&groups, &vobs_ssb, a, b](py::array_t<double> x, py::array_t<double> p0){
+		double f0 = p0.data()[0];
+		double f1 = p0.data()[1];
+		double da = p0.data()[2];
+		double db = p0.data()[3];
+		double asini_c = p0.data()[4];
+		double Pb = p0.data()[5];
+		double T0 = p0.data()[6];
+		double e = p0.data()[7];
+		double omega0 = p0.data()[8];
+		double omega_dot = p0.data()[9];
+
+		auto vph = timing2_for_lmfit3(x, da, db, f0, f1, asini_c, Pb, T0, e, omega0, omega_dot, vobs_ssb, a, b);
+		auto vph_arr = vph.mutable_unchecked<1>();
+
+		double sin_ph_mean = 0.;
+		double cos_ph_mean = 0.;
+		long int idx = groups.data()[0];
+		size_t istart = 0;
+		size_t iend = 0;
+		for (size_t i = 0; i < groups.size(); i++)
+		{
+			if (groups.data()[i] == idx)
+			{
+				sin_ph_mean += std::sin(vph_arr(i) * 2. * M_PI);
+				cos_ph_mean += std::cos(vph_arr(i) * 2. * M_PI);
+
+				iend++;
+			}
+			else
+			{
+				size_t n = iend - istart;
+
+				sin_ph_mean /= n;
+				cos_ph_mean /= n;
+
+				double ph_mean = std::atan2(sin_ph_mean, cos_ph_mean) / (2. * M_PI);
+
+				for (size_t k = istart; k < iend; k++)
+				{
+					vph_arr(k) -= ph_mean;
+					vph_arr(k) -= std::round(vph_arr(k));
+				}
+				
+				sin_ph_mean = 0.;
+				cos_ph_mean = 0.;
+
+				sin_ph_mean += std::sin(vph_arr(i) * 2. * M_PI);
+				cos_ph_mean += std::cos(vph_arr(i) * 2. * M_PI);
+
+				idx = groups.data()[i];
+				istart = i;
+				iend++;
+			}
+		}
+
+		size_t n = iend - istart;
+
+		sin_ph_mean /= n;
+		cos_ph_mean /= n;
+
+		double ph_mean = std::atan2(sin_ph_mean, cos_ph_mean) / (2. * M_PI);
+
+		for (size_t k = istart; k < iend; k++)
+		{
+			vph_arr(k) -= ph_mean;
+			vph_arr(k) -= std::round(vph_arr(k));
+		}
+
+		return vph;
 	};
 
 	return lmfit(func, x, y, p0, sigma, diff_step, if_fit);
@@ -861,7 +1293,15 @@ PYBIND11_MODULE(orbit_utils, m)
 		"calculate f0,f1 with the orbital parameters");
 
 	m.def(
+		"compute_f0_f1_ell1", &compute_f0_f1_ell1,
+		"calculate f0,f1 with the orbital parameters");
+
+	m.def(
 		"compute_roemer_delay", &compute_roemer_delay0,
+		"calculate roemer_delay with the orbital parameters");
+
+	m.def(
+		"compute_roemer_delay_ell1", &compute_roemer_delay0_ell1,
 		"calculate roemer_delay with the orbital parameters");
 
 	m.def(
@@ -869,11 +1309,31 @@ PYBIND11_MODULE(orbit_utils, m)
 		"calculate Te with the orbital parameters");
 
 	m.def(
+		"compute_Te_ell1", &compute_Te_ell1,
+		"calculate Te with the orbital parameters");
+
+	m.def(
 		"timing", &timing,
 		"perform timing");
 
 	m.def(
+		"timing_ell1", &timing_ell1,
+		"perform timing");
+
+	m.def(
+		"timing_raw_ell1", &timing_raw_ell1,
+		"perform timing");
+
+	m.def(
 		"timing2", &timing2,
+		"perform timing with ra,dec");
+
+	m.def(
+		"timing2_ell1", &timing2_ell1,
+		"perform timing with ra,dec");
+
+	m.def(
+		"timing2_raw_ell1", &timing2_raw_ell1,
 		"perform timing with ra,dec");
 
 	m.def(
@@ -882,5 +1342,13 @@ PYBIND11_MODULE(orbit_utils, m)
 
 	m.def(
 		"lmfit2", &lmfit2,
+		"perform leastsq fitting");
+	
+	m.def(
+		"lmfit2_ell1", &lmfit2_ell1,
+		"perform leastsq fitting ELL1 model");
+
+	m.def(
+		"lmfit3", &lmfit3,
 		"perform leastsq fitting");
 }
