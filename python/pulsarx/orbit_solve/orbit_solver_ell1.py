@@ -51,10 +51,10 @@ A1_min = np.log10(config['parameter_range']['A1_min'])
 A1_max = np.log10(config['parameter_range']['A1_max'])
 PB_min = np.log10(config['parameter_range']['PB_min'])
 PB_max = np.log10(config['parameter_range']['PB_max'])
-EPS1_min = np.log10(config['parameter_range']['EPS1_min'])
-EPS1_max = np.log10(config['parameter_range']['EPS1_max'])
-EPS2_min = np.log10(config['parameter_range']['EPS2_min'])
-EPS2_max = np.log10(config['parameter_range']['EPS2_max'])
+EPS1_min = (config['parameter_range']['EPS1_min'])
+EPS1_max = (config['parameter_range']['EPS1_max'])
+EPS2_min = (config['parameter_range']['EPS2_min'])
+EPS2_max = (config['parameter_range']['EPS2_max'])
 
 dat = np.loadtxt(config['data']['path'])
 
@@ -80,9 +80,9 @@ def myprior(cube, ndim, nparams):
 	cube[2] = PB_min + cube[2] * (PB_max-PB_min)
 	# Tasc / Pb
 	cube[3] = 0. + cube[3] * 1.
-	# log10(eps1)
+	# eps1
 	cube[4] = EPS1_min + cube[4] * (EPS1_max-EPS1_min)
-	# log10(eps2)
+	# eps2
 	cube[5] = EPS2_min + cube[5] * (EPS2_max-EPS2_min)
 
 def myloglike(cube, ndim, nparams):
@@ -93,8 +93,8 @@ def likli(vpar):
 	asini_c = 10**vpar[1]
 	Pb = 10**vpar[2]
 	Tasc = vpar[3] * Pb
-	eps1 = 10**vpar[4]
-	eps2 = 10**vpar[5]
+	eps1 = vpar[4]
+	eps2 = vpar[5]
 	
 	vf0_s, vf1_s = get_ffdot(vT, f0, asini_c, Pb, Tasc, eps1, eps2)
   
@@ -102,8 +102,11 @@ def likli(vpar):
 
 	if config['data']['fit_F1']:
 		chi2 += orbit_utils.get_chi2(np.concatenate([vf1, vf1_s, vf1err]).reshape(3, -1))
-  
-	return 0.5 * (1. - len(vT)) * np.log(chi2)
+
+	if config['parameter_range']['EFAC']:
+		return -0.5 * len(vT) * np.log(chi2)
+	else:
+		return -0.5 * chi2  
 
 def get_mass_function(asini_c, Pb, e):
 	return (4.*np.pi**2)*(asini_c*const_c)**3/(Pb*86400.)**2/const_G/const_solarmass
@@ -308,8 +311,8 @@ def main():
 	samples[:, 1] = 10**samples[:, 1]
 	samples[:, 2] = 10**samples[:, 2]
 	samples[:, 3] = circular_transform(samples[:, 3])
-	samples[:, 4] = 10**samples[:, 4]
-	samples[:, 5] = 10**samples[:, 5]
+	samples[:, 4] = samples[:, 4]
+	samples[:, 5] = samples[:, 5]
 	id = np.argmax(samples[:, 6])
 	vpar0 = samples[id, :-1]
 	samples[:, 3] *= vpar0[2]

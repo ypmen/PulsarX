@@ -101,8 +101,11 @@ def likli(vpar):
 
 	if config['data']['fit_F1']:
 		chi2 += orbit_utils.get_chi2(np.concatenate([vf1, vf1_s, vf1err]).reshape(3, -1))
-  
-	return 0.5 * (1. - len(vT)) * np.log(chi2)
+
+	if config['parameter_range']['EFAC']:
+		return -0.5 * len(vT) * np.log(chi2)
+	else:
+		return -0.5 * chi2
 
 def get_mass_function(asini_c, Pb, e):
 	return Pb*86400.*(2.*np.pi/Pb/86400.*asini_c*const_c)**3/(2.*np.pi*const_G)*(1.-e*e)**1.5/const_solarmass
