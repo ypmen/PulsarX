@@ -34,6 +34,71 @@ py::array_t<double> lmfit(std::function<py::array_t<double> (py::array_t<double>
 
 #include <cmath>
 
+double compute_roemer_delay2_ell1(double T, double asini_c, double Pb, double Tasc, double eps1, double eps2)
+{
+	// calculate fractional orbit
+	double orbit = (T - Tasc) / Pb;
+	double norbit = std::floor(orbit);
+	double forbit = orbit - norbit;
+
+	// calculate eccentric anomaly
+	double phase = 2. * M_PI * forbit;
+	double sin_phase = std::sin(phase);
+	double cos_phase = std::cos(phase);
+	double sin_2phase = 2. * sin_phase * cos_phase;
+	double cos_2phase = cos_phase * cos_phase - sin_phase * sin_phase;
+
+	double dre_pre = (sin_phase + 0.5 * (eps2 * sin_2phase - eps1 * cos_2phase));
+	double dre = asini_c * dre_pre;
+	double drep = asini_c * cos_phase;
+	double drepp = -asini_c * cos_phase;
+
+	double n = 2. * M_PI / (Pb * 86400.);
+
+	double doppler_factor1 = -(n * drep - n * n * (drep * drep + 0.5 * dre * drepp));
+
+	return dre * (1. + doppler_factor1);
+}
+
+double compute_roemer_delay2(double T, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
+{
+	double sqrt_1_ee = std::sqrt(1. - e * e);
+
+	// calculate fractional orbit
+	double orbit = (T - T0) / Pb;
+	double norbit = std::floor(orbit);
+	double forbit = orbit - norbit;
+
+	// calculate eccentric anomaly
+	double phase = 2. * M_PI * forbit;
+	double E = phase + e * std::sin(phase) / std::sqrt(1. - 2. * e * std::cos(phase) + e * e);
+	double dE = 1.;
+	size_t nstep = 0;
+	while (std::abs(dE) > 1e-14 && nstep++ < 8)
+	{
+		dE = (phase - (E - e * std::sin(E))) / (1. - e * std::cos(E));
+		E += dE;
+	}
+
+	double sin_E = std::sin(E);
+	double cos_E = std::cos(E);
+
+	// calculate omega
+	double omega = omega0 + omega_dot / (365.25 / Pb) * (norbit + forbit);
+
+	// calculate v/c, a/c
+	double sin_omega = std::sin(omega);
+	double cos_omega = std::cos(omega);
+
+	double temp = 2 * M_PI / (Pb * 86400. * (1. - e * cos_E));
+
+	double roemer_delay = asini_c * ((cos_E - e) * sin_omega + sqrt_1_ee * sin_E * cos_omega);
+
+	double doppler_factor1 = -asini_c * (-sin_omega * sin_E + sqrt_1_ee * cos_omega * cos_E) * temp;
+
+	return roemer_delay* (1. + doppler_factor1);
+}
+
 py::array_t<double> compute_f0_f1(py::array_t<double> &vT, double f0, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {
 	auto array_T = vT.unchecked<1>();
@@ -46,6 +111,7 @@ py::array_t<double> compute_f0_f1(py::array_t<double> &vT, double f0, double asi
 	for (size_t i = 0; i < size; i++)
 	{
 		double T = array_T(i);
+		T -= compute_roemer_delay2(T, asini_c, Pb, T0, e, omega0, omega_dot)/86400.;
 		// calculate fractional orbit
 		double orbit = (T - T0) / Pb;
 		double norbit = std::floor(orbit);
@@ -77,7 +143,7 @@ py::array_t<double> compute_f0_f1(py::array_t<double> &vT, double f0, double asi
 		double doppler_factor1 = -asini_c * (-sin_omega * sin_E + sqrt_1_ee * cos_omega * cos_E) * temp;
 		double doppler_factor2 = -asini_c * (-e * sin_omega + sin_omega * cos_E + sqrt_1_ee * cos_omega * sin_E) / (e * cos_E - 1.) * std::pow(temp, 2.);
 
-		vf0_f1[i * 2 + 0] = f0 * (1. + doppler_factor1);
+		vf0_f1[i * 2 + 0] = f0 / (1. - doppler_factor1);
 		vf0_f1[i * 2 + 1] = f0 * doppler_factor2;
 	}
 
@@ -103,6 +169,7 @@ py::array_t<double> compute_f0_f1_ell1(py::array_t<double> &vT, double f0, doubl
 	for (size_t i = 0; i < size; i++)
 	{
 		double T = array_T(i);
+		T -= compute_roemer_delay2_ell1(T, asini_c, Pb, Tasc, eps1, eps2)/86400.;
 		// calculate fractional orbit
 		double orbit = (T - Tasc) / Pb;
 		double norbit = std::floor(orbit);
@@ -122,7 +189,7 @@ py::array_t<double> compute_f0_f1_ell1(py::array_t<double> &vT, double f0, doubl
 		double doppler_factor1 = -asini_c * (cos_phase + eps2 * cos_2phase + eps1 * sin_2phase) * temp;
 		double doppler_factor2 = -asini_c * (-sin_phase - 2. * eps2 * sin_2phase + 2. * eps1 * cos_2phase) * temp * temp;
 
-		vf0_f1[i * 2 + 0] = f0 * (1. + doppler_factor1);
+		vf0_f1[i * 2 + 0] = f0 / (1. - doppler_factor1);
 		vf0_f1[i * 2 + 1] = f0 * doppler_factor2;
 	}
 
@@ -290,72 +357,6 @@ py::array_t<double> compute_roemer_delay0_ell1(py::array_t<double> &vT, double a
 		vroemer_delay,
 		free_when_done);
 }
-
-double compute_roemer_delay2_ell1(double T, double asini_c, double Pb, double Tasc, double eps1, double eps2)
-{
-	// calculate fractional orbit
-	double orbit = (T - Tasc) / Pb;
-	double norbit = std::floor(orbit);
-	double forbit = orbit - norbit;
-
-	// calculate eccentric anomaly
-	double phase = 2. * M_PI * forbit;
-	double sin_phase = std::sin(phase);
-	double cos_phase = std::cos(phase);
-	double sin_2phase = 2. * sin_phase * cos_phase;
-	double cos_2phase = cos_phase * cos_phase - sin_phase * sin_phase;
-
-	double dre_pre = (sin_phase + 0.5 * (eps2 * sin_2phase - eps1 * cos_2phase));
-	double dre = asini_c * dre_pre;
-	double drep = asini_c * cos_phase;
-	double drepp = -asini_c * cos_phase;
-
-	double n = 2. * M_PI / (Pb * 86400.);
-
-	double doppler_factor1 = -(n * drep - n * n * (drep * drep + 0.5 * dre * drepp));
-
-	return dre * (1. + doppler_factor1);
-}
-
-double compute_roemer_delay2(double T, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
-{
-	double sqrt_1_ee = std::sqrt(1. - e * e);
-
-	// calculate fractional orbit
-	double orbit = (T - T0) / Pb;
-	double norbit = std::floor(orbit);
-	double forbit = orbit - norbit;
-
-	// calculate eccentric anomaly
-	double phase = 2. * M_PI * forbit;
-	double E = phase + e * std::sin(phase) / std::sqrt(1. - 2. * e * std::cos(phase) + e * e);
-	double dE = 1.;
-	size_t nstep = 0;
-	while (std::abs(dE) > 1e-14 && nstep++ < 8)
-	{
-		dE = (phase - (E - e * std::sin(E))) / (1. - e * std::cos(E));
-		E += dE;
-	}
-
-	double sin_E = std::sin(E);
-	double cos_E = std::cos(E);
-
-	// calculate omega
-	double omega = omega0 + omega_dot / (365.25 / Pb) * (norbit + forbit);
-
-	// calculate v/c, a/c
-	double sin_omega = std::sin(omega);
-	double cos_omega = std::cos(omega);
-
-	double temp = 2 * M_PI / (Pb * 86400. * (1. - e * cos_E));
-
-	double roemer_delay = asini_c * ((cos_E - e) * sin_omega + sqrt_1_ee * sin_E * cos_omega);
-
-	double doppler_factor1 = -asini_c * (-sin_omega * sin_E + sqrt_1_ee * cos_omega * cos_E) * temp;
-
-	return roemer_delay * (1. + doppler_factor1);
-}
-
 
 py::array_t<double> compute_Te(py::array_t<double> &vTb, double asini_c, double Pb, double T0, double e, double omega0, double omega_dot)
 {

@@ -3,6 +3,12 @@
 solve the orbit based on the epoch-F0-F1 (ELL1 model)
 """
 from email.policy import default
+import matplotlib as mpl
+mpl.rcParams['xtick.labelsize'] = 15
+mpl.rcParams['ytick.labelsize'] = 15
+mpl.rcParams['xtick.direction'] = 'in'
+mpl.rcParams['ytick.direction'] = 'in'
+mpl.rcParams['axes.labelsize'] = 15
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
@@ -79,7 +85,7 @@ def myprior(cube, ndim, nparams):
 	# log10(Pb)
 	cube[2] = PB_min + cube[2] * (PB_max-PB_min)
 	# Tasc / Pb
-	cube[3] = 0. + cube[3] * 1.
+	cube[3] = -0.5 + cube[3] * 1.
 	# eps1
 	cube[4] = EPS1_min + cube[4] * (EPS1_max-EPS1_min)
 	# eps2
@@ -240,8 +246,8 @@ def plot(vpar, vpar_err):
 			ax4.set_xlabel(r'T (day)')
 			ax4.set_ylabel(r'$\Delta f1 (Hz)$')
 	
-		ax2.set_title(rf"$\chi^2 = {np.mean(deltaf0*deltaf0/(vf0err*vf0err)):.2f}$")
-		ax4.set_title(rf"$\chi^2 = {np.mean(deltaf1*deltaf1/(vf1err*vf1err)):.2f}$")
+		ax2.set_title(rf"$\chi^2 = {np.mean(deltaf0*deltaf0/(vf0err*vf0err)):.2f}$", fontsize=15)
+		ax4.set_title(rf"$\chi^2 = {np.mean(deltaf1*deltaf1/(vf1err*vf1err)):.2f}$", fontsize=15)
 	else:
 		log.info(f"plot F0 fitting")
   
@@ -315,9 +321,18 @@ def main():
 	samples[:, 5] = samples[:, 5]
 	id = np.argmax(samples[:, 6])
 	vpar0 = samples[id, :-1]
-	samples[:, 3] *= vpar0[2]
+	samples[:, 3] *= samples[:, 2]
 	vpar0 = samples[id, :-1]
 	vpar0_err = np.std(samples[:, :-1], 0)
+
+	samples_full = np.loadtxt(out_dir+'/'+rootname+'.txt')
+	samples_full[:, 2+1] = 10**samples_full[:, 2+1]
+	samples_full[:, 2+2] = 10**samples_full[:, 2+2]
+	samples_full[:, 2+3] = circular_transform(samples_full[:, 2+3])
+	samples_full[:, 2+4] = samples_full[:, 2+4]
+	samples_full[:, 2+5] = samples_full[:, 2+5]
+	id = np.argmax(-0.5*samples_full[:, 1])
+	vpar0 = samples_full[id, 2]
 
 	plot(vpar0, vpar0_err)
 
