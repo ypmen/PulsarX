@@ -97,6 +97,7 @@ int main(int argc, const char *argv[])
 			("plotx", "Using PlotX for plotting (default; not used any more)")
 			("output_width", "Output boxcar width (s)")
 			("saveimage", "Save images to fits")
+			("white", "Set the background color to white")
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("input,f", value<string>(), "Input timeseries file");
 
@@ -527,7 +528,7 @@ int main(int argc, const char *argv[])
 			obsinfo["Dist_YMW16"] = to_string(ymw16_dist);
 			obsinfo["Coherent_DM"] = to_string(0);
 			Pulsar::PulsarPlot psrplot;
-			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true, vm.count("saveimage"));
+			psrplot.plot(folder[k], gridsearch[k], obsinfo, k+1, rootname, true, vm.count("saveimage"), vm.count("white"));
 		}
 	}
 

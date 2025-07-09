@@ -28,7 +28,7 @@ PulsarPlot::PulsarPlot(){}
 
 PulsarPlot::~PulsarPlot(){}
 
-void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx, bool save2fits)
+void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::map<std::string, std::string> &obsinfo, int id, const string &rootname, bool plotx, bool save2fits, bool white)
 {
 	string basename;
 	if (obsinfo.find("Basename") == obsinfo.end())
@@ -270,8 +270,16 @@ void PulsarPlot::plot(const ArchiveLite &archive, GridSearch &gridsearch, std::m
 
 	/** plot */
 	PlotX::Figure fig(11.75, 1.);
-	fig.set_background_color("black");
-	fig.set_default_color("white");
+	if (white)
+	{
+		fig.set_background_color("white");
+		fig.set_default_color("black");
+	}
+	else
+	{
+		fig.set_background_color("black");
+		fig.set_default_color("white");
+	}
 
 	//profile
 	float smear_left = 1.-0.5*dmsmear_phase;
