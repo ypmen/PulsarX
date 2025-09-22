@@ -10,6 +10,7 @@ from matplotlib.gridspec import GridSpec
 import astropy.io.fits as fits
 from scipy.stats import skew, kurtosis, shapiro
 from scipy.optimize import minimize, curve_fit
+from scipy.ndimage import gaussian_filter1d
 from pybaselines.whittaker import airpls
 from scipy.signal import savgol_filter
 import argparse
@@ -56,9 +57,12 @@ def plot_channel_statistics(vf, spectra, statfile):
 	plt.savefig(statfile)
 	plt.show()
 
-def smooth_profile(x, lam=100.):
-	res = minimize(lambda s: np.mean((x - s) * (x - s)) + lam * np.mean((np.roll(s, 1) - s) * (np.roll(s, 1) - s)), x, method='BFGS')
-	return res.x
+# def smooth_profile(x, sigma=100.):
+# 	res = minimize(lambda s: np.mean((x - s) * (x - s)) + sigma * np.mean((np.roll(s, 1) - s) * (np.roll(s, 1) - s)), x, method='BFGS')
+# 	return res.x
+
+def smooth_profile(x, sigma=100.):
+    return gaussian_filter1d(x, sigma=sigma)
 
 def compute_scloffs(dat, s):
 	ex = np.sum(dat, 1)
@@ -107,57 +111,46 @@ def autocorrelation(data, lag=1):
 def peak2peak(data):
 	return np.max(data, 1) - np.min(data, 1)
 
-def indentify_rfi_channels(spectra, threshold=1.5):
-	x = np.mean(spectra, 1)
-	x_baseline, _ = airpls(x, lam=1e6, diff_order=2, max_iter=50, tol=1e-3)
-	x -= x_baseline
-	q75, q25 = np.percentile(x, [75, 25])
-	iqr = q75 - q25
-	idx_mean = np.bitwise_or(x < q25 - threshold * iqr, x > q75 + threshold * iqr)
+def indentify_outliers(x, idx, threshold=3., sigma=100.,):
+	y = np.zeros(len(x))
+	nrest = np.sum(idx)+1
+	while np.sum(idx) < nrest:
+		nrest = np.sum(idx)
+		y[idx] = smooth_profile(x[idx])
+		idx[idx] *= np.abs(x[idx]-y[idx] - np.mean(x[idx]-y[idx])) < 3*np.std(x[idx]-y[idx])
 
-	x = np.std(spectra, 1)
-	x_baseline, _ = airpls(x, lam=1e6, diff_order=2, max_iter=50, tol=1e-3)
-	x -= x_baseline
-	q75, q25 = np.percentile(x, [75, 25])
-	iqr = q75 - q25
-	idx_std = np.bitwise_or(x < q25 - threshold * iqr, x > q75 + threshold * iqr)
+def indentify_rfi_channels(spectra, threshold=3.):
+	sigma = int(0.1 * spectra.shape[0])
     
+	x = np.std(spectra, 1)
+	idx = np.ones(len(x), dtype=bool)
+	indentify_outliers(x, idx, threshold=threshold, sigma=sigma)
+ 	
 	x = skew(spectra, 1)
-	q75, q25 = np.percentile(x, [75, 25])
-	iqr = q75 - q25
-	idx_skew = np.bitwise_or(x < q25 - threshold * iqr, x > q75 + threshold * iqr)
+	indentify_outliers(x, idx, threshold=threshold, sigma=sigma)
 
 	x = kurtosis(spectra, 1)
-	q75, q25 = np.percentile(x, [75, 25])
-	iqr = q75 - q25
-	idx_kurt = np.bitwise_or(x < q25 - threshold * iqr, x > q75 + threshold * iqr)
+	indentify_outliers(x, idx, threshold=threshold, sigma=sigma)
 
 	x = autocorrelation(spectra)
-	q75, q25 = np.percentile(x, [75, 25])
-	iqr = q75 - q25
-	idx_ac = np.bitwise_or(x < q25 - threshold * iqr, x > q75 + threshold * iqr)
+	indentify_outliers(x, idx, threshold=threshold, sigma=sigma)
 
 	x = peak2peak(spectra)
-	q75, q25 = np.percentile(x, [75, 25])
-	iqr = q75 - q25
-	idx_p2p = np.bitwise_or(x < q25 - threshold * iqr, x > q75 + threshold * iqr)
+	indentify_outliers(x, idx, threshold=threshold, sigma=sigma)
 
-	idx = idx_mean + idx_std + idx_skew + idx_kurt + idx_ac + idx_p2p
-	idx = idx > 0
-
-	return idx
+	return np.bitwise_not(idx)
 
 def parse_options():
 	parser = argparse.ArgumentParser(description="Clean archive file from RFI using statistical methods")
 	parser.add_argument("infile", type=str, help="Input archive file (psrchive format)")
 	parser.add_argument("--plot", action='store_true', help="Output statistics plot (optional)")
-	parser.add_argument("--threshold", type=float, default=1.5, help="Threshold for RFI detection (in sigma)")
+	parser.add_argument("--threshold", type=float, default=3.0, help="Threshold for RFI detection (in sigma)")
 	args = parser.parse_args()
 	return args
 
 def main():
 	options = parse_options()
-	infile = options.infile
+	infile =  options.infile
 	outfile = infile + '.clean'
 	statfile = outfile.replace('.clean', '.png')
 
@@ -177,7 +170,9 @@ def main():
 		XX, YY = np.sum(data, axis=0)[0:2]
 		spectra = XX + YY
 	else:
-		spectra = np.sum(subint_hdu.data['DATA'][:, 0, :, :], axis=0)
+		spectra = np.sum(data[:, 0, :, :], axis=0)
+
+	#residuals = remove_signal(spectra)
 
 	idx_rfi = indentify_rfi_channels(spectra, threshold=options.threshold)
 
