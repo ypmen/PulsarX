@@ -61,6 +61,13 @@ void FilMaker::prepare(DataBuffer<float> &databuffer)
 	baseline.closable = true;
 
 	rfi.filltype = filltype;
+	rfi.zaplist = zaplist;
+	rfi.rfilist = rfilist;
+	rfi.thremask = threMask;
+	rfi.bandlimitKT = bandlimitKT;
+	rfi.threKadaneF = threKadaneF;
+	rfi.threKadaneT = threKadaneT;
+	rfi.widthlimit = widthlimit;
 	rfi.prepare(baseline);
 	rfi.close();
 	rfi.closable = true;
@@ -89,38 +96,7 @@ void FilMaker::run(DataBuffer<float> &databuffer)
 
 	data = baseline.filter(*data);
 
-	data = rfi.zap(*data, zaplist);
-	if (rfi.isbusy) rfi.closable = false;
-	
-	for (auto irfi = rfilist.begin(); irfi!=rfilist.end(); ++irfi)
-	{
-		if ((*irfi)[0] == "mask")
-		{
-			data = rfi.mask(*data, threMask, stoi((*irfi)[1]), stoi((*irfi)[2]));
-			if (rfi.isbusy) rfi.closable = false;
-		}
-		else if ((*irfi)[0] == "kadaneF")
-		{
-			data = rfi.kadaneF(*data, threKadaneF*threKadaneF, widthlimit, stoi((*irfi)[1]), stoi((*irfi)[2]));
-			if (rfi.isbusy) rfi.closable = false;
-		}
-		else if ((*irfi)[0] == "kadaneT")
-		{
-			data = rfi.kadaneT(*data, threKadaneT*threKadaneT, bandlimitKT, stoi((*irfi)[1]), stoi((*irfi)[2]));
-			if (rfi.isbusy) rfi.closable = false;
-		}
-		else if ((*irfi)[0] == "zdot")
-		{
-			data = rfi.zdot(*data);
-			if (rfi.isbusy) rfi.closable = false;
-		}
-		else if ((*irfi)[0] == "zero")
-		{
-			data = rfi.zero(*data);
-			if (rfi.isbusy) rfi.closable = false;
-		}
-	}
-
+	data = rfi.run(*data);
 	if (!databuffer.isbusy) data->closable = true;
 
 	filwriter.run(*data);
