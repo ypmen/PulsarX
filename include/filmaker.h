@@ -48,6 +48,7 @@ public:
 
 	//rfi
 	std::vector<std::pair<double, double>> zaplist;
+	std::vector<int> zaplist_channel;
 	std::vector<std::vector<std::string>> rfilist;
 	double bandlimit;
 	double widthlimit;

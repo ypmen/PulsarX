@@ -14,6 +14,7 @@
 
 #include "json.hpp"
 #include "filmaker.h"
+#include "logging.h"
 
 using json = nlohmann::json;
 
@@ -62,6 +63,7 @@ void FilMaker::prepare(DataBuffer<float> &databuffer)
 
 	rfi.filltype = filltype;
 	rfi.zaplist = zaplist;
+	rfi.zaplist_channel = zaplist_channel;
 	rfi.rfilist = rfilist;
 	rfi.thremask = threMask;
 	rfi.bandlimitKT = bandlimitKT;
@@ -125,6 +127,25 @@ void plan(variables_map &vm, std::vector<FilMaker> &filmakers)
 				fm.zaplist.push_back(std::pair<double, double>(std::stod(*(opt+1)), std::stod(*(opt+2))));
 				std::advance(opt, 2);
 			}
+			else if (*opt == "zapchan")
+			{
+				std::string filename = *(opt+1);
+				std::ifstream infile;
+				infile.open(filename);
+				if (infile.fail())
+				{
+					BOOST_LOG_TRIVIAL(error)<<filename<<" not exist";
+					exit(-1);
+				}
+				int ch;
+				while (infile >> ch)
+				{
+					fm.zaplist_channel.push_back(ch);
+				}
+				infile.close();
+
+				advance(opt, 1);
+			}
 			else if (*opt=="zero" or *opt=="zdot")
 			{
 				std::vector<std::string> temp{*opt};
@@ -180,6 +201,25 @@ void plan(variables_map &vm, std::vector<FilMaker> &filmakers)
 				{
 					fm.zaplist.push_back(std::pair<double, double>(std::stod(*(opt+1)), std::stod(*(opt+2))));
 					std::advance(opt, 2);
+				}
+				else if (*opt == "zapchan")
+				{
+					std::string filename = *(opt+1);
+					std::ifstream infile;
+					infile.open(filename);
+					if (infile.fail())
+					{
+						BOOST_LOG_TRIVIAL(error)<<filename<<" not exist";
+						exit(-1);
+					}
+					int ch;
+					while (infile >> ch)
+					{
+						fm.zaplist_channel.push_back(ch);
+					}
+					infile.close();
+
+					advance(opt, 1);
 				}
 				else if (*opt=="zero" or *opt=="zdot")
 				{
