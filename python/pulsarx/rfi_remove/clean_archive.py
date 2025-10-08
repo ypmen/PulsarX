@@ -144,6 +144,7 @@ def parse_options():
 	parser = argparse.ArgumentParser(description="Clean archive file from RFI using statistical methods")
 	parser.add_argument("infile", type=str, help="Input archive file (psrchive format)")
 	parser.add_argument("--plot", action='store_true', help="Output statistics plot (optional)")
+	parser.add_argument("--outmask", action='store_true', help="Output channel mask")
 	parser.add_argument("--threshold", type=float, default=3.0, help="Threshold for RFI detection (in sigma)")
 	args = parser.parse_args()
 	return args
@@ -178,6 +179,9 @@ def main():
 
 	subint_hdu.data['DAT_WTS'][:, idx_rfi] = 0.
 	f.close()
+
+	if options.outmask:
+		print(*np.arange(len(vf))[idx_rfi])
 
 	if options.plot:
 		plot_channel_statistics(vf[np.bitwise_not(idx_rfi)], spectra[np.bitwise_not(idx_rfi)], statfile)
