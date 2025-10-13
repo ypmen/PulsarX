@@ -1,4 +1,4 @@
-bin_PROGRAMS=dedisperse_all_fil psrfold_fil psrfold_fil2 psrfold_tim filtool dmffdot chop8 pulsar_injector genstat
+bin_PROGRAMS=dedisperse_all_fil psrfold_fil psrfold_fil2 psrfold_tim filtool dmffdot chop8 pulsar_injector genstat psrheader
 
 AM_CPPFLAGS=-I$(top_srcdir)/include
 LDADD=-lboost_program_options -lxmodule -lxutils -lxcontainer -lxformats -lymw16
@@ -12,3 +12,4 @@ dmffdot_SOURCES=dmffdot.cpp archivelite.cpp gridsearch.cpp pulsarplot.cpp archiv
 chop8_SOURCES=chop8.cpp
 pulsar_injector_SOURCES=pulsar_injector.cpp
 genstat_SOURCES=genstat.cpp
+psrheader_SOURCES=psrheader.cpp
