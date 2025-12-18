@@ -103,6 +103,39 @@ def remove_signal(spectra, threshold=0.5):
 
 	return residuals	
 
+def remove_baseline(data, data_base, idx_rfi):
+	nsub, npol, nchan, nbin = data.shape
+
+	for isub in range(nsub):
+		for ipol in range(npol):
+			profile = np.sum(data_base[isub, ipol, np.bitwise_not(idx_rfi), :], 0)
+			profile_smooth = smooth_profile(profile)
+			
+			va, vb = compute_scloffs(data[isub, ipol, np.bitwise_not(idx_rfi), :], profile_smooth)
+			data[isub, ipol, np.bitwise_not(idx_rfi), :] -= va[:, None] * profile_smooth + vb[:, None]
+
+def rescale_data(data):
+	nsub, npol, nchan, nbin = data.shape
+
+	dat_offs = np.zeros((nsub, npol, nchan))
+	dat_scl = np.zeros((nsub, npol, nchan))
+
+	for isub in range(nsub):
+		for ipol in range(npol):
+			for ichan in range(nchan):
+				min_value = np.min(data[isub, ipol, ichan, :])
+				max_value = np.max(data[isub, ipol, ichan, :])
+
+				dat_scl_tmp = (max_value - min_value) / (2**16-1)
+				dat_offs_tmp = (max_value + min_value) * 0.5
+
+				dat_scl[isub, ipol, ichan] = dat_scl_tmp
+				dat_offs[isub, ipol, ichan] = dat_offs_tmp
+
+				data[isub, ipol, ichan, :] = (data[isub, ipol, ichan, :] - dat_offs_tmp) / dat_scl_tmp
+
+	return dat_scl, dat_offs
+
 def autocorrelation(data, lag=1):
 	data1 = np.roll(data, lag, axis=1)
 	vmean = np.mean(data, 1)[:, None]
@@ -123,7 +156,7 @@ def indentify_rfi_channels(spectra, threshold=3.):
 	sigma = int(0.1 * spectra.shape[0])
     
 	x = np.std(spectra, 1)
-	idx = np.ones(len(x), dtype=bool)
+	idx = x!=0
 	indentify_outliers(x, idx, threshold=threshold, sigma=sigma)
  	
 	x = skew(spectra, 1)
@@ -146,12 +179,37 @@ def parse_options():
 	parser.add_argument("--plot", action='store_true', help="Output statistics plot (optional)")
 	parser.add_argument("--outmask", action='store_true', help="Output channel mask")
 	parser.add_argument("--threshold", type=float, default=3.0, help="Threshold for RFI detection (in sigma)")
+	parser.add_argument("--baseline", type=str, help="remove baseline based on a given archive")
 	args = parser.parse_args()
 	return args
 
 def main():
 	options = parse_options()
+ 
 	infile =  options.infile
+
+	if options.baseline:
+		f = fits.open(infile)
+
+		subint_hdu = f['SUBINT']
+		nsub, npol, nchan, nbin = subint_hdu.data['DATA'].shape
+	
+		vf = subint_hdu.data['DAT_FREQ'][0]
+		vph = np.arange(nbin)/nbin
+
+		# read baseline file
+		f_base = fits.open(options.baseline)
+
+		subint_hdu_base = f_base['SUBINT']
+		nsub_base, npol_base, nchan_base, nbin_base = subint_hdu_base.data['DATA'].shape
+	
+		vf_base = subint_hdu.data['DAT_FREQ'][0]
+		vph_base = np.arange(nbin)/nbin
+
+		assert(npol == npol_base and nsub == nsub_base and nbin == nbin_base)
+
+		data_base = subint_hdu_base.data['DATA'] * subint_hdu_base.data['DAT_SCL'].reshape(nsub_base, npol_base, nchan_base, 1) + subint_hdu_base.data['DAT_OFFS'].reshape(nsub_base, npol_base, nchan_base, 1)
+	 
 	outfile = infile + '.clean'
 	statfile = outfile.replace('.clean', '.png')
 
@@ -178,6 +236,25 @@ def main():
 	idx_rfi = indentify_rfi_channels(spectra, threshold=options.threshold)
 
 	subint_hdu.data['DAT_WTS'][:, idx_rfi] = 0.
+
+	if options.baseline:
+		remove_baseline(data, data_base, idx_rfi)
+
+		if subint_hdu.header['POL_TYPE'] == 'AABBCRCI':
+			XX, YY = np.sum(data, axis=0)[0:2]
+			spectra = XX + YY
+		else:
+			spectra = np.sum(data[:, 0, :, :], axis=0)
+
+		idx_rfi = indentify_rfi_channels(spectra, threshold=options.threshold)
+
+		subint_hdu.data['DAT_WTS'][:, idx_rfi] = 0.
+  
+		dat_scl, dat_offs = rescale_data(data)
+		subint_hdu.data['DATA'] = data.astype(np.int16)
+		subint_hdu.data['DAT_SCL'] = dat_scl.reshape(nsub, npol, nchan).astype(np.float32)
+		subint_hdu.data['DAT_OFFS'] = dat_offs.reshape(nsub, npol, nchan).astype(np.float32)
+
 	f.close()
 
 	if options.outmask:
