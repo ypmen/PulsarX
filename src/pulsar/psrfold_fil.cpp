@@ -106,7 +106,8 @@ int main(int argc, const char *argv[])
 			("dec", value<string>()->default_value("00:00:00"), "DEC (ddmmss.s)")
 			("cdm", value<double>()->default_value(0), "Coherent dedispersion DM (pc/cc)")
 			("baseline", value<vector<float>>()->multitoken()->default_value(vector<float>{0.0, 0.0}, "0.0, 0.0"), "The scale of baseline remove (s)")
-			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied")
+			("clfd", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied (frequency)")
+			("clfd2", value<double>()->default_value(-1), "CLFD q value, if q<=0, CLFD will not be applied (time integration)")
 			("bandcorr", value<double>()->default_value(10), "CLFD correlation bandwidth threshold to differentiate RFI and real signal (MHz)")
 			("rfi,z", value<vector<string>>()->multitoken()->zero_tokens()->composing(), "RFI mitigation [[mask tdRFI fdRFI] [kadaneF tdRFI fdRFI] [kadaneT tdRFI fdRFI] [zap fl fh] [zdot] [zero]]")
 			("bandlimit", value<double>()->default_value(10), "Band limit of RFI mask (MHz)")
@@ -611,6 +612,7 @@ int main(int argc, const char *argv[])
 		gs.f2search = f2search;
 		gs.nosearch = nosearch;
 		gs.clfd_q = vm["clfd"].as<double>();
+		gs.clfd2_q = vm["clfd2"].as<double>();
 		gs.bandcorr = vm["bandcorr"].as<double>();
 		gridsearch.push_back(gs);
 	}

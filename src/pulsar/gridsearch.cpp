@@ -41,6 +41,7 @@ GridSearch::GridSearch()
 	ddmstep = 0.;
 	nddm = 0;
 	clfd_q = -1.;
+	clfd2_q = -1.;
 
 	nodmsearch = false;
 	nof0search = false;
@@ -199,6 +200,9 @@ void GridSearch::prepare(ArchiveLite &arch)
 
 	if (clfd_q > 0)
 		clfd3();
+
+	if (clfd2_q > 0)
+		clfd4();
 
 	get_rms();
 
@@ -1264,6 +1268,104 @@ void GridSearch::clfd3()
 			for (long int i=0; i<nbin; i++)
 			{
 				profiles[k*nchan*nbin+j*nbin+i] *= weights_tmp[j];
+			}
+		}
+	}
+}
+
+void GridSearch::clfd4()
+{
+	/**
+	 * @brief apply to time
+	 * 
+	 */
+
+	vector<float> tstatistics(nsubint, 0.);
+	vector<float> tstatistics_sort(nsubint, 0.);
+
+	for (long int k=0; k<nsubint; k++)
+	{
+		vector<float> tmppro(nbin, 0.);
+		for (long int j=0; j<nchan; j++)
+		{
+			for (long int i=0; i<nbin; i++)
+			{
+				tmppro[i] += profiles[k*nchan*nbin+j*nbin+i];
+			}
+		}
+	   
+		tstatistics_sort[k] = tstatistics[k] = get_andersondarling<std::vector<float>>(tmppro);
+	}
+
+	std::nth_element(tstatistics_sort.begin(), tstatistics_sort.begin()+nsubint/4, tstatistics_sort.end(), std::less<float>());
+	float Q1_statistics = tstatistics_sort[nsubint/4];
+	std::nth_element(tstatistics_sort.begin(), tstatistics_sort.begin()+nsubint/4, tstatistics_sort.end(), std::greater<float>());
+	float Q3_statistics = tstatistics_sort[nsubint/4];
+
+	float R_statistics = Q3_statistics-Q1_statistics;
+	float vmin_statistics = Q1_statistics-clfd2_q*R_statistics;
+	float vmax_statistics = Q3_statistics+clfd2_q*R_statistics;
+
+	for (long int k=0; k<nsubint; k++)
+	{
+		if (tstatistics[k]<vmin_statistics or tstatistics[k]>vmax_statistics)
+		{
+			for (long int j=0; j<nchan; j++)
+			{
+				for (long int i=0; i<nbin; i++)
+				{
+					profiles[k*nchan*nbin+j*nbin+i] = 0.;
+				}
+			}
+		}
+	}
+
+	/**
+	 * @brief apply to frequency
+	 * 
+	 */
+
+	vector<float> fstatistics(nchan, 0.);
+	vector<float> fstatistics_sort(nchan, 0.);
+
+	vector<float> fph(nchan*nbin, 0.);
+	for (long int k=0; k<nsubint; k++)
+	{
+		for (long int j=0; j<nchan; j++)
+		{
+			for (long int i=0; i<nbin; i++)
+			{
+				fph[j*nbin+i] += profiles[k*nchan*nbin+j*nbin+i];
+			}
+		}
+	}
+
+	for (long int j=0; j<nchan; j++)
+	{
+		std::vector<float> tmppro(fph.begin()+j*nbin, fph.begin()+j*nbin+nbin);
+
+		fstatistics_sort[j] = fstatistics[j] = get_andersondarling<std::vector<float>>(tmppro);
+	}
+
+	std::nth_element(fstatistics_sort.begin(), fstatistics_sort.begin()+nchan/4, fstatistics_sort.end(), std::less<float>());
+	Q1_statistics = fstatistics_sort[nchan/4];
+	std::nth_element(fstatistics_sort.begin(), fstatistics_sort.begin()+nchan/4, fstatistics_sort.end(), std::greater<float>());
+	Q3_statistics = fstatistics_sort[nchan/4];
+
+	R_statistics = Q3_statistics-Q1_statistics;
+	vmin_statistics = Q1_statistics-clfd2_q*R_statistics;
+	vmax_statistics = Q3_statistics+clfd2_q*R_statistics;
+
+	for (long int k=0; k<nsubint; k++)
+	{
+		for (long int j=0; j<nchan; j++)
+		{
+			if (fstatistics[j]<vmin_statistics or fstatistics[j]>vmax_statistics)
+			{
+				for (long int i=0; i<nbin; i++)
+				{
+					profiles[k*nchan*nbin+j*nbin+i] = 0.;
+				}
 			}
 		}
 	}

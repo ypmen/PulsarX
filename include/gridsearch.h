@@ -66,6 +66,7 @@ namespace Pulsar
 		void clfd();
 		void clfd2();
 		void clfd3();
+		void clfd4();
 		void zap();
 	public:
 		double df0start;
@@ -88,6 +89,7 @@ namespace Pulsar
 		int scale;
 		double tint;
 		double clfd_q;
+		double clfd2_q;
 		double bandcorr;
 		std::vector<std::pair<double, double>> zaplist;
 	public:
