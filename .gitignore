@@ -18,6 +18,7 @@ src/pulsar/dmffdot
 src/pulsar/chop8
 src/pulsar/genstat
 src/pulsar/pulsar_injector
+src/pulsar/psrheader
 src/ymw16/ymw16
 src/ymw16/ymw16_ne
 .vscode
