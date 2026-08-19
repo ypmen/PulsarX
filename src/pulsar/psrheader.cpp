@@ -111,10 +111,12 @@ int main(int argc, const char *argv[])
 	double tsamp = reader->tsamp;
 	int nifs = reader->nifs;
 	long int ntotal = reader->nsamples;
+	long int header_size = reader->header_size;
 
 	char start_date[32];
 	reader->start_mjd.to_date(start_date, 32, "%Y/%m/%d %H:%M:%S");
 
+	std::cout<<std::left<<std::setw(32)<<"Header size (Byte)"<<" : "<<header_size<<std::endl;
 	std::cout<<std::left<<std::setw(32)<<"Telescope"<<" : "<<s_telescope<<std::endl;
 	std::cout<<std::left<<std::setw(32)<<"Source Name"<<" : "<<source_name<<std::endl;
 	std::cout<<std::left<<std::setw(32)<<"Source RA (J2000)"<<" : "<<reader->ra<<std::endl;
