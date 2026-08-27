@@ -184,6 +184,13 @@ int main(int argc, const char *argv[])
 	for (auto fm=filmakers.begin(); fm!=filmakers.end(); ++fm)
 	{
 		tds.push_back((*fm).td*td);
+		if (vm.count("flip"))
+		{
+			for (auto k=fm->zaplist_channel.begin(); k!=fm->zaplist_channel.end(); ++k)
+			{
+				(*k) = nchans - 1 - (*k);
+			}
+		}
 	}
 
 	long int td_lcm = findlcm(&tds[0], tds.size());
@@ -214,6 +221,7 @@ int main(int argc, const char *argv[])
 	prep.thresig = vm["zapthre"].as<float>();
 	prep.filltype = vm["fill"].as<string>();
 	prep.zaplist = filmakers[0].zaplist;
+	prep.zaplist_channel = filmakers[0].zaplist_channel;
 	prep.prepare(databuf);
 
 	long int noutfil = filmakers.size();
