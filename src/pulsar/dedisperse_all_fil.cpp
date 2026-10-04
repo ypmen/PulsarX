@@ -227,7 +227,7 @@ int main(int argc, const char *argv[])
 	for (long int k=0; k<nsearch; k++)
 	{
 		search[k].ibeam = ibeam;
-		search[k].rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
+		search[k].rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_Seg" + to_string(ncover);
 		reader->get_filterbank_template(search[k].fildedisp);
 		search[k].fildedisp.fch1 = (databuf.frequencies.front()+databuf.frequencies.back())/2.;
 		search[k].fildedisp.foff = databuf.frequencies.back()-databuf.frequencies.front();
@@ -267,9 +267,9 @@ int main(int argc, const char *argv[])
 				{
 					search[k].dedisp.modifynblock();
 				}
-				search[k].dedisp.rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_" + to_string(ncover);
+				search[k].dedisp.rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_Seg" + to_string(ncover);
 				search[k].dedisp.prepare(search[k].rfi);
-				search[k].fildedisp.tstart = (reader->start_mjd + count*tsamp/86400.).to_day();
+				search[k].fildedisp.tstart = (reader->start_mjd + (search[k].dedisp.counter-search[k].dedisp.offset)*search[k].dedisp.tsamp).to_day();
 				search[k].dedisp.preparedump(search[k].fildedisp, outnbits, vm["format"].as<string>());
 			}
 		}
