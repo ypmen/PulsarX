@@ -114,6 +114,7 @@ int main(int argc, const char *argv[])
 	Filterbank fil;
 	fil.filename = rootname + ".fil";
 	std::strcpy(fil.source_name, source_name.c_str());
+	fil.telescope_id = get_telescope_id(reader->telescope);
 	fil.tstart += tstart + nstart * tsamp / 86400.;
 	fil.tsamp = tsamp;
 	fil.nchans = nchans;
