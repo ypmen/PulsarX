@@ -196,7 +196,6 @@ namespace Pulsar
 		vector<float> mxWTW;
 		vector<float> vWTd_T;
 		vector<float> trlsm_vWli;
-		vector<int> trlsm_binplan;
 		vector<int> hits;
 		vector<float> profilesTPF;
 		vector<float> profilesPFT;

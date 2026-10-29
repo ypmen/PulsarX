@@ -6,6 +6,7 @@
  * @desc [description]
  */
 
+#include <algorithm>
 #include <string.h>
 
 #include "dedisperse.h"
@@ -93,7 +94,6 @@ void ArchiveLite::prepare(DataBuffer<float> &databuffer)
 	mxWTW.resize(nbin*nbin, 0.);
 	vWTd_T.resize(nbin*databuffer.nchans, 0.);
 	trlsm_vWli.resize(nbin);
-	trlsm_binplan.resize(nbin);
 
 	hits.resize(nbin, 0);
 	profilesTPF.resize(nbin*npol*nchan, 0.);
@@ -267,6 +267,36 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 				vWTd_T[m*databuffer.nchans+j] += vWli1*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
 			}
 		}
+		else if (nphi == 3)
+		{
+			float vWli0 = 1.-(low_phi*nbin-floor(low_phi*nbin));
+			float vWli1 = 1.;
+			float vWli2 = high_phi*nbin-floor(high_phi*nbin);
+
+			long int l = low_phin%nbin;
+			l = l<0 ? l+nbin:l;
+			long int m = l+1;
+			m = m==nbin ? 0:m;
+			long int n = m+1;
+			n = n==nbin ? 0:n;
+
+			mxWTW[l*nbin+l] += vWli0*vWli0;
+			mxWTW[l*nbin+m] += vWli0*vWli1;
+			mxWTW[l*nbin+n] += vWli0*vWli2;
+			mxWTW[m*nbin+l] += vWli1*vWli0;
+			mxWTW[m*nbin+m] += vWli1*vWli1;
+			mxWTW[m*nbin+n] += vWli1*vWli2;
+			mxWTW[n*nbin+l] += vWli2*vWli0;
+			mxWTW[n*nbin+m] += vWli2*vWli1;
+			mxWTW[n*nbin+n] += vWli2*vWli2;
+
+			for (long int j=0; j<databuffer.nchans; j++)
+			{
+				vWTd_T[l*databuffer.nchans+j] += vWli0*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+				vWTd_T[m*databuffer.nchans+j] += vWli1*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+				vWTd_T[n*databuffer.nchans+j] += vWli2*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+			}
+		}
 		else
 		{
 			fill_n(trlsm_vWli.begin(), nphi, 1.);
@@ -274,25 +304,34 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 			trlsm_vWli[0] = 1.-(low_phi*nbin-floor(low_phi*nbin));
 			trlsm_vWli[nphi-1] = high_phi*nbin-floor(high_phi*nbin);
 
-			for (long int l=0; l<nphi; l++)
-			{
-				trlsm_binplan[l] = (low_phin+l)%nbin;
-				trlsm_binplan[l] = trlsm_binplan[l]<0 ? trlsm_binplan[l]+nbin:trlsm_binplan[l];
-			}
+			long int low_bin = low_phin%nbin;
+			low_bin = low_bin<0 ? low_bin+nbin:low_bin;
+			const long int first_span = std::min(nphi, nbin-low_bin);
 
 			for (long int l=0; l<nphi; l++)
 			{
-				for (long int m=0; m<nphi; m++)
+				long int row_bin = low_bin+l;
+				row_bin = row_bin>=nbin ? row_bin-nbin:row_bin;
+				float *row = &mxWTW[row_bin*nbin];
+				const float row_weight = trlsm_vWli[l];
+
+				for (long int m=0; m<first_span; m++)
 				{
-					mxWTW[trlsm_binplan[l]*nbin+trlsm_binplan[m]] += trlsm_vWli[l]*trlsm_vWli[m];
+					row[low_bin+m] += row_weight*trlsm_vWli[m];
+				}
+				for (long int m=first_span; m<nphi; m++)
+				{
+					row[m-first_span] += row_weight*trlsm_vWli[m];
 				}
 			}
 
 			for (long int l=0; l<nphi; l++)
 			{
+				long int bin = low_bin+l;
+				bin = bin>=nbin ? bin-nbin:bin;
 				for (long int j=0; j<databuffer.nchans; j++)
 				{
-					vWTd_T[trlsm_binplan[l]*databuffer.nchans+j] += trlsm_vWli[l]*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+					vWTd_T[bin*databuffer.nchans+j] += trlsm_vWli[l]*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
 				}
 			}
 		}
