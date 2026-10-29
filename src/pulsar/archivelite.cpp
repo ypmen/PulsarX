@@ -92,6 +92,8 @@ void ArchiveLite::prepare(DataBuffer<float> &databuffer)
 
 	mxWTW.resize(nbin*nbin, 0.);
 	vWTd_T.resize(nbin*databuffer.nchans, 0.);
+	trlsm_vWli.resize(nbin);
+	trlsm_binplan.resize(nbin);
 
 	hits.resize(nbin, 0);
 	profilesTPF.resize(nbin*npol*nchan, 0.);
@@ -267,23 +269,22 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 		}
 		else
 		{
-			vector<float> vWli(nphi, 1.);
-			vector<int> binplan(nphi, 0);
+			fill_n(trlsm_vWli.begin(), nphi, 1.);
 
-			vWli[0] = 1.-(low_phi*nbin-floor(low_phi*nbin));
-			vWli[nphi-1] = high_phi*nbin-floor(high_phi*nbin);
+			trlsm_vWli[0] = 1.-(low_phi*nbin-floor(low_phi*nbin));
+			trlsm_vWli[nphi-1] = high_phi*nbin-floor(high_phi*nbin);
 
 			for (long int l=0; l<nphi; l++)
 			{
-				binplan[l] = (low_phin+l)%nbin;
-				binplan[l] = binplan[l]<0 ? binplan[l]+nbin:binplan[l];
+				trlsm_binplan[l] = (low_phin+l)%nbin;
+				trlsm_binplan[l] = trlsm_binplan[l]<0 ? trlsm_binplan[l]+nbin:trlsm_binplan[l];
 			}
 
 			for (long int l=0; l<nphi; l++)
 			{
 				for (long int m=0; m<nphi; m++)
 				{
-					mxWTW[binplan[l]*nbin+binplan[m]] += vWli[l]*vWli[m];
+					mxWTW[trlsm_binplan[l]*nbin+trlsm_binplan[m]] += trlsm_vWli[l]*trlsm_vWli[m];
 				}
 			}
 
@@ -291,7 +292,7 @@ bool ArchiveLite::runTRLSM(DataBuffer<float> &databuffer)
 			{
 				for (long int j=0; j<databuffer.nchans; j++)
 				{
-					vWTd_T[binplan[l]*databuffer.nchans+j] += vWli[l]*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
+					vWTd_T[trlsm_binplan[l]*databuffer.nchans+j] += trlsm_vWli[l]*databuffer.buffer[(i-iblock*databuffer.nsamples)*databuffer.nchans+j];
 				}
 			}
 		}

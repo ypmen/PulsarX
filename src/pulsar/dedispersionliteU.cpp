@@ -6,6 +6,8 @@
  * @desc [description]
  */
 
+#include <cstring>
+
 #include "dedispersionliteU.h"
 #include "dedisperse.h"
 
@@ -94,6 +96,7 @@ void DedispersionLiteU::updatedm(const std::vector<double> &dms)
 	vdm = dms;
 
 	buffersub.resize(vdm.size()*ndump*nsubband, 0.);
+	buffersubT.resize(vdm.size()*ndump*nsubband);
 
 	delayn.resize(vdm.size()*nchans, 0);
 	int ndm = vdm.size();
@@ -148,7 +151,7 @@ void DedispersionLiteU::run()
 	int ndm = vdm.size();
 	int nch = ceil(nchans*1./nsubband);
 
-	vector<float> buffersubT(nsubband*vdm.size()*ndump, 0.);
+	fill(buffersubT.begin(), buffersubT.end(), 0.);
 
 	for (long int j=0; j<nchans; j++)
 	{
@@ -171,11 +174,9 @@ void DedispersionLiteU::postrun()
 {
 	int nspace = nsamples-ndump;
 
-	for (long int i=0; i<nspace; i++)
+	if (nspace > 0)
 	{
-		for (long int j=0; j<nchans; j++)
-		{
-			buffer[i*nchans+j] = buffer[(i+ndump)*nchans+j];
-		}
+		std::memmove(buffer.data(), buffer.data()+ndump*nchans,
+			static_cast<size_t>(nspace)*static_cast<size_t>(nchans)*sizeof(float));
 	}
 }
