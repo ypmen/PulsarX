@@ -1,0 +1,251 @@
+FROM ubuntu:20.04
+
+MAINTAINER Yunpeng Men "ypmen@hust.edu.cn"
+
+SHELL ["/bin/bash", "-c"] 
+
+RUN useradd -ms /bin/bash pulsarx
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV HOME=/home/pulsarx
+
+ENV YMW16_DIR=$HOME/software/XLibs/src/ymw16
+ENV OMP_NUM_THREADS=1
+ENV PSRCAT_FILE=/home/pulsarx/software/psrcat_tar/psrcat.db
+ENV TEMPO2=/home/pulsarx/software/tempo2/T2runtime
+ENV TEMPO=/home/pulsarx/software/tempo
+ENV PRESTO=/home/pulsarx/software/presto
+ENV PGPLOT_DIR=/usr/lib
+ENV PATH=$PATH:$HOME/software/bin:$HOME/.local/bin:$PRESTO/bin
+ENV LD_LIBRARY_PATH=$HOME/software/lib:/usr/local/lib:$PRESTO/lib:$LD_LIBRARY_PATH
+
+USER root
+
+RUN apt-get update
+
+RUN apt-get install -y git \
+    autoconf \
+    libtool \
+    g++ \
+    gfortran \
+    libboost-program-options-dev \
+    libboost-log-dev \
+    libcfitsio-dev \
+    libblas-dev \
+    liblapack-dev \
+    libeigen3-dev \
+    libpng-dev \
+    libfftw3-dev \
+    pgplot5 \
+    wget \
+    vim \
+    make \
+	cmake \
+	mpich \
+    libx11-dev \
+	python3-pip \
+    python3-dev \
+    python3-distutils \
+    python3-numpy \
+	python3-scipy \
+    python3-matplotlib \
+	swig \
+	libcpgplot0 \
+	csh \
+	libglib2.0-dev
+
+USER pulsarx
+
+WORKDIR $HOME
+RUN mkdir software
+
+USER root
+
+WORKDIR $HOME/software
+RUN git clone https://github.com/JohannesBuchner/MultiNest.git
+WORKDIR $HOME/software/MultiNest/build
+RUN cmake -DCMAKE_PREFIX_PATH=$HOME/software ..
+RUN make && make install
+
+RUN pip3 install mpi4py
+RUN pip3 install pybind11
+RUN pip3 install pyyaml
+
+WORKDIR $HOME/software
+RUN git clone https://github.com/JohannesBuchner/PyMultiNest/
+WORKDIR $HOME/software/PyMultiNest
+RUN python3 setup.py install
+
+USER pulsarx
+
+#install sofa
+WORKDIR $HOME/software
+RUN git clone https://github.com/liberfa/erfa.git
+WORKDIR $HOME/software/erfa
+RUN ./bootstrap.sh
+RUN ./configure --prefix=$HOME/software
+RUN make -j 8 && make install
+
+#install tempo
+WORKDIR $HOME/software
+RUN for i in 1 2 3 4 5; do git clone --depth 1 https://git.code.sf.net/p/tempo/tempo && break; rm -rf tempo; sleep 10; done
+WORKDIR $HOME/software/tempo
+RUN ./prepare
+RUN ./configure F77=gfortran --prefix=$HOME/software/ CFLAGS=-fPIC FFLAGS=-fPIC
+RUN make -j 8 && make install
+RUN make clean
+
+#install tempo2
+WORKDIR $HOME/software
+RUN git clone https://bitbucket.org/psrsoft/tempo2.git
+WORKDIR $HOME/software/tempo2
+RUN rm -rf .git
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software
+RUN make -j 8 && make install
+RUN make plugins-install
+RUN make clean
+
+#sigproc
+WORKDIR $HOME/software
+RUN git clone https://github.com/SixByNine/sigproc.git
+WORKDIR $HOME/software/sigproc
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software CFLAGS=-fPIC FFLAGS=-fPIC
+RUN make -j 8 && make install
+RUN make clean
+
+RUN pip3 install meson
+RUN pip3 install ninja
+
+USER root
+RUN apt-get install -y libgsl-dev
+USER pulsarx
+
+#presto
+WORKDIR $HOME/software
+RUN git clone https://github.com/scottransom/presto.git
+WORKDIR $HOME/software/presto
+# --prefix must be $HOME/software: that is where PATH / LD_LIBRARY_PATH point
+# erfa.pc lives in $HOME/software/lib/pkgconfig (we built liberfa ourselves);
+# without this meson tries to download the erfa subproject from github
+RUN PKG_CONFIG_PATH=$HOME/software/lib/pkgconfig \
+    meson setup build --prefix=$HOME/software -Dbuildtype=release -Dc_args=-march=native
+RUN cd build && ninja
+RUN cd build && meson install
+RUN cd $PRESTO/build/src && ./makewisdom
+WORKDIR $HOME/software/presto/python
+# ubuntu:20.04 has python3.8 while PRESTO's pyproject.toml asks for >=3.9, and
+# the stock pip 20.0.2 copies the source to /tmp, which breaks python/meson.build
+# (it refers to ../include).  A pip >= 21.3 builds in-tree, so that path works.
+# LIBRARY_PATH lets meson find the just-installed libpresto.so
+# the code itself is 3.8-compatible (verified with compileall); only the
+# metadata says >=3.9, and meson-python refuses to build otherwise
+RUN sed -i "s/requires-python = '>=3.9'/requires-python = '>=3.8'/" pyproject.toml
+# meson-python's build requirements need setuptools>=77, which does not exist
+# for python 3.8 -> install the build backend up front and build in-place
+RUN pip3 install --user -U "pip<25" "setuptools<76" wheel meson-python
+# presto's metadata lists astropy; the python3.8 compatible wheel is 4.3.x
+# (numpy/scipy/matplotlib come from apt, so do not let pip touch them)
+RUN pip3 install --user "astropy<5"
+RUN LIBRARY_PATH=$HOME/software/lib python3 -m pip install --no-build-isolation --no-deps --ignore-requires-python .
+
+#install psrcat
+WORKDIR $HOME/software
+RUN wget https://www.atnf.csiro.au/research/pulsar/psrcat/downloads/psrcat_pkg.tar.gz && \
+    tar -zxvf psrcat_pkg.tar.gz
+WORKDIR $HOME/software/psrcat_tar
+RUN source makeit && cp psrcat $HOME/software/bin
+
+#install psrchive
+WORKDIR $HOME/software
+RUN for i in 1 2 3 4 5; do git clone --depth 1 https://git.code.sf.net/p/psrchive/code psrchive && break; rm -rf psrchive; sleep 10; done
+WORKDIR $HOME/software/psrchive
+# the epsic submodule lives on github; use the mirror for this step
+RUN GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.https://ghfast.top/https://github.com/.insteadOf GIT_CONFIG_VALUE_0=https://github.com/ ./bootstrap
+RUN ./configure F77=gfortran --prefix=$HOME/software/ --enable-shared CFLAGS=-fPIC FFLAGS=-fPIC
+RUN make -j 8 && make install
+RUN make clean
+
+#install dspsr
+WORKDIR $HOME/software
+# git:// + full history takes ~50 min here and gets dropped; a shallow
+# https clone of the same tree takes ~6 s
+RUN for i in 1 2 3 4 5; do git clone --depth 1 https://git.code.sf.net/p/dspsr/code dspsr && break; rm -rf dspsr; sleep 10; done
+WORKDIR $HOME/software/dspsr
+RUN echo "apsr asp bcpm bpsr caspsr cpsr2 cpsr dummy fits gmrt guppi kat lbadr64 lbadr lump lwa mark4 mark5 maxim mwa pdev pmdaq s2 sigproc spda1k spigot vdif" > backends.list
+# bootstrap pulls the googletest submodule from github
+RUN GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.https://ghfast.top/https://github.com/.insteadOf GIT_CONFIG_VALUE_0=https://github.com/ ./bootstrap
+# dspsr finds psrchive through pkg-config
+RUN PKG_CONFIG_PATH=$HOME/software/lib/pkgconfig ./configure F77=gfortran --prefix=$HOME/software/ --enable-shared CFLAGS=-fPIC FFLAGS=-fPIC
+RUN make -j 8 && make install
+RUN make clean
+
+
+WORKDIR $HOME/software
+#install PlotX
+RUN git clone https://github.com/ypmen/PlotX.git
+#install XLibs
+RUN git clone https://github.com/ypmen/XLibs.git
+#install PulsarX
+RUN git clone https://github.com/ypmen/PulsarX.git
+#install BasebandX
+RUN git clone https://github.com/ypmen/BasebandX.git
+#install TransientX
+RUN git clone https://github.com/ypmen/TransientX
+
+WORKDIR $HOME/software/PlotX
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software
+RUN make -j 8 && make install
+RUN make clean
+
+WORKDIR $HOME/software/XLibs
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/lib" CPPFLAGS="-I$HOME/software/include"
+RUN make -j 8 && make install
+RUN make clean
+
+WORKDIR $HOME/software/PulsarX
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/lib" CPPFLAGS="-I$HOME/software/include"
+RUN make -j 8 && make install
+RUN make clean
+
+WORKDIR $HOME/software/BasebandX
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/lib" CPPFLAGS="-I$HOME/software/include"
+RUN make -j 8 && make install
+RUN make clean
+
+WORKDIR $HOME/software/TransientX
+RUN ./bootstrap
+RUN ./configure --prefix=$HOME/software CXXFLAGS="-std=c++11 -O3" LDFLAGS="-L$HOME/software/lib" CPPFLAGS="-I$HOME/software/include"
+RUN make -j 8 && make install
+RUN make clean
+
+USER root
+
+WORKDIR $HOME/software/PulsarX/python
+RUN python3 setup.py install
+
+WORKDIR $HOME/software
+RUN git clone https://github.com/danielemichilli/DM_phase.git
+WORKDIR $HOME/software/DM_phase
+RUN python3 setup.py install --user
+
+WORKDIR $HOME/software/psrchive/More/python
+RUN /usr/bin/swig -c++ -Wall -python -I../../ -I../../local_include -I../../../include -DHAVE_CONFIG_H -outcurrentdir ./psrchive.i
+# upstream setup.py does not know where psrchive was installed
+RUN sed -i "s#include_dirs=\[#include_dirs=['../../../include','$HOME/software/include','$HOME/software/include/epsic','../../../include/epsic',#" setup.py
+RUN sed -i "s#libraries=\['psrmore','psrbase','psrutil'\]#libraries=['psrmore','psrbase','psrutil','epsic'],library_dirs=['$HOME/software/lib','../../../lib']#" setup.py
+RUN python3 setup.py install --user
+
+ENV PYTHONPATH=$HOME/.local/lib/python3.8/site-packages/:/home/pulsarx/.local/lib/python3.8/site-packages/psrchive-0.1-py3.8-linux-x86_64.egg/:$PYTHONPATH
+ENV LD_LIBRARY_PATH=/home/pulsarx/software/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+
+RUN chmod 755 -R $HOME/.local
+
+USER pulsarx
+
+WORKDIR $HOME
