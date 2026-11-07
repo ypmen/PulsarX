@@ -6,6 +6,8 @@
  * @desc [description]
  */
 
+#include <cstring>
+
 #include "dedispersionliteU.h"
 #include "dedisperse.h"
 
@@ -94,6 +96,10 @@ void DedispersionLiteU::updatedm(const std::vector<double> &dms)
 	vdm = dms;
 
 	buffersub.resize(vdm.size()*ndump*nsubband, 0.);
+	if (nsubband == nchans)
+		buffersubT.clear();
+	else
+		buffersubT.resize(vdm.size()*ndump*nsubband);
 
 	delayn.resize(vdm.size()*nchans, 0);
 	int ndm = vdm.size();
@@ -148,7 +154,28 @@ void DedispersionLiteU::run()
 	int ndm = vdm.size();
 	int nch = ceil(nchans*1./nsubband);
 
-	vector<float> buffersubT(nsubband*vdm.size()*ndump, 0.);
+	// A one-channel subband needs no accumulation. Write directly in the
+	// time-major layout consumed by get_subdata, avoiding the intermediate
+	// buffer clear and transpose.
+	if (nsubband == nchans)
+	{
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(num_threads)
+#endif
+		for (long int k=0; k<ndm; k++)
+		{
+			for (long int i=0; i<ndump; i++)
+			{
+				for (long int j=0; j<nchans; j++)
+				{
+					buffersub[k*ndump*nsubband+i*nsubband+j] = 0.F + bufferT[j*nsamples+i+delayn[j*ndm+k]];
+				}
+			}
+		}
+		return;
+	}
+
+	fill(buffersubT.begin(), buffersubT.end(), 0.);
 
 	for (long int j=0; j<nchans; j++)
 	{
@@ -171,11 +198,9 @@ void DedispersionLiteU::postrun()
 {
 	int nspace = nsamples-ndump;
 
-	for (long int i=0; i<nspace; i++)
+	if (nspace > 0)
 	{
-		for (long int j=0; j<nchans; j++)
-		{
-			buffer[i*nchans+j] = buffer[(i+ndump)*nchans+j];
-		}
+		std::memmove(buffer.data(), buffer.data()+ndump*nchans,
+			static_cast<size_t>(nspace)*static_cast<size_t>(nchans)*sizeof(float));
 	}
 }
