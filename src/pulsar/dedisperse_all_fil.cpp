@@ -77,6 +77,7 @@ int main(int argc, const char *argv[])
 			("fill", value<string>()->default_value("mean"), "Fill the zapped samples by [mean, rand]")
 			("rootname,o", value<string>()->default_value("J0000-00"), "Output rootname")
 			("format", value<string>()->default_value("pulsarx"), "Output format of dedispersed data [pulsarx(default),sigproc,presto]")
+			("dm_precision", value<int>()->default_value(2), "Number of decimal places of DM in output file names")
 			("wts", "Apply DAT_WTS")
 			("scloffs", "Apply DAT_SCL and DAT_OFFS")
 			("zero_off", "Apply ZERO_OFF")
@@ -118,6 +119,7 @@ int main(int argc, const char *argv[])
 	float outmean = vm["mean"].as<float>();
 	float outstd = vm["std"].as<float>();
 	int outnbits = vm["nbits"].as<int>();
+	int dm_precision = vm["dm_precision"].as<int>();
 
 	bool apply_wts = false;
 	bool apply_scloffs = false;
@@ -228,6 +230,7 @@ int main(int argc, const char *argv[])
 	{
 		search[k].ibeam = ibeam;
 		search[k].rootname = rootname + "_" + s_ibeam + "_Plan" + to_string(k+1) + "_Seg" + to_string(ncover);
+		search[k].dedisp.dm_precision = dm_precision;
 		reader->get_filterbank_template(search[k].fildedisp);
 		search[k].fildedisp.fch1 = (databuf.frequencies.front()+databuf.frequencies.back())/2.;
 		search[k].fildedisp.foff = databuf.frequencies.back()-databuf.frequencies.front();
