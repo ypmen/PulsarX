@@ -34,6 +34,9 @@ namespace Pulsar
 			bufferT.clear();
 			bufferT.shrink_to_fit();
 
+			buffersubT.clear();
+			buffersubT.shrink_to_fit();
+
 			buffersub.clear();
 			buffersub.shrink_to_fit();
 		}
@@ -92,6 +95,7 @@ namespace Pulsar
 		vector<float> buffer;
 		vector<float> bufferT;
 		vector<double> frequencies_sub;
+		vector<float> buffersubT;
 		vector<float> buffersub;
 		std::vector<double> means;
 		std::vector<double> vars;
